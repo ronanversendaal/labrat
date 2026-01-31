@@ -21,7 +21,8 @@
       "Bash(SHELL=/bin/bash /bin/bash -c 'git add -A && git commit -m \"\"[speckit] Implement: T012-T019 Rust backend types\n\n- T012-T016: GitLab types \\(Account, Project, MergeRequest, Author, Milestone, Pipeline, Diff\\)\n- T017: AI types \\(Provider, Suggestion with categories/severity\\)\n- T018: Settings struct with defaults and partial updates\n- T019: TauriError with error codes for IPC\"\"')",
       "Bash(SHELL=/bin/bash /bin/bash -c 'git add -A && git commit -m \"\"[speckit] Implement: T020-T022 Frontend TypeScript types\n\n- T020: GitLab types \\(Account, Project, MergeRequest, Diff, Discussion, etc.\\)\n- T021: AI types \\(Provider, Suggestion, AnalysisProgress\\)\n- T022: Settings types \\(Settings, CacheStats, TauriError\\)\"\"')",
       "Bash(SHELL=/bin/bash /bin/bash -c 'git add -A && git commit -m \"\"[speckit] Implement: T023 Tauri command registration\n\n- Added all GitLab commands \\(accounts, MRs, diffs, discussions\\)\n- Added all AI commands \\(providers, analysis, suggestions\\)\n- Added all Settings commands \\(get, update, reset\\)\n- Added all Cache commands \\(stats, clear, evict\\)\n- Commands are stub implementations for now\"\"')",
-      "Bash(SHELL=/bin/bash /bin/bash -c 'git add -A && git commit -m \"\"[speckit] Implement: T024 Tauri IPC wrapper service\n\n- Created typed invoke helper with error handling\n- Added TauriCommandError class for error handling\n- Created wrappers for all GitLab, AI, Settings, and Cache commands\n- Added grouped API objects for convenience\"\"')"
+      "Bash(SHELL=/bin/bash /bin/bash -c 'git add -A && git commit -m \"\"[speckit] Implement: T024 Tauri IPC wrapper service\n\n- Created typed invoke helper with error handling\n- Added TauriCommandError class for error handling\n- Created wrappers for all GitLab, AI, Settings, and Cache commands\n- Added grouped API objects for convenience\"\"')",
+      "Bash(SHELL=/bin/bash /bin/bash:*)"
     ]
   }
 }

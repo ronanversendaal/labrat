@@ -64,11 +64,11 @@
 
 ### UI Foundation
 
-- [ ] T025 [P] Create Button component in `src/components/common/Button.tsx`
-- [ ] T026 [P] Create Input component in `src/components/common/Input.tsx`
-- [ ] T027 [P] Create Modal component in `src/components/common/Modal.tsx`
-- [ ] T028 [P] Create Skeleton loader component in `src/components/common/Skeleton.tsx`
-- [ ] T029 [P] Create Toast notification component in `src/components/common/Toast.tsx`
+- [x] T025 [P] Create Button component in `src/components/common/Button.tsx`
+- [x] T026 [P] Create Input component in `src/components/common/Input.tsx`
+- [x] T027 [P] Create Modal component in `src/components/common/Modal.tsx`
+- [x] T028 [P] Create Skeleton loader component in `src/components/common/Skeleton.tsx`
+- [x] T029 [P] Create Toast notification component in `src/components/common/Toast.tsx`
 - [ ] T030 Create app layout with Sidebar, Header, MainContent in `src/components/layout/`
 - [ ] T031 Setup React Query provider in `src/App.tsx`
 - [ ] T032 Setup Zustand stores structure in `src/stores/` (mrStore, uiStore, settingsStore)
