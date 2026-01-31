@@ -38,7 +38,7 @@
 
 - [x] T009 Create SQLite schema migration in `src-tauri/migrations/001_initial_schema.sql` per data-model.md
 - [x] T010 Implement database connection pool in `src-tauri/src/cache/db.rs` using sqlx
-- [ ] T011 Implement secure credential storage wrapper in `src-tauri/src/settings/credentials.rs` using keyring crate
+- [x] T011 Implement secure credential storage wrapper in `src-tauri/src/settings/credentials.rs` using keyring crate
 
 ### Base Types & Models
 

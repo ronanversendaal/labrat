@@ -1,1 +1,215 @@
 //! Secure credential storage using OS keychain
+//!
+//! This module provides secure storage for sensitive data like
+//! GitLab access tokens and AI provider API keys using the
+//! platform's native keychain/credential manager.
+
+use keyring::Entry;
+use thiserror::Error;
+use tracing::{debug, warn};
+
+/// Service name used for keyring entries
+const SERVICE_NAME: &str = "com.gitlab-mr-review";
+
+/// Credential storage errors
+#[derive(Debug, Error)]
+pub enum CredentialError {
+    #[error("Failed to access keyring: {0}")]
+    KeyringAccess(String),
+
+    #[error("Credential not found for: {0}")]
+    NotFound(String),
+
+    #[error("Failed to store credential: {0}")]
+    StoreFailed(String),
+
+    #[error("Failed to delete credential: {0}")]
+    DeleteFailed(String),
+}
+
+/// Credential types that can be stored
+#[derive(Debug, Clone, Copy)]
+pub enum CredentialType {
+    /// GitLab personal access token
+    GitLabToken,
+    /// AI provider API key
+    AiApiKey,
+}
+
+impl CredentialType {
+    /// Get the prefix used for keyring entry names
+    fn prefix(&self) -> &'static str {
+        match self {
+            CredentialType::GitLabToken => "gitlab-token",
+            CredentialType::AiApiKey => "ai-apikey",
+        }
+    }
+}
+
+/// Secure credential storage manager
+pub struct CredentialStore;
+
+impl CredentialStore {
+    /// Create a new credential store instance
+    pub fn new() -> Self {
+        Self
+    }
+
+    /// Store a credential securely
+    ///
+    /// # Arguments
+    /// * `credential_type` - The type of credential being stored
+    /// * `account_id` - Unique identifier for the account (e.g., GitLab account ID)
+    /// * `secret` - The secret value to store (e.g., access token)
+    pub fn store(
+        &self,
+        credential_type: CredentialType,
+        account_id: &str,
+        secret: &str,
+    ) -> Result<(), CredentialError> {
+        let entry_name = self.entry_name(credential_type, account_id);
+        debug!("Storing credential: {}", entry_name);
+
+        let entry = Entry::new(SERVICE_NAME, &entry_name)
+            .map_err(|e| CredentialError::KeyringAccess(e.to_string()))?;
+
+        entry
+            .set_password(secret)
+            .map_err(|e| CredentialError::StoreFailed(e.to_string()))?;
+
+        debug!("Credential stored successfully");
+        Ok(())
+    }
+
+    /// Retrieve a credential
+    ///
+    /// # Arguments
+    /// * `credential_type` - The type of credential to retrieve
+    /// * `account_id` - Unique identifier for the account
+    ///
+    /// # Returns
+    /// The secret value if found, or an error
+    pub fn get(
+        &self,
+        credential_type: CredentialType,
+        account_id: &str,
+    ) -> Result<String, CredentialError> {
+        let entry_name = self.entry_name(credential_type, account_id);
+        debug!("Retrieving credential: {}", entry_name);
+
+        let entry = Entry::new(SERVICE_NAME, &entry_name)
+            .map_err(|e| CredentialError::KeyringAccess(e.to_string()))?;
+
+        match entry.get_password() {
+            Ok(secret) => {
+                debug!("Credential retrieved successfully");
+                Ok(secret)
+            }
+            Err(keyring::Error::NoEntry) => {
+                warn!("Credential not found: {}", entry_name);
+                Err(CredentialError::NotFound(entry_name))
+            }
+            Err(e) => Err(CredentialError::KeyringAccess(e.to_string())),
+        }
+    }
+
+    /// Delete a credential
+    ///
+    /// # Arguments
+    /// * `credential_type` - The type of credential to delete
+    /// * `account_id` - Unique identifier for the account
+    pub fn delete(
+        &self,
+        credential_type: CredentialType,
+        account_id: &str,
+    ) -> Result<(), CredentialError> {
+        let entry_name = self.entry_name(credential_type, account_id);
+        debug!("Deleting credential: {}", entry_name);
+
+        let entry = Entry::new(SERVICE_NAME, &entry_name)
+            .map_err(|e| CredentialError::KeyringAccess(e.to_string()))?;
+
+        match entry.delete_credential() {
+            Ok(()) => {
+                debug!("Credential deleted successfully");
+                Ok(())
+            }
+            Err(keyring::Error::NoEntry) => {
+                // Already deleted, not an error
+                debug!("Credential was already deleted");
+                Ok(())
+            }
+            Err(e) => Err(CredentialError::DeleteFailed(e.to_string())),
+        }
+    }
+
+    /// Check if a credential exists
+    ///
+    /// # Arguments
+    /// * `credential_type` - The type of credential to check
+    /// * `account_id` - Unique identifier for the account
+    pub fn exists(&self, credential_type: CredentialType, account_id: &str) -> bool {
+        self.get(credential_type, account_id).is_ok()
+    }
+
+    /// Generate the keyring entry name for a credential
+    fn entry_name(&self, credential_type: CredentialType, account_id: &str) -> String {
+        format!("{}-{}", credential_type.prefix(), account_id)
+    }
+}
+
+impl Default for CredentialStore {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Note: These tests interact with the real system keychain
+    // They are marked as ignored by default to avoid polluting the keychain
+    // Run with: cargo test -- --ignored
+
+    #[test]
+    #[ignore]
+    fn test_credential_store_lifecycle() {
+        let store = CredentialStore::new();
+        let account_id = "test-account-123";
+        let token = "glpat-xxxx-test-token";
+
+        // Store
+        store
+            .store(CredentialType::GitLabToken, account_id, token)
+            .unwrap();
+
+        // Verify exists
+        assert!(store.exists(CredentialType::GitLabToken, account_id));
+
+        // Retrieve
+        let retrieved = store.get(CredentialType::GitLabToken, account_id).unwrap();
+        assert_eq!(retrieved, token);
+
+        // Delete
+        store
+            .delete(CredentialType::GitLabToken, account_id)
+            .unwrap();
+
+        // Verify deleted
+        assert!(!store.exists(CredentialType::GitLabToken, account_id));
+    }
+
+    #[test]
+    fn test_entry_name_generation() {
+        let store = CredentialStore::new();
+        assert_eq!(
+            store.entry_name(CredentialType::GitLabToken, "abc123"),
+            "gitlab-token-abc123"
+        );
+        assert_eq!(
+            store.entry_name(CredentialType::AiApiKey, "provider1"),
+            "ai-apikey-provider1"
+        );
+    }
+}
