@@ -24,6 +24,7 @@ export function MRCard({ mr, selected = false, onClick }: MRCardProps) {
       onClick={onClick}
       onKeyDown={handleKeyDown}
       aria-selected={selected}
+      aria-label={`Open merge request: ${mr.title}${mr.draft ? ' (Draft)' : ''}`}
       className={`
         p-4 border rounded-lg cursor-pointer
         transition-colors duration-150

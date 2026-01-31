@@ -344,11 +344,11 @@
 
 ### Final Polish
 
-- [ ] T176 Run quickstart.md validation - verify all setup steps work
+- [x] T176 Run quickstart.md validation - verify all setup steps work
 - [x] T177 Review and update all loading states and skeleton UIs
 - [x] T178 Audit keyboard shortcuts for consistency and conflicts
 - [x] T179 Ensure all error messages are user-friendly
-- [ ] T180 Final accessibility audit (WCAG 2.1 AA compliance)
+- [x] T180 Final accessibility audit (WCAG 2.1 AA compliance)
 
 ---
 

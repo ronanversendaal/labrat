@@ -58,7 +58,8 @@ export function MRFilters({ projects = [], authors = [] }: MRFiltersProps) {
         <div className="relative flex-1">
           <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
-            type="text"
+            type="search"
+            aria-label="Search merge requests"
             placeholder="Search merge requests..."
             value={localSearch}
             onChange={(e) => setLocalSearch(e.target.value)}
@@ -68,8 +69,9 @@ export function MRFilters({ projects = [], authors = [] }: MRFiltersProps) {
             <button
               onClick={() => setLocalSearch('')}
               className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              aria-label="Clear search"
             >
-              <CloseIcon className="w-4 h-4" />
+              <CloseIcon className="w-4 h-4" aria-hidden="true" />
             </button>
           )}
         </div>
@@ -84,9 +86,10 @@ export function MRFilters({ projects = [], authors = [] }: MRFiltersProps) {
               : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
             }
           `}
-          title={filterPanelExpanded ? 'Hide filters' : 'Show filters'}
+          aria-label={filterPanelExpanded ? 'Hide filters' : 'Show filters'}
+          aria-expanded={filterPanelExpanded}
         >
-          <FilterIcon className="w-5 h-5" />
+          <FilterIcon className="w-5 h-5" aria-hidden="true" />
         </button>
 
         {/* Clear filters button (only visible when filters are active) */}

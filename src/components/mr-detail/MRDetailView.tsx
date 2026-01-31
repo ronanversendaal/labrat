@@ -138,10 +138,14 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
     <div className="flex flex-col h-full">
       {/* Update notification banner */}
       {hasUpdates && (
-        <div className="px-6 py-3 bg-blue-50 dark:bg-blue-900/20 border-b border-blue-200 dark:border-blue-800">
+        <div
+          role="status"
+          aria-live="polite"
+          className="px-6 py-3 bg-blue-50 dark:bg-blue-900/20 border-b border-blue-200 dark:border-blue-800"
+        >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <svg className="w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
               <span className="text-sm text-blue-700 dark:text-blue-300">
@@ -165,8 +169,9 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
               <button
                 onClick={() => setDismissedUpdate(true)}
                 className="p-1 text-blue-500 hover:text-blue-700 dark:hover:text-blue-300"
+                aria-label="Dismiss update notification"
               >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
@@ -212,6 +217,7 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
               <button
                 onClick={onClose}
                 className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                aria-label="Close merge request detail view"
               >
                 <CloseIcon />
               </button>
