@@ -1,1 +1,2 @@
-// Hook exports - will be populated as hooks are implemented
+// Hook exports
+export * from './useGitLab';

@@ -2,6 +2,8 @@ import { create } from 'zustand';
 import type { MergeRequest, MergeRequestFilter, MergeRequestSort } from '../types/gitlab';
 import type { AISuggestion } from '../types/ai';
 
+type GroupByOption = 'project' | 'author' | 'date' | 'none';
+
 interface MRState {
   // Selected MR
   selectedMrId: number | null;
@@ -11,6 +13,7 @@ interface MRState {
   filter: MergeRequestFilter;
   sort: MergeRequestSort;
   searchQuery: string;
+  groupBy: GroupByOption;
 
   // UI state
   expandedFiles: Set<string>;
@@ -21,6 +24,7 @@ interface MRState {
   setFilter: (filter: Partial<MergeRequestFilter>) => void;
   setSort: (sort: MergeRequestSort) => void;
   setSearchQuery: (query: string) => void;
+  setGroupBy: (groupBy: GroupByOption) => void;
   clearFilters: () => void;
   toggleFileExpanded: (filePath: string) => void;
   setSelectedSuggestion: (suggestion: AISuggestion | null) => void;
@@ -39,6 +43,7 @@ export const useMRStore = create<MRState>((set) => ({
   filter: defaultFilter,
   sort: defaultSort,
   searchQuery: '',
+  groupBy: 'none',
   expandedFiles: new Set(),
   selectedSuggestion: null,
 
@@ -58,6 +63,8 @@ export const useMRStore = create<MRState>((set) => ({
   setSort: (sort) => set({ sort }),
 
   setSearchQuery: (searchQuery) => set({ searchQuery }),
+
+  setGroupBy: (groupBy) => set({ groupBy }),
 
   clearFilters: () =>
     set({

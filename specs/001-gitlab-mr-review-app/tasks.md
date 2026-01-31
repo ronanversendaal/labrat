@@ -95,23 +95,23 @@
 - [x] T037 [US1] Implement `GET /merge_requests` endpoint with reviewer filter in `src-tauri/src/gitlab/merge_requests.rs`
 - [x] T038 [US1] Implement pagination handling (keyset) for MR list in `src-tauri/src/gitlab/merge_requests.rs`
 - [x] T039 [US1] Implement MR cache storage/retrieval in `src-tauri/src/cache/mr_cache.rs`
-- [ ] T040 [US1] Implement `gitlab_list_accounts` command in `src-tauri/src/commands/gitlab.rs`
-- [ ] T041 [US1] Implement `gitlab_add_account` command with token validation in `src-tauri/src/commands/gitlab.rs`
-- [ ] T042 [US1] Implement `gitlab_validate_token` command in `src-tauri/src/commands/gitlab.rs`
-- [ ] T043 [US1] Implement `gitlab_set_active_account` command in `src-tauri/src/commands/gitlab.rs`
-- [ ] T044 [US1] Implement `gitlab_list_merge_requests` command in `src-tauri/src/commands/gitlab.rs`
-- [ ] T045 [US1] Implement background refresh with configurable interval in `src-tauri/src/commands/gitlab.rs`
-- [ ] T046 [US1] Implement `mr:list_updated` event emission in `src-tauri/src/commands/gitlab.rs`
+- [x] T040 [US1] Implement `gitlab_list_accounts` command in `src-tauri/src/commands/gitlab.rs`
+- [x] T041 [US1] Implement `gitlab_add_account` command with token validation in `src-tauri/src/commands/gitlab.rs`
+- [x] T042 [US1] Implement `gitlab_validate_token` command in `src-tauri/src/commands/gitlab.rs`
+- [x] T043 [US1] Implement `gitlab_set_active_account` command in `src-tauri/src/commands/gitlab.rs`
+- [x] T044 [US1] Implement `gitlab_list_merge_requests` command in `src-tauri/src/commands/gitlab.rs`
+- [x] T045 [US1] Implement background refresh with configurable interval in `src-tauri/src/commands/gitlab.rs`
+- [x] T046 [US1] Implement `mr:list_updated` event emission in `src-tauri/src/commands/gitlab.rs`
 
 ### Frontend Implementation for US1
 
-- [ ] T047 [US1] Implement MR list Zustand store with loading states in `src/stores/mrStore.ts`
-- [ ] T048 [US1] Implement useGitLab hook for MR list fetching in `src/hooks/useGitLab.ts`
-- [ ] T049 [US1] Create MRCard component displaying title, project, author, avatar in `src/components/mr-list/MRCard.tsx`
-- [ ] T050 [US1] Create ImpedimentBadge component for conflicts, pipeline, threads, draft in `src/components/mr-list/ImpedimentBadge.tsx`
-- [ ] T051 [US1] Create MRList component with skeleton loading in `src/components/mr-list/MRList.tsx`
-- [ ] T052 [US1] Implement grouping/sorting by project, date, author in `src/components/mr-list/MRList.tsx`
-- [ ] T053 [US1] Wire MRList to Tauri backend and display real data
+- [x] T047 [US1] Implement MR list Zustand store with loading states in `src/stores/mrStore.ts`
+- [x] T048 [US1] Implement useGitLab hook for MR list fetching in `src/hooks/useGitLab.ts`
+- [x] T049 [US1] Create MRCard component displaying title, project, author, avatar in `src/components/mr-list/MRCard.tsx`
+- [x] T050 [US1] Create ImpedimentBadge component for conflicts, pipeline, threads, draft in `src/components/mr-list/ImpedimentBadge.tsx`
+- [x] T051 [US1] Create MRList component with skeleton loading in `src/components/mr-list/MRList.tsx`
+- [x] T052 [US1] Implement grouping/sorting by project, date, author in `src/components/mr-list/MRList.tsx`
+- [x] T053 [US1] Wire MRList to Tauri backend and display real data
 
 **Checkpoint**: User Story 1 complete - Users can view their pending MR reviews with impediment indicators
 
