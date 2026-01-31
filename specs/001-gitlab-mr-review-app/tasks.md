@@ -152,14 +152,14 @@
 
 ### Backend Implementation for US3
 
-- [ ] T065 [US3] Implement `GET /projects/:id/merge_requests/:iid` wrapper in `src-tauri/src/gitlab/merge_requests.rs`
-- [ ] T066 [US3] Implement `GET /projects/:id/merge_requests/:iid/changes` wrapper in `src-tauri/src/gitlab/diffs.rs`
-- [ ] T067 [US3] Implement diff parsing and line number extraction in `src-tauri/src/utils/diff_parser.rs`
-- [ ] T068 [US3] Implement syntax highlighting with syntect in `src-tauri/src/utils/diff_parser.rs`
-- [ ] T069 [US3] Implement diff cache storage/retrieval in `src-tauri/src/cache/diff_cache.rs`
+- [x] T065 [US3] Implement `GET /projects/:id/merge_requests/:iid` wrapper in `src-tauri/src/gitlab/merge_requests.rs`
+- [x] T066 [US3] Implement `GET /projects/:id/merge_requests/:iid/changes` wrapper in `src-tauri/src/gitlab/diffs.rs`
+- [x] T067 [US3] Implement diff parsing and line number extraction in `src-tauri/src/utils/diff_parser.rs`
+- [x] T068 [US3] Implement syntax highlighting with syntect in `src-tauri/src/utils/diff_parser.rs`
+- [x] T069 [US3] Implement diff cache storage/retrieval in `src-tauri/src/cache/diff_cache.rs`
 - [ ] T070 [US3] Implement `gitlab_get_merge_request` command in `src-tauri/src/commands/gitlab.rs`
 - [ ] T071 [US3] Implement `gitlab_get_diff` command with progressive loading in `src-tauri/src/commands/gitlab.rs`
-- [ ] T072 [US3] Implement `GET /projects/:id/merge_requests/:iid/discussions` wrapper in `src-tauri/src/gitlab/comments.rs`
+- [x] T072 [US3] Implement `GET /projects/:id/merge_requests/:iid/discussions` wrapper in `src-tauri/src/gitlab/comments.rs`
 - [ ] T073 [US3] Implement `gitlab_get_discussions` command in `src-tauri/src/commands/gitlab.rs`
 - [ ] T074 [US3] Implement diff prefetching for visible MRs in `src-tauri/src/commands/gitlab.rs`
 
