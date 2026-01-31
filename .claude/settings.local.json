@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm create:*)",
+      "Bash(pnpm init)",
+      "Bash(pnpm add:*)",
+      "Bash(pnpm tauri init:*)",
+      "Bash(pnpm tauri icon --help:*)",
+      "Bash(cargo check:*)",
+      "Bash(SHELL=/bin/bash cargo check:*)",
+      "Bash(/bin/ls:*)",
+      "Bash(pnpm build:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
+    ]
+  }
+}
