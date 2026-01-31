@@ -111,7 +111,10 @@ impl TauriError {
 
     /// Duplicate name
     pub fn duplicate_name(name: impl Into<String>) -> Self {
-        Self::new("duplicate_name", format!("Name '{}' already exists", name.into()))
+        Self::new(
+            "duplicate_name",
+            format!("Name '{}' already exists", name.into()),
+        )
     }
 }
 
@@ -130,6 +133,36 @@ pub type TauriResult<T> = Result<T, TauriError>;
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
+        .invoke_handler(tauri::generate_handler![
+            // GitLab commands
+            commands::gitlab::gitlab_list_accounts,
+            commands::gitlab::gitlab_add_account,
+            commands::gitlab::gitlab_remove_account,
+            commands::gitlab::gitlab_set_active_account,
+            commands::gitlab::gitlab_validate_token,
+            commands::gitlab::gitlab_list_merge_requests,
+            commands::gitlab::gitlab_get_merge_request,
+            commands::gitlab::gitlab_get_diff,
+            commands::gitlab::gitlab_get_discussions,
+            commands::gitlab::gitlab_post_comment,
+            commands::gitlab::gitlab_refresh,
+            // AI commands
+            commands::ai::ai_list_providers,
+            commands::ai::ai_add_provider,
+            commands::ai::ai_remove_provider,
+            commands::ai::ai_set_default_provider,
+            commands::ai::ai_analyze_diff,
+            commands::ai::ai_update_suggestion_status,
+            commands::ai::ai_check_cli_available,
+            // Settings commands
+            commands::settings::settings_get,
+            commands::settings::settings_update,
+            commands::settings::settings_reset,
+            // Cache commands
+            commands::cache::cache_get_stats,
+            commands::cache::cache_clear,
+            commands::cache::cache_evict_old,
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

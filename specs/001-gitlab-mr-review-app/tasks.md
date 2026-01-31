@@ -59,7 +59,7 @@
 
 ### Tauri IPC Infrastructure
 
-- [ ] T023 Implement Tauri command registration in `src-tauri/src/main.rs` (empty handlers initially)
+- [x] T023 Implement Tauri command registration in `src-tauri/src/lib.rs` (empty handlers initially)
 - [ ] T024 Create Tauri IPC wrapper service in `src/services/tauri.ts` with typed invoke helper
 
 ### UI Foundation
