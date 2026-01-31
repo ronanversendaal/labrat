@@ -3,7 +3,7 @@
  * Supports unified and split view modes
  */
 
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import type { DiffFile, LineType } from '../../types';
 import { useUIStore } from '../../stores';
 
@@ -11,14 +11,46 @@ interface DiffViewProps {
   file: DiffFile;
   onNextFile?: () => void;
   onPrevFile?: () => void;
+  targetLine?: number;
 }
 
-export function DiffView({ file, onNextFile, onPrevFile }: DiffViewProps) {
+export function DiffView({ file, onNextFile, onPrevFile, targetLine }: DiffViewProps) {
   const { diffViewMode, setDiffViewMode, showWhitespace, toggleWhitespace } = useUIStore();
   const [collapsedHunks, setCollapsedHunks] = useState<Set<number>>(new Set());
+  const [highlightedLine, setHighlightedLine] = useState<number | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Parse diff lines
   const lines = useMemo(() => parseDiffLines(file.diff), [file.diff]);
+
+  // Scroll to target line when it changes
+  useEffect(() => {
+    if (targetLine && containerRef.current) {
+      // Find the hunk containing this line and expand it
+      const targetHunk = lines.find(
+        (line) => line.newLine === targetLine || line.oldLine === targetLine
+      );
+      if (targetHunk && collapsedHunks.has(targetHunk.hunkIndex)) {
+        setCollapsedHunks((prev) => {
+          const next = new Set(prev);
+          next.delete(targetHunk.hunkIndex);
+          return next;
+        });
+      }
+
+      // Set highlighted line and scroll to it after a short delay
+      setHighlightedLine(targetLine);
+      setTimeout(() => {
+        const lineElement = containerRef.current?.querySelector(`[data-line="${targetLine}"]`);
+        if (lineElement) {
+          lineElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 100);
+
+      // Clear highlight after a few seconds
+      setTimeout(() => setHighlightedLine(null), 3000);
+    }
+  }, [targetLine, lines, collapsedHunks]);
 
   const toggleHunk = useCallback((index: number) => {
     setCollapsedHunks((prev) => {
@@ -110,13 +142,14 @@ export function DiffView({ file, onNextFile, onPrevFile }: DiffViewProps) {
       </div>
 
       {/* Diff content */}
-      <div className="flex-1 overflow-auto font-mono text-sm">
+      <div ref={containerRef} className="flex-1 overflow-auto font-mono text-sm">
         {diffViewMode === 'unified' ? (
           <UnifiedDiff
             lines={lines}
             showWhitespace={showWhitespace}
             collapsedHunks={collapsedHunks}
             onToggleHunk={toggleHunk}
+            highlightedLine={highlightedLine}
           />
         ) : (
           <SplitDiff
@@ -124,6 +157,7 @@ export function DiffView({ file, onNextFile, onPrevFile }: DiffViewProps) {
             showWhitespace={showWhitespace}
             collapsedHunks={collapsedHunks}
             onToggleHunk={toggleHunk}
+            highlightedLine={highlightedLine}
           />
         )}
       </div>
@@ -212,11 +246,13 @@ function UnifiedDiff({
   showWhitespace,
   collapsedHunks,
   onToggleHunk,
+  highlightedLine,
 }: {
   lines: ParsedLine[];
   showWhitespace: boolean;
   collapsedHunks: Set<number>;
   onToggleHunk: (index: number) => void;
+  highlightedLine: number | null;
 }) {
   return (
     <table className="w-full border-collapse">
@@ -240,11 +276,18 @@ function UnifiedDiff({
             return null;
           }
 
-          const bgClass = getLineBgClass(line.type);
+          const isHighlighted = highlightedLine !== null && (line.newLine === highlightedLine || line.oldLine === highlightedLine);
+          const bgClass = isHighlighted
+            ? 'bg-yellow-200 dark:bg-yellow-700/50 animate-pulse'
+            : getLineBgClass(line.type);
           const content = showWhitespace ? renderWhitespace(line.content) : line.content;
 
           return (
-            <tr key={i} className={bgClass}>
+            <tr
+              key={i}
+              className={bgClass}
+              data-line={line.newLine ?? line.oldLine}
+            >
               <td className="w-12 px-2 py-0 text-right text-gray-400 select-none border-r border-gray-200 dark:border-gray-700">
                 {line.oldLine ?? ''}
               </td>
@@ -265,11 +308,13 @@ function SplitDiff({
   showWhitespace,
   collapsedHunks,
   onToggleHunk,
+  highlightedLine,
 }: {
   lines: ParsedLine[];
   showWhitespace: boolean;
   collapsedHunks: Set<number>;
   onToggleHunk: (index: number) => void;
+  highlightedLine: number | null;
 }) {
   // Build paired lines for split view
   const pairs = useMemo(() => buildSplitPairs(lines), [lines]);
@@ -296,20 +341,24 @@ function SplitDiff({
             return null;
           }
 
+          const isLeftHighlighted = highlightedLine !== null && pair.left?.oldLine === highlightedLine;
+          const isRightHighlighted = highlightedLine !== null && pair.right?.newLine === highlightedLine;
+          const dataLine = pair.right?.newLine ?? pair.left?.oldLine;
+
           return (
-            <tr key={i}>
+            <tr key={i} data-line={dataLine}>
               {/* Old side */}
-              <td className={`w-12 px-2 py-0 text-right text-gray-400 select-none border-r border-gray-200 dark:border-gray-700 ${pair.left?.type === 'deletion' ? 'bg-red-100 dark:bg-red-900/30' : ''}`}>
+              <td className={`w-12 px-2 py-0 text-right text-gray-400 select-none border-r border-gray-200 dark:border-gray-700 ${isLeftHighlighted ? 'bg-yellow-200 dark:bg-yellow-700/50 animate-pulse' : pair.left?.type === 'deletion' ? 'bg-red-100 dark:bg-red-900/30' : ''}`}>
                 {pair.left?.oldLine ?? ''}
               </td>
-              <td className={`w-1/2 px-2 py-0 whitespace-pre border-r border-gray-200 dark:border-gray-700 ${pair.left?.type === 'deletion' ? 'bg-red-100 dark:bg-red-900/30' : ''}`}>
+              <td className={`w-1/2 px-2 py-0 whitespace-pre border-r border-gray-200 dark:border-gray-700 ${isLeftHighlighted ? 'bg-yellow-200 dark:bg-yellow-700/50 animate-pulse' : pair.left?.type === 'deletion' ? 'bg-red-100 dark:bg-red-900/30' : ''}`}>
                 {pair.left ? (showWhitespace ? renderWhitespace(pair.left.content) : pair.left.content) : '\u00A0'}
               </td>
               {/* New side */}
-              <td className={`w-12 px-2 py-0 text-right text-gray-400 select-none border-r border-gray-200 dark:border-gray-700 ${pair.right?.type === 'addition' ? 'bg-green-100 dark:bg-green-900/30' : ''}`}>
+              <td className={`w-12 px-2 py-0 text-right text-gray-400 select-none border-r border-gray-200 dark:border-gray-700 ${isRightHighlighted ? 'bg-yellow-200 dark:bg-yellow-700/50 animate-pulse' : pair.right?.type === 'addition' ? 'bg-green-100 dark:bg-green-900/30' : ''}`}>
                 {pair.right?.newLine ?? ''}
               </td>
-              <td className={`w-1/2 px-2 py-0 whitespace-pre ${pair.right?.type === 'addition' ? 'bg-green-100 dark:bg-green-900/30' : ''}`}>
+              <td className={`w-1/2 px-2 py-0 whitespace-pre ${isRightHighlighted ? 'bg-yellow-200 dark:bg-yellow-700/50 animate-pulse' : pair.right?.type === 'addition' ? 'bg-green-100 dark:bg-green-900/30' : ''}`}>
                 {pair.right ? (showWhitespace ? renderWhitespace(pair.right.content) : pair.right.content) : '\u00A0'}
               </td>
             </tr>

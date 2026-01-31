@@ -399,3 +399,22 @@ pub struct SpecificMr {
     pub project_id: i64,
     pub mr_iid: i64,
 }
+
+/// Connection status for a GitLab account
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ConnectionStatus {
+    Connected,
+    Disconnected,
+    Checking,
+    Error,
+}
+
+/// Connection status event payload
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConnectionStatusEvent {
+    pub account_id: String,
+    pub status: ConnectionStatus,
+    pub error: Option<String>,
+    pub latency_ms: Option<u64>,
+}

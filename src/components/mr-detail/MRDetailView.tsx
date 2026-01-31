@@ -24,6 +24,7 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
   const [activeTab, setActiveTab] = useState<Tab>('changes');
   const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+  const [targetLine, setTargetLine] = useState<number | undefined>(undefined);
 
   const { data: diff, isLoading: isLoadingDiff } = useDiff(mr.project_id, mr.iid);
   const { data: discussions, isLoading: isLoadingDiscussions } = useDiscussions(mr.project_id, mr.iid);
@@ -68,6 +69,15 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
   const unresolvedThreads = discussions?.filter(
     (d) => d.notes.some((n) => n.resolvable && !n.resolved)
   ).length || 0;
+
+  // Handle jumping to a specific file and line from AI suggestions
+  const handleJumpToLine = (filePath: string, line: number) => {
+    setSelectedFilePath(filePath);
+    setTargetLine(line);
+    setActiveTab('changes');
+    // Clear target line after a short delay so subsequent clicks work
+    setTimeout(() => setTargetLine(undefined), 100);
+  };
 
   return (
     <div className="flex flex-col h-full">
@@ -190,6 +200,7 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
                   file={selectedFile}
                   onNextFile={handleNextFile}
                   onPrevFile={handlePrevFile}
+                  targetLine={targetLine}
                 />
               ) : (
                 <div className="flex items-center justify-center h-full text-gray-500">
@@ -219,6 +230,7 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
           <AISuggestionsPanel
             projectId={mr.project_id}
             mrIid={mr.iid}
+            onJumpToLine={handleJumpToLine}
           />
         )}
       </div>

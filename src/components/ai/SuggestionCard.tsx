@@ -10,6 +10,7 @@ interface SuggestionCardProps {
   suggestion: AISuggestion;
   onUpdateStatus: (id: string, status: SuggestionStatus) => void;
   onPostToGitLab?: (suggestion: AISuggestion) => void;
+  onJumpToLine?: (filePath: string, line: number) => void;
   isUpdating?: boolean;
 }
 
@@ -43,6 +44,7 @@ export function SuggestionCard({
   suggestion,
   onUpdateStatus,
   onPostToGitLab,
+  onJumpToLine,
   isUpdating,
 }: SuggestionCardProps) {
   const [isExpanded, setIsExpanded] = useState(true);
@@ -91,10 +93,17 @@ export function SuggestionCard({
             )}
           </div>
           <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">{suggestion.title}</h4>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+          <button
+            className="text-xs text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 hover:underline mt-0.5 text-left"
+            onClick={(e) => {
+              e.stopPropagation();
+              onJumpToLine?.(suggestion.file_path, suggestion.start_line);
+            }}
+            title="Jump to line in diff"
+          >
             {suggestion.file_path}:{suggestion.start_line}
             {suggestion.end_line > suggestion.start_line && `-${suggestion.end_line}`}
-          </p>
+          </button>
         </div>
 
         {/* Expand icon */}

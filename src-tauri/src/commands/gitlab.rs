@@ -6,14 +6,15 @@ use crate::cache::diff_cache::DiffCache;
 use crate::gitlab::client::GitLabClient;
 use crate::gitlab::comments::PositionData;
 use crate::gitlab::types::{
-    AddAccountRequest, Diff, Discussion, GetDiffRequest, GitLabAccount,
+    AddAccountRequest, ConnectionStatus, ConnectionStatusEvent, Diff, Discussion, GetDiffRequest, GitLabAccount,
     ListMergeRequestsRequest, ListMergeRequestsResponse, MergeRequest, PostCommentRequest,
     PostCommentResponse, RefreshRequest, ValidateTokenRequest, ValidateTokenResponse,
 };
 use crate::settings::credentials::CredentialManager;
 use crate::{SharedAppState, TauriError, TauriResult};
 use chrono::Utc;
-use tauri::State;
+use std::time::Instant;
+use tauri::{AppHandle, Emitter, State};
 use tracing::{debug, info, warn};
 use uuid::Uuid;
 
@@ -390,6 +391,26 @@ pub async fn gitlab_post_comment(
 ) -> TauriResult<PostCommentResponse> {
     let (_account, client) = get_active_client(&state).await?;
 
+    // Check MR state - cannot post to merged or closed MRs
+    let mr = client
+        .get_merge_request(request.project_id, request.mr_iid)
+        .await
+        .map_err(|e| TauriError::api_error(e.to_string()))?;
+
+    match mr.state {
+        crate::gitlab::types::MergeRequestState::Merged => {
+            return Err(TauriError::invalid_input(
+                "Cannot post comment: Merge request has already been merged"
+            ));
+        }
+        crate::gitlab::types::MergeRequestState::Closed => {
+            return Err(TauriError::invalid_input(
+                "Cannot post comment: Merge request is closed"
+            ));
+        }
+        _ => {} // "opened" is valid
+    }
+
     // If as_suggestion, format the body accordingly
     let body = if request.as_suggestion {
         crate::gitlab::comments::format_code_suggestion("", &request.body, None)
@@ -450,4 +471,113 @@ pub async fn gitlab_refresh(
     }
 
     Ok(())
+}
+
+/// Check connection status for a GitLab account
+/// Emits a connection:status event with the result
+#[tauri::command]
+pub async fn gitlab_check_connection(
+    app: AppHandle,
+    state: State<'_, SharedAppState>,
+    account_id: String,
+) -> TauriResult<ConnectionStatusEvent> {
+    // Emit checking status
+    let checking_event = ConnectionStatusEvent {
+        account_id: account_id.clone(),
+        status: ConnectionStatus::Checking,
+        error: None,
+        latency_ms: None,
+    };
+    let _ = app.emit("connection:status", &checking_event);
+
+    // Get the account token
+    let token = match CredentialManager::get_token(&account_id) {
+        Ok(Some(t)) => t,
+        Ok(None) => {
+            let event = ConnectionStatusEvent {
+                account_id: account_id.clone(),
+                status: ConnectionStatus::Error,
+                error: Some("No token found for account".to_string()),
+                latency_ms: None,
+            };
+            let _ = app.emit("connection:status", &event);
+            return Ok(event);
+        }
+        Err(e) => {
+            let event = ConnectionStatusEvent {
+                account_id: account_id.clone(),
+                status: ConnectionStatus::Error,
+                error: Some(format!("Failed to retrieve token: {}", e)),
+                latency_ms: None,
+            };
+            let _ = app.emit("connection:status", &event);
+            return Ok(event);
+        }
+    };
+
+    // Get account instance URL from database
+    let instance_url = {
+        let state = state.read().await;
+        sqlx::query_as::<_, (String,)>("SELECT instance_url FROM gitlab_accounts WHERE id = ?")
+            .bind(&account_id)
+            .fetch_optional(&state.db_pool)
+            .await
+            .map_err(|e| TauriError::cache_error(e.to_string()))?
+            .map(|(url,)| url)
+    };
+
+    let instance_url = match instance_url {
+        Some(url) => url,
+        None => {
+            let event = ConnectionStatusEvent {
+                account_id: account_id.clone(),
+                status: ConnectionStatus::Error,
+                error: Some("Account not found".to_string()),
+                latency_ms: None,
+            };
+            let _ = app.emit("connection:status", &event);
+            return Ok(event);
+        }
+    };
+
+    // Try to connect and measure latency
+    let start = Instant::now();
+    let client = match GitLabClient::new(&instance_url, &token) {
+        Ok(c) => c,
+        Err(e) => {
+            let event = ConnectionStatusEvent {
+                account_id: account_id.clone(),
+                status: ConnectionStatus::Error,
+                error: Some(format!("Failed to create client: {}", e)),
+                latency_ms: None,
+            };
+            let _ = app.emit("connection:status", &event);
+            return Ok(event);
+        }
+    };
+
+    match client.get_current_user().await {
+        Ok(_) => {
+            let latency = start.elapsed().as_millis() as u64;
+            let event = ConnectionStatusEvent {
+                account_id,
+                status: ConnectionStatus::Connected,
+                error: None,
+                latency_ms: Some(latency),
+            };
+            let _ = app.emit("connection:status", &event);
+            Ok(event)
+        }
+        Err(e) => {
+            let latency = start.elapsed().as_millis() as u64;
+            let event = ConnectionStatusEvent {
+                account_id,
+                status: ConnectionStatus::Disconnected,
+                error: Some(e.to_string()),
+                latency_ms: Some(latency),
+            };
+            let _ = app.emit("connection:status", &event);
+            Ok(event)
+        }
+    }
 }

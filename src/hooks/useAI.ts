@@ -2,11 +2,14 @@
  * AI-related hooks using React Query
  */
 
+import { useEffect, useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import * as api from '../services/tauri';
 import type {
   AddProviderRequest,
   AnalyzeDiffRequest,
+  AnalysisProgressEvent,
   UpdateSuggestionRequest,
 } from '../types';
 
@@ -121,4 +124,51 @@ export function useUpdateSuggestionStatus() {
       queryClient.invalidateQueries({ queryKey: ['ai', 'suggestions'] });
     },
   });
+}
+
+/**
+ * Hook to listen for AI analysis progress events
+ * @param mrId - The MR ID to listen for (or null for all MRs)
+ * @param onProgress - Callback when progress updates are received
+ */
+export function useAnalysisProgress(
+  mrId: number | null,
+  onProgress?: (event: AnalysisProgressEvent) => void
+) {
+  const [progress, setProgress] = useState<AnalysisProgressEvent | null>(null);
+
+  const handleProgress = useCallback(
+    (event: AnalysisProgressEvent) => {
+      // Filter by MR ID if specified
+      if (mrId !== null && event.mr_id !== mrId) return;
+
+      setProgress(event);
+      onProgress?.(event);
+    },
+    [mrId, onProgress]
+  );
+
+  useEffect(() => {
+    let unlisten: UnlistenFn | null = null;
+
+    const setupListener = async () => {
+      unlisten = await listen<AnalysisProgressEvent>('ai:analysis_progress', (event) => {
+        handleProgress(event.payload);
+      });
+    };
+
+    setupListener();
+
+    return () => {
+      if (unlisten) {
+        unlisten();
+      }
+    };
+  }, [handleProgress]);
+
+  const reset = useCallback(() => {
+    setProgress(null);
+  }, []);
+
+  return { progress, reset };
 }

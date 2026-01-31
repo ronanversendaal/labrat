@@ -2,7 +2,9 @@
  * GitLab data fetching hooks using React Query
  */
 
+import { useEffect, useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import * as api from '../services/tauri';
 import type {
   ListMergeRequestsRequest,
@@ -10,6 +12,7 @@ import type {
   AddAccountRequest,
   ValidateTokenRequest,
   GetDiffRequest,
+  ConnectionStatusEvent,
 } from '../types';
 import { useMRStore } from '../stores';
 
@@ -172,4 +175,60 @@ export function usePostComment() {
       });
     },
   });
+}
+
+/**
+ * Hook to check connection status for a GitLab account
+ */
+export function useCheckConnection() {
+  return useMutation({
+    mutationFn: (accountId: string) => api.checkConnection(accountId),
+  });
+}
+
+/**
+ * Hook to listen for connection status events
+ * @param accountId - Optional account ID to filter events
+ * @param onStatusChange - Callback when status changes
+ */
+export function useConnectionStatus(
+  accountId?: string,
+  onStatusChange?: (event: ConnectionStatusEvent) => void
+) {
+  const [status, setStatus] = useState<ConnectionStatusEvent | null>(null);
+
+  const handleStatusChange = useCallback(
+    (event: ConnectionStatusEvent) => {
+      // Filter by account ID if specified
+      if (accountId && event.account_id !== accountId) return;
+
+      setStatus(event);
+      onStatusChange?.(event);
+    },
+    [accountId, onStatusChange]
+  );
+
+  useEffect(() => {
+    let unlisten: UnlistenFn | null = null;
+
+    const setupListener = async () => {
+      unlisten = await listen<ConnectionStatusEvent>('connection:status', (event) => {
+        handleStatusChange(event.payload);
+      });
+    };
+
+    setupListener();
+
+    return () => {
+      if (unlisten) {
+        unlisten();
+      }
+    };
+  }, [handleStatusChange]);
+
+  const reset = useCallback(() => {
+    setStatus(null);
+  }, []);
+
+  return { status, reset };
 }

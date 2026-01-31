@@ -172,7 +172,7 @@
 - [x] T079 [US3] Implement line numbers with addition/deletion/modification highlighting in `src/components/mr-detail/DiffView.tsx`
 - [x] T080 [US3] Create FileTree component with expand/collapse in `src/components/mr-detail/FileTree.tsx`
 - [x] T081 [US3] Implement file navigation (next/previous file) in `src/components/mr-detail/DiffView.tsx`
-- [ ] T082 [US3] Create CommitList component in `src/components/mr-detail/CommitList.tsx`
+- [x] T082 [US3] Create CommitList component in `src/components/mr-detail/CommitList.tsx`
 - [x] T083 [US3] Implement "Open in GitLab" button with external link in `src/components/mr-detail/MRDetail.tsx`
 - [x] T084 [US3] Implement progressive loading UI with skeleton for large diffs in `src/components/mr-detail/DiffView.tsx`
 - [ ] T085 [US3] Implement virtualized scrolling for smooth 60fps on large diffs in `src/components/mr-detail/DiffView.tsx`
@@ -200,7 +200,7 @@
 - [x] T094 [US4] Implement `ai_set_default_provider` command in `src-tauri/src/commands/ai.rs`
 - [x] T095 [US4] Implement diff analysis prompt construction in `src-tauri/src/ai/mod.rs`
 - [x] T096 [US4] Implement `ai_analyze_diff` command with streaming progress in `src-tauri/src/commands/ai.rs`
-- [ ] T097 [US4] Implement `ai:analysis_progress` event emission in `src-tauri/src/commands/ai.rs`
+- [x] T097 [US4] Implement `ai:analysis_progress` event emission in `src-tauri/src/commands/ai.rs`
 - [x] T098 [US4] Implement AISuggestion storage in `ai_suggestions` table in `src-tauri/src/cache/db.rs`
 - [x] T099 [US4] Implement `ai_update_suggestion_status` command (pending/accepted/dismissed) in `src-tauri/src/commands/ai.rs`
 
@@ -213,7 +213,7 @@
 - [x] T104 [US4] Implement "Analyze with AI" button for manual triggering in `src/components/mr-detail/MRDetail.tsx`
 - [x] T105 [US4] Implement analysis progress indicator in `src/components/ai/AISuggestions.tsx`
 - [x] T106 [US4] Implement dismiss suggestion action in `src/components/ai/SuggestionCard.tsx`
-- [ ] T107 [US4] Link suggestion to diff line (scroll to line on click) in `src/components/ai/SuggestionCard.tsx`
+- [x] T107 [US4] Link suggestion to diff line (scroll to line on click) in `src/components/ai/SuggestionCard.tsx`
 
 **Checkpoint**: User Story 4 complete - Users can analyze MRs with AI and view categorized suggestions
 
@@ -264,11 +264,11 @@
 - [x] T129 [US6] Implement `cache_get_stats` command in `src-tauri/src/commands/cache.rs`
 - [x] T130 [US6] Implement `cache_clear` command in `src-tauri/src/commands/cache.rs`
 - [x] T131 [US6] Implement `cache_evict_old` command in `src-tauri/src/commands/cache.rs`
-- [ ] T132 [US6] Implement `connection:status` event for account connectivity in `src-tauri/src/commands/gitlab.rs`
+- [x] T132 [US6] Implement `connection:status` event for account connectivity in `src-tauri/src/commands/gitlab.rs`
 
 ### Frontend Implementation for US6
 
-- [ ] T133 [US6] Implement settings Zustand store in `src/stores/settingsStore.ts`
+- [x] T133 [US6] Implement settings Zustand store in `src/stores/settingsStore.ts`
 - [x] T134 [US6] Implement useSettings hook in `src/hooks/useSettings.ts`
 - [x] T135 [US6] Create SettingsPage layout with navigation in `src/components/settings/SettingsPage.tsx`
 - [x] T136 [US6] Create GitLabSettings panel with account management in `src/components/settings/GitLabSettings.tsx`
@@ -305,7 +305,7 @@
 - [x] T151 [US7] Implement "Post as suggestion" action (GitLab apply-able format) in `src/components/ai/SuggestionCard.tsx`
 - [x] T152 [US7] Implement suggestion text editing in `src/components/ai/PostSuggestionModal.tsx`
 - [x] T153 [US7] Implement additional context input in `src/components/ai/PostSuggestionModal.tsx`
-- [ ] T154 [US7] Show success confirmation with link to posted comment in `src/components/ai/PostSuggestionModal.tsx`
+- [x] T154 [US7] Show success confirmation with link to posted comment in `src/components/ai/PostSuggestionModal.tsx`
 - [x] T155 [US7] Update suggestion card to show "Posted" status after successful post
 
 **Checkpoint**: User Story 7 complete - Users can post AI suggestions to GitLab
@@ -318,21 +318,21 @@
 
 ### Error Handling & Edge Cases
 
-- [ ] T156 Handle expired/invalid GitLab token with re-authentication prompt
+- [x] T156 Handle expired/invalid GitLab token with re-authentication prompt
 - [ ] T157 Handle extremely large diffs (10,000+ lines) with chunked loading
-- [ ] T158 Handle "no MRs assigned" empty state with helpful message
-- [ ] T159 Handle GitLab unreachable with offline mode fallback
+- [x] T158 Handle "no MRs assigned" empty state with helpful message
+- [x] T159 Handle GitLab unreachable with offline mode fallback
 - [ ] T160 Handle MR updated/closed while viewing with refresh prompt
-- [ ] T161 Handle project access revoked gracefully
-- [ ] T162 Handle AI analysis timeout with retry option
-- [ ] T163 Handle posting to merged/closed MR with error message
-- [ ] T164 Handle Claude CLI not installed with setup instructions
-- [ ] T165 Handle invalid/rate-limited API keys with clear feedback
-- [ ] T166 Handle account switching mid-session safely
-- [ ] T167 Handle corrupted settings with reset option
+- [x] T161 Handle project access revoked gracefully
+- [x] T162 Handle AI analysis timeout with retry option
+- [x] T163 Handle posting to merged/closed MR with error message
+- [x] T164 Handle Claude CLI not installed with setup instructions
+- [x] T165 Handle invalid/rate-limited API keys with clear feedback
+- [x] T166 Handle account switching mid-session safely
+- [x] T167 Handle corrupted settings with reset option
 - [ ] T168 Handle secure storage unavailable with fallback warning
-- [ ] T169 Handle cache full condition with auto-eviction
-- [ ] T170 Handle slow network with timeout and retry
+- [x] T169 Handle cache full condition with auto-eviction
+- [x] T170 Handle slow network with timeout and retry
 
 ### Performance Optimization
 
@@ -340,14 +340,14 @@
 - [ ] T172 [P] Implement request batching for GitLab API calls in `src-tauri/src/gitlab/client.rs`
 - [ ] T173 [P] Optimize diff rendering with virtualization in `src/components/mr-detail/DiffView.tsx`
 - [ ] T174 [P] Implement lazy loading for off-screen diff content
-- [ ] T175 [P] Add performance tracing with tracing crate in Rust backend
+- [x] T175 [P] Add performance tracing with tracing crate in Rust backend
 
 ### Final Polish
 
 - [ ] T176 Run quickstart.md validation - verify all setup steps work
-- [ ] T177 Review and update all loading states and skeleton UIs
-- [ ] T178 Audit keyboard shortcuts for consistency and conflicts
-- [ ] T179 Ensure all error messages are user-friendly
+- [x] T177 Review and update all loading states and skeleton UIs
+- [x] T178 Audit keyboard shortcuts for consistency and conflicts
+- [x] T179 Ensure all error messages are user-friendly
 - [ ] T180 Final accessibility audit (WCAG 2.1 AA compliance)
 
 ---

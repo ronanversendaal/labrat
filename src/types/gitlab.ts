@@ -291,3 +291,29 @@ export interface CreateFilterPresetRequest {
   filter: MergeRequestFilter;
   search_query?: string;
 }
+
+/** A commit in GitLab */
+export interface Commit {
+  id: string;
+  short_id: string;
+  title: string;
+  message: string;
+  author_name: string;
+  author_email: string;
+  authored_date: string;
+  committer_name: string;
+  committer_email: string;
+  committed_date: string;
+  web_url: string;
+}
+
+/** Connection status for a GitLab account */
+export type ConnectionStatus = 'connected' | 'disconnected' | 'checking' | 'error';
+
+/** Connection status event payload */
+export interface ConnectionStatusEvent {
+  account_id: string;
+  status: ConnectionStatus;
+  error: string | null;
+  latency_ms: number | null;
+}

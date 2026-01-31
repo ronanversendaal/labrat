@@ -5,14 +5,14 @@
 use crate::ai::{
     AIProvider, AIProviderType, AISuggestion, AddProviderRequest, AnalysisContext,
     AnalyzeDiffRequest, AnalyzeDiffResponse, ClaudeCliProvider, CliAvailableResponse,
-    FileContext, SuggestionStatus, UpdateSuggestionRequest,
+    FileContext, SuggestionStatus, UpdateSuggestionRequest, AnalysisProgressEvent, AnalysisStatus,
 };
 use crate::ai::types::AIProvider as AIProviderConfig;
 use crate::settings::credentials::CredentialManager;
 use crate::{SharedAppState, TauriError, TauriResult};
 use chrono::Utc;
 use std::time::Instant;
-use tauri::State;
+use tauri::{AppHandle, Emitter, State};
 use tracing::{debug, info, warn};
 use uuid::Uuid;
 
@@ -169,15 +169,34 @@ pub async fn ai_set_default_provider(
     Ok(())
 }
 
+/// Helper function to emit analysis progress events
+fn emit_progress(app: &AppHandle, mr_id: i64, status: AnalysisStatus, progress: u8, message: &str) {
+    let event = AnalysisProgressEvent {
+        mr_id,
+        status,
+        progress,
+        message: message.to_string(),
+    };
+    if let Err(e) = app.emit("ai:analysis_progress", &event) {
+        warn!("Failed to emit analysis progress event: {}", e);
+    }
+}
+
 /// Analyze a merge request diff with AI
 #[tauri::command]
 pub async fn ai_analyze_diff(
+    app: AppHandle,
     state: State<'_, SharedAppState>,
     request: AnalyzeDiffRequest,
 ) -> TauriResult<AnalyzeDiffResponse> {
     let start_time = Instant::now();
+    let mr_id = request.mr_iid;
+
+    // Emit start event
+    emit_progress(&app, mr_id, AnalysisStatus::Started, 0, "Starting AI analysis...");
 
     // Get the provider to use
+    emit_progress(&app, mr_id, AnalysisStatus::Processing, 10, "Loading AI provider...");
     let (provider_id, provider_type, model) = {
         let state = state.read().await;
 
@@ -194,20 +213,34 @@ pub async fn ai_analyze_diff(
 
         query.fetch_optional(&state.db_pool)
             .await
-            .map_err(|e| TauriError::cache_error(e.to_string()))?
-            .ok_or_else(|| TauriError::ai_error("No AI provider configured"))?
+            .map_err(|e| {
+                emit_progress(&app, mr_id, AnalysisStatus::Error, 0, &format!("Cache error: {}", e));
+                TauriError::cache_error(e.to_string())
+            })?
+            .ok_or_else(|| {
+                emit_progress(&app, mr_id, AnalysisStatus::Error, 0, "No AI provider configured");
+                TauriError::ai_error("No AI provider configured")
+            })?
     };
 
     // Get the diff for this MR
+    emit_progress(&app, mr_id, AnalysisStatus::Processing, 20, "Loading diff...");
     let diff = {
         let state = state.read().await;
         let cache = crate::cache::diff_cache::DiffCache::new(state.db_pool.clone());
         cache.get(request.mr_iid).await
-            .map_err(|e| TauriError::cache_error(e.to_string()))?
-            .ok_or_else(|| TauriError::not_found("Diff not cached"))?
+            .map_err(|e| {
+                emit_progress(&app, mr_id, AnalysisStatus::Error, 0, &format!("Cache error: {}", e));
+                TauriError::cache_error(e.to_string())
+            })?
+            .ok_or_else(|| {
+                emit_progress(&app, mr_id, AnalysisStatus::Error, 0, "Diff not cached - please load the diff first");
+                TauriError::not_found("Diff not cached")
+            })?
     };
 
     // Build analysis context
+    emit_progress(&app, mr_id, AnalysisStatus::Processing, 30, "Preparing analysis context...");
     let context = AnalysisContext {
         mr_id: request.mr_iid,
         mr_title: format!("MR #{}", request.mr_iid), // TODO: Get actual title
@@ -223,42 +256,72 @@ pub async fn ai_analyze_diff(
     };
 
     // Create provider instance and analyze
+    emit_progress(&app, mr_id, AnalysisStatus::Processing, 40, "Sending to AI for analysis...");
     let provider_type_enum = match provider_type.as_str() {
         "claude_cli" => AIProviderType::ClaudeCli,
         "anthropic_api" => AIProviderType::AnthropicApi,
         "openai_api" => AIProviderType::OpenaiApi,
-        _ => return Err(TauriError::ai_error("Unknown provider type")),
+        _ => {
+            emit_progress(&app, mr_id, AnalysisStatus::Error, 0, "Unknown provider type");
+            return Err(TauriError::ai_error("Unknown provider type"));
+        }
     };
 
     let raw_suggestions = match provider_type_enum {
         AIProviderType::ClaudeCli => {
+            emit_progress(&app, mr_id, AnalysisStatus::Processing, 50, "Analyzing with Claude CLI...");
             let provider = ClaudeCliProvider::new(provider_id.clone(), "Claude CLI".to_string(), None);
             provider.analyze(&context).await
-                .map_err(|e| TauriError::ai_error(e.to_string()))?
+                .map_err(|e| {
+                    emit_progress(&app, mr_id, AnalysisStatus::Error, 0, &format!("AI analysis failed: {}", e));
+                    TauriError::ai_error(e.to_string())
+                })?
         }
         AIProviderType::AnthropicApi => {
+            emit_progress(&app, mr_id, AnalysisStatus::Processing, 50, "Analyzing with Anthropic API...");
             let api_key = CredentialManager::get_ai_key(&provider_id)
-                .map_err(|e| TauriError::cache_error(e.to_string()))?
-                .ok_or_else(|| TauriError::ai_error("Anthropic API key not found"))?;
+                .map_err(|e| {
+                    emit_progress(&app, mr_id, AnalysisStatus::Error, 0, "Failed to retrieve API key");
+                    TauriError::cache_error(e.to_string())
+                })?
+                .ok_or_else(|| {
+                    emit_progress(&app, mr_id, AnalysisStatus::Error, 0, "Anthropic API key not found");
+                    TauriError::ai_error("Anthropic API key not found")
+                })?;
             let provider = crate::ai::AnthropicProvider::new(provider_id.clone(), "Anthropic".to_string(), api_key, model);
             provider.analyze(&context).await
-                .map_err(|e| TauriError::ai_error(e.to_string()))?
+                .map_err(|e| {
+                    emit_progress(&app, mr_id, AnalysisStatus::Error, 0, &format!("AI analysis failed: {}", e));
+                    TauriError::ai_error(e.to_string())
+                })?
         }
         AIProviderType::OpenaiApi => {
+            emit_progress(&app, mr_id, AnalysisStatus::Processing, 50, "Analyzing with OpenAI API...");
             let api_key = CredentialManager::get_ai_key(&provider_id)
-                .map_err(|e| TauriError::cache_error(e.to_string()))?
-                .ok_or_else(|| TauriError::ai_error("OpenAI API key not found"))?;
+                .map_err(|e| {
+                    emit_progress(&app, mr_id, AnalysisStatus::Error, 0, "Failed to retrieve API key");
+                    TauriError::cache_error(e.to_string())
+                })?
+                .ok_or_else(|| {
+                    emit_progress(&app, mr_id, AnalysisStatus::Error, 0, "OpenAI API key not found");
+                    TauriError::ai_error("OpenAI API key not found")
+                })?;
             let provider = crate::ai::OpenAIProvider::new(provider_id.clone(), "OpenAI".to_string(), api_key, model);
             provider.analyze(&context).await
-                .map_err(|e| TauriError::ai_error(e.to_string()))?
+                .map_err(|e| {
+                    emit_progress(&app, mr_id, AnalysisStatus::Error, 0, &format!("AI analysis failed: {}", e));
+                    TauriError::ai_error(e.to_string())
+                })?
         }
     };
 
     // Convert raw suggestions to AISuggestion and store
+    emit_progress(&app, mr_id, AnalysisStatus::Processing, 80, "Saving suggestions...");
     let mut suggestions = Vec::new();
     let state = state.read().await;
 
-    for raw in raw_suggestions {
+    let total_suggestions = raw_suggestions.len();
+    for (i, raw) in raw_suggestions.into_iter().enumerate() {
         let suggestion_id = Uuid::new_v4().to_string();
         let suggestion = raw.to_suggestion(suggestion_id.clone(), request.mr_iid, provider_id.clone());
 
@@ -287,10 +350,19 @@ pub async fn ai_analyze_diff(
         }
 
         suggestions.push(suggestion);
+
+        // Update progress for each suggestion saved
+        if total_suggestions > 0 {
+            let progress = 80 + ((i + 1) * 15 / total_suggestions) as u8;
+            emit_progress(&app, mr_id, AnalysisStatus::Processing, progress, &format!("Saved {}/{} suggestions", i + 1, total_suggestions));
+        }
     }
 
     let analysis_time = start_time.elapsed().as_millis() as u64;
     info!("AI analysis complete: {} suggestions in {}ms", suggestions.len(), analysis_time);
+
+    // Emit completion event
+    emit_progress(&app, mr_id, AnalysisStatus::Completed, 100, &format!("Analysis complete: {} suggestions found", suggestions.len()));
 
     Ok(AnalyzeDiffResponse {
         suggestions,

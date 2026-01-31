@@ -8,11 +8,12 @@ import { useAISuggestions, useAnalyzeDiff, useUpdateSuggestionStatus } from '../
 import { usePostComment, useDiff } from '../../hooks/useGitLab';
 import { SuggestionCard } from './SuggestionCard';
 import { PostSuggestionModal } from './PostSuggestionModal';
-import { Button, Skeleton } from '../common';
+import { Button, Skeleton, useToast } from '../common';
 
 interface AISuggestionsPanelProps {
   projectId: number;
   mrIid: number;
+  onJumpToLine?: (filePath: string, line: number) => void;
 }
 
 type FilterCategory = SuggestionCategory | 'all';
@@ -37,11 +38,12 @@ const statusOptions: { value: FilterStatus; label: string }[] = [
   { value: 'posted', label: 'Posted' },
 ];
 
-export function AISuggestionsPanel({ projectId, mrIid }: AISuggestionsPanelProps) {
+export function AISuggestionsPanel({ projectId, mrIid, onJumpToLine }: AISuggestionsPanelProps) {
   const [categoryFilter, setCategoryFilter] = useState<FilterCategory>('all');
   const [statusFilter, setStatusFilter] = useState<FilterStatus>('pending');
   const [postingSuggestion, setPostingSuggestion] = useState<AISuggestion | null>(null);
 
+  const toast = useToast();
   const { data: suggestions, isLoading } = useAISuggestions(mrIid);
   const { data: diff } = useDiff(projectId, mrIid);
   const analyzeMutation = useAnalyzeDiff();
@@ -94,6 +96,12 @@ export function AISuggestionsPanel({ projectId, mrIid }: AISuggestionsPanelProps
             status: 'posted',
           });
           setPostingSuggestion(null);
+          toast.success(
+            `Suggestion posted to GitLab! View it in the MR discussion.`
+          );
+        },
+        onError: (error) => {
+          toast.error(`Failed to post suggestion: ${error.message}`);
         },
       }
     );
@@ -242,6 +250,7 @@ export function AISuggestionsPanel({ projectId, mrIid }: AISuggestionsPanelProps
                 suggestion={suggestion}
                 onUpdateStatus={handleUpdateStatus}
                 onPostToGitLab={handlePostToGitLab}
+                onJumpToLine={onJumpToLine}
                 isUpdating={updateStatusMutation.isPending}
               />
             ))}

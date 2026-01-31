@@ -21,6 +21,7 @@ import type {
   PostCommentRequest,
   PostCommentResponse,
   RefreshRequest,
+  ConnectionStatusEvent,
 } from '../types/gitlab';
 import type {
   AIProvider,
@@ -262,6 +263,13 @@ export async function clearCache(request: ClearCacheRequest = {}): Promise<void>
  */
 export async function evictOldCache(): Promise<EvictCacheResponse> {
   return invokeCommand<EvictCacheResponse>('cache_evict_old');
+}
+
+/**
+ * Check connection status for a GitLab account
+ */
+export async function checkConnection(accountId: string): Promise<ConnectionStatusEvent> {
+  return invokeCommand<ConnectionStatusEvent>('gitlab_check_connection', { accountId });
 }
 
 // ============================================================================

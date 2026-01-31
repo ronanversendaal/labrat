@@ -188,6 +188,7 @@ pub fn run() {
             commands::gitlab::gitlab_get_discussions,
             commands::gitlab::gitlab_post_comment,
             commands::gitlab::gitlab_refresh,
+            commands::gitlab::gitlab_check_connection,
             // AI commands
             commands::ai::ai_list_providers,
             commands::ai::ai_add_provider,
