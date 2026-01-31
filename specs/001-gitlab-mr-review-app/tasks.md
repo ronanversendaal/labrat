@@ -53,9 +53,9 @@
 
 ### Frontend Base Types
 
-- [ ] T020 [P] Define TypeScript types for GitLab entities in `src/types/gitlab.ts` per contracts/tauri-commands.md
-- [ ] T021 [P] Define TypeScript types for AI entities in `src/types/ai.ts`
-- [ ] T022 [P] Define TypeScript types for Settings in `src/types/settings.ts`
+- [x] T020 [P] Define TypeScript types for GitLab entities in `src/types/gitlab.ts` per contracts/tauri-commands.md
+- [x] T021 [P] Define TypeScript types for AI entities in `src/types/ai.ts`
+- [x] T022 [P] Define TypeScript types for Settings in `src/types/settings.ts`
 
 ### Tauri IPC Infrastructure
 
