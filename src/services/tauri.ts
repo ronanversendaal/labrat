@@ -24,6 +24,7 @@ import type {
 } from '../types/gitlab';
 import type {
   AIProvider,
+  AISuggestion,
   AddProviderRequest,
   AnalyzeDiffRequest,
   AnalyzeDiffResponse,
@@ -206,6 +207,13 @@ export async function checkCliAvailable(): Promise<CliAvailableResponse> {
   return invokeCommand<CliAvailableResponse>('ai_check_cli_available');
 }
 
+/**
+ * Get AI suggestions for a merge request
+ */
+export async function getSuggestions(mrId: number): Promise<AISuggestion[]> {
+  return invokeCommand<AISuggestion[]>('ai_get_suggestions', { mrId });
+}
+
 // ============================================================================
 // Settings Commands
 // ============================================================================
@@ -288,6 +296,7 @@ export const ai = {
   analyzeDiff,
   updateSuggestionStatus,
   checkCliAvailable,
+  getSuggestions,
 };
 
 /**

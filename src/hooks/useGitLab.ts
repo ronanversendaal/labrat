@@ -71,6 +71,20 @@ export function useSetActiveAccount() {
 }
 
 /**
+ * Hook to remove a GitLab account
+ */
+export function useRemoveAccount() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (accountId: string) => api.removeAccount(accountId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.accounts });
+    },
+  });
+}
+
+/**
  * Hook to list merge requests with optional filters
  */
 export function useMergeRequests(request?: ListMergeRequestsRequest) {

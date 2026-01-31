@@ -1,22 +1,24 @@
 /**
- * MRDetailView - Full merge request detail view with tabs for description, diff, discussions
+ * MRDetailView - Full merge request detail view with tabs for description, diff, discussions, AI
  */
 
 import { useState, useMemo } from 'react';
 import type { MergeRequest, Discussion } from '../../types';
 import { useDiff, useDiscussions } from '../../hooks/useGitLab';
+import { useAISuggestions } from '../../hooks/useAI';
 import { MRDescription } from './MRDescription';
 import { DiffView } from './DiffView';
 import { FileTree } from './FileTree';
 import { ImpedimentBadge } from '../mr-list/ImpedimentBadge';
 import { Skeleton } from '../common';
+import { AISuggestionsPanel } from '../ai';
 
 interface MRDetailViewProps {
   mr: MergeRequest;
   onClose?: () => void;
 }
 
-type Tab = 'description' | 'changes' | 'discussions';
+type Tab = 'description' | 'changes' | 'discussions' | 'ai';
 
 export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
   const [activeTab, setActiveTab] = useState<Tab>('changes');
@@ -25,6 +27,8 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
 
   const { data: diff, isLoading: isLoadingDiff } = useDiff(mr.project_id, mr.iid);
   const { data: discussions, isLoading: isLoadingDiscussions } = useDiscussions(mr.project_id, mr.iid);
+  const { data: aiSuggestions } = useAISuggestions(mr.iid);
+  const pendingAISuggestions = aiSuggestions?.filter((s) => s.status === 'pending').length || 0;
 
   // Auto-select first file when diff loads
   const selectedFile = useMemo(() => {
@@ -133,6 +137,13 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
           >
             Discussions
           </TabButton>
+          <TabButton
+            active={activeTab === 'ai'}
+            onClick={() => setActiveTab('ai')}
+            badge={pendingAISuggestions > 0 ? pendingAISuggestions : undefined}
+          >
+            AI Review
+          </TabButton>
         </div>
       </div>
 
@@ -202,6 +213,13 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
               <div className="text-center text-gray-500 py-8">No discussions yet</div>
             )}
           </div>
+        )}
+
+        {activeTab === 'ai' && (
+          <AISuggestionsPanel
+            projectId={mr.project_id}
+            mrIid={mr.iid}
+          />
         )}
       </div>
     </div>

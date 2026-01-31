@@ -3,3 +3,4 @@ export { Input } from './Input';
 export { Modal } from './Modal';
 export { Skeleton } from './Skeleton';
 export { ToastProvider, useToast } from './Toast';
+export { KeyboardHelpModal, useKeyboardHelpModal } from './KeyboardHelpModal';

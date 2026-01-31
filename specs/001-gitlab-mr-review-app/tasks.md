@@ -206,13 +206,13 @@
 
 ### Frontend Implementation for US4
 
-- [ ] T100 [US4] Implement useAI hook for analysis triggering in `src/hooks/useAI.ts`
-- [ ] T101 [US4] Create AISuggestions panel component in `src/components/ai/AISuggestions.tsx`
-- [ ] T102 [US4] Create SuggestionCard showing location, category, severity, description in `src/components/ai/SuggestionCard.tsx`
-- [ ] T103 [US4] Implement suggestion category badges (code_quality, potential_bug, performance, security, etc.) in `src/components/ai/SuggestionCard.tsx`
-- [ ] T104 [US4] Implement "Analyze with AI" button for manual triggering in `src/components/mr-detail/MRDetail.tsx`
-- [ ] T105 [US4] Implement analysis progress indicator in `src/components/ai/AISuggestions.tsx`
-- [ ] T106 [US4] Implement dismiss suggestion action in `src/components/ai/SuggestionCard.tsx`
+- [x] T100 [US4] Implement useAI hook for analysis triggering in `src/hooks/useAI.ts`
+- [x] T101 [US4] Create AISuggestions panel component in `src/components/ai/AISuggestions.tsx`
+- [x] T102 [US4] Create SuggestionCard showing location, category, severity, description in `src/components/ai/SuggestionCard.tsx`
+- [x] T103 [US4] Implement suggestion category badges (code_quality, potential_bug, performance, security, etc.) in `src/components/ai/SuggestionCard.tsx`
+- [x] T104 [US4] Implement "Analyze with AI" button for manual triggering in `src/components/mr-detail/MRDetail.tsx`
+- [x] T105 [US4] Implement analysis progress indicator in `src/components/ai/AISuggestions.tsx`
+- [x] T106 [US4] Implement dismiss suggestion action in `src/components/ai/SuggestionCard.tsx`
 - [ ] T107 [US4] Link suggestion to diff line (scroll to line on click) in `src/components/ai/SuggestionCard.tsx`
 
 **Checkpoint**: User Story 4 complete - Users can analyze MRs with AI and view categorized suggestions
@@ -227,19 +227,19 @@
 
 ### Implementation for US5
 
-- [ ] T108 [US5] Create keyboard shortcut registry in `src/services/keyboard.ts`
-- [ ] T109 [US5] Implement platform-aware modifier detection (⌘ on macOS, Ctrl on Windows/Linux) in `src/services/keyboard.ts`
-- [ ] T110 [US5] Implement useKeyboardShortcuts hook in `src/hooks/useKeyboardShortcuts.ts`
-- [ ] T111 [US5] Create KeyboardHelpModal listing all shortcuts in `src/components/common/KeyboardHelpModal.tsx`
-- [ ] T112 [US5] Implement `?` shortcut to show help modal
-- [ ] T113 [P] [US5] Implement global shortcuts: `s`/`/` search, `f` filter, `Esc` close dialogs, `⌘+\` toggle sidebar
-- [ ] T114 [P] [US5] Implement MR list navigation: `Shift+m` my MRs, `Shift+r` review requests
-- [ ] T115 [P] [US5] Implement diff navigation: `]`/`j` next file, `[`/`k` previous file, `n`/`p` threads
-- [ ] T116 [P] [US5] Implement file browser shortcuts: arrows, `Enter` open, `y` permalink, `Shift+f` toggle, `v` mark viewed
-- [ ] T117 [P] [US5] Implement editing shortcuts: `⌘+b` bold, `⌘+i` italic, `⌘+k` link, `⌘+Shift+x` strikethrough, `⌘+Shift+p` preview
-- [ ] T118 [P] [US5] Implement commit navigation: `c` next, `x` previous
-- [ ] T119 [P] [US5] Implement context shortcuts: `e` edit, `l` labels, `a` assignee, `m` milestone, `b` copy branch
-- [ ] T120 [P] [US5] Implement review shortcuts: `⌘+Enter` add to review, `Shift+⌘+Enter` publish, `r` reply with quote
+- [x] T108 [US5] Create keyboard shortcut registry in `src/services/keyboard.ts`
+- [x] T109 [US5] Implement platform-aware modifier detection (⌘ on macOS, Ctrl on Windows/Linux) in `src/services/keyboard.ts`
+- [x] T110 [US5] Implement useKeyboardShortcuts hook in `src/hooks/useKeyboardShortcuts.ts`
+- [x] T111 [US5] Create KeyboardHelpModal listing all shortcuts in `src/components/common/KeyboardHelpModal.tsx`
+- [x] T112 [US5] Implement `?` shortcut to show help modal
+- [x] T113 [P] [US5] Implement global shortcuts: `s`/`/` search, `f` filter, `Esc` close dialogs, `⌘+\` toggle sidebar
+- [x] T114 [P] [US5] Implement MR list navigation: `Shift+m` my MRs, `Shift+r` review requests
+- [x] T115 [P] [US5] Implement diff navigation: `]`/`j` next file, `[`/`k` previous file, `n`/`p` threads
+- [x] T116 [P] [US5] Implement file browser shortcuts: arrows, `Enter` open, `y` permalink, `Shift+f` toggle, `v` mark viewed
+- [x] T117 [P] [US5] Implement editing shortcuts: `⌘+b` bold, `⌘+i` italic, `⌘+k` link, `⌘+Shift+x` strikethrough, `⌘+Shift+p` preview
+- [x] T118 [P] [US5] Implement commit navigation: `c` next, `x` previous
+- [x] T119 [P] [US5] Implement context shortcuts: `e` edit, `l` labels, `a` assignee, `m` milestone, `b` copy branch
+- [x] T120 [P] [US5] Implement review shortcuts: `⌘+Enter` add to review, `Shift+⌘+Enter` publish, `r` reply with quote
 - [ ] T121 [US5] Implement `⌘+p`/`t` quick file picker modal in `src/components/mr-detail/QuickFilePicker.tsx`
 - [ ] T122 [US5] Ensure all interactive elements are focusable and keyboard-accessible
 
@@ -255,30 +255,30 @@
 
 ### Backend Implementation for US6
 
-- [ ] T123 [US6] Implement settings initialization with defaults in `src-tauri/src/settings/config.rs`
-- [ ] T124 [US6] Implement `settings_get` command in `src-tauri/src/commands/settings.rs`
-- [ ] T125 [US6] Implement `settings_update` command in `src-tauri/src/commands/settings.rs`
-- [ ] T126 [US6] Implement `settings_reset` command in `src-tauri/src/commands/settings.rs`
-- [ ] T127 [US6] Implement `gitlab_remove_account` command in `src-tauri/src/commands/gitlab.rs`
-- [ ] T128 [US6] Implement `ai_remove_provider` command in `src-tauri/src/commands/ai.rs`
-- [ ] T129 [US6] Implement `cache_get_stats` command in `src-tauri/src/commands/cache.rs`
-- [ ] T130 [US6] Implement `cache_clear` command in `src-tauri/src/commands/cache.rs`
-- [ ] T131 [US6] Implement `cache_evict_old` command in `src-tauri/src/commands/cache.rs`
+- [x] T123 [US6] Implement settings initialization with defaults in `src-tauri/src/settings/config.rs`
+- [x] T124 [US6] Implement `settings_get` command in `src-tauri/src/commands/settings.rs`
+- [x] T125 [US6] Implement `settings_update` command in `src-tauri/src/commands/settings.rs`
+- [x] T126 [US6] Implement `settings_reset` command in `src-tauri/src/commands/settings.rs`
+- [x] T127 [US6] Implement `gitlab_remove_account` command in `src-tauri/src/commands/gitlab.rs`
+- [x] T128 [US6] Implement `ai_remove_provider` command in `src-tauri/src/commands/ai.rs`
+- [x] T129 [US6] Implement `cache_get_stats` command in `src-tauri/src/commands/cache.rs`
+- [x] T130 [US6] Implement `cache_clear` command in `src-tauri/src/commands/cache.rs`
+- [x] T131 [US6] Implement `cache_evict_old` command in `src-tauri/src/commands/cache.rs`
 - [ ] T132 [US6] Implement `connection:status` event for account connectivity in `src-tauri/src/commands/gitlab.rs`
 
 ### Frontend Implementation for US6
 
 - [ ] T133 [US6] Implement settings Zustand store in `src/stores/settingsStore.ts`
-- [ ] T134 [US6] Implement useSettings hook in `src/hooks/useSettings.ts`
-- [ ] T135 [US6] Create SettingsPage layout with navigation in `src/components/settings/SettingsPage.tsx`
-- [ ] T136 [US6] Create GitLabSettings panel with account management in `src/components/settings/GitLabSettings.tsx`
-- [ ] T137 [US6] Implement add/edit/remove GitLab account forms in `src/components/settings/GitLabSettings.tsx`
-- [ ] T138 [US6] Create AISettings panel with provider management in `src/components/settings/AISettings.tsx`
-- [ ] T139 [US6] Implement Claude CLI detection and configuration in `src/components/settings/AISettings.tsx`
-- [ ] T140 [US6] Implement API key entry for Anthropic/OpenAI in `src/components/settings/AISettings.tsx`
-- [ ] T141 [US6] Implement auto-analyze toggle in `src/components/settings/AISettings.tsx`
-- [ ] T142 [US6] Create GeneralSettings panel (theme, refresh interval, cache) in `src/components/settings/GeneralSettings.tsx`
-- [ ] T143 [US6] Implement "Reset to defaults" with confirmation dialog in `src/components/settings/SettingsPage.tsx`
+- [x] T134 [US6] Implement useSettings hook in `src/hooks/useSettings.ts`
+- [x] T135 [US6] Create SettingsPage layout with navigation in `src/components/settings/SettingsPage.tsx`
+- [x] T136 [US6] Create GitLabSettings panel with account management in `src/components/settings/GitLabSettings.tsx`
+- [x] T137 [US6] Implement add/edit/remove GitLab account forms in `src/components/settings/GitLabSettings.tsx`
+- [x] T138 [US6] Create AISettings panel with provider management in `src/components/settings/AISettings.tsx`
+- [x] T139 [US6] Implement Claude CLI detection and configuration in `src/components/settings/AISettings.tsx`
+- [x] T140 [US6] Implement API key entry for Anthropic/OpenAI in `src/components/settings/AISettings.tsx`
+- [x] T141 [US6] Implement auto-analyze toggle in `src/components/settings/AISettings.tsx`
+- [x] T142 [US6] Create GeneralSettings panel (theme, refresh interval, cache) in `src/components/settings/GeneralSettings.tsx`
+- [x] T143 [US6] Implement "Reset to defaults" with confirmation dialog in `src/components/settings/SettingsPage.tsx`
 - [ ] T144 [US6] Display connection status indicators for each service in settings
 
 **Checkpoint**: User Story 6 complete - Users can configure all app settings
