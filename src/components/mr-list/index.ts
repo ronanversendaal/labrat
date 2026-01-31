@@ -4,3 +4,4 @@ export { MRCard } from './MRCard';
 export { ImpedimentBadge } from './ImpedimentBadge';
 export { MRListPage } from './MRListPage';
 export { MRDetail } from './MRDetail';
+export { MRFilters } from './MRFilters';

@@ -125,20 +125,20 @@
 
 ### Backend Implementation for US2
 
-- [ ] T054 [US2] Extend `gitlab_list_merge_requests` command to accept filter parameters in `src-tauri/src/commands/gitlab.rs`
-- [ ] T055 [US2] Implement filter logic for project_id, author_username, labels, state in `src-tauri/src/gitlab/merge_requests.rs`
-- [ ] T056 [US2] Implement client-side filtering for impediment types (conflicts, pipeline_failed, draft) in `src-tauri/src/commands/gitlab.rs`
-- [ ] T057 [US2] Implement text search across MR title/description in `src-tauri/src/commands/gitlab.rs`
-- [ ] T058 [US2] Implement filter preset storage in `filter_presets` table in `src-tauri/src/cache/db.rs`
+- [x] T054 [US2] Extend `gitlab_list_merge_requests` command to accept filter parameters in `src-tauri/src/commands/gitlab.rs`
+- [x] T055 [US2] Implement filter logic for project_id, author_username, labels, state in `src-tauri/src/gitlab/merge_requests.rs`
+- [x] T056 [US2] Implement client-side filtering for impediment types (conflicts, pipeline_failed, draft) in `src-tauri/src/commands/gitlab.rs`
+- [x] T057 [US2] Implement text search across MR title/description in `src-tauri/src/commands/gitlab.rs`
+- [x] T058 [US2] Implement filter preset storage in `filter_presets` table in `src-tauri/src/cache/db.rs`
 
 ### Frontend Implementation for US2
 
-- [ ] T059 [US2] Implement UI store for filter state in `src/stores/uiStore.ts`
-- [ ] T060 [US2] Create MRFilters component with dropdowns for project, author, impediment in `src/components/mr-list/MRFilters.tsx`
-- [ ] T061 [US2] Implement search input with debounced text search in `src/components/mr-list/MRFilters.tsx`
-- [ ] T062 [US2] Implement "Clear all filters" button in `src/components/mr-list/MRFilters.tsx`
-- [ ] T063 [US2] Implement filter combination logic in `src/hooks/useGitLab.ts`
-- [ ] T064 [US2] Persist filter state across sessions via settings in `src/stores/uiStore.ts`
+- [x] T059 [US2] Implement UI store for filter state in `src/stores/uiStore.ts`
+- [x] T060 [US2] Create MRFilters component with dropdowns for project, author, impediment in `src/components/mr-list/MRFilters.tsx`
+- [x] T061 [US2] Implement search input with debounced text search in `src/components/mr-list/MRFilters.tsx`
+- [x] T062 [US2] Implement "Clear all filters" button in `src/components/mr-list/MRFilters.tsx`
+- [x] T063 [US2] Implement filter combination logic in `src/hooks/useGitLab.ts`
+- [x] T064 [US2] Persist filter state across sessions via settings in `src/stores/uiStore.ts`
 
 **Checkpoint**: User Story 2 complete - Users can filter and search their MR queue
 

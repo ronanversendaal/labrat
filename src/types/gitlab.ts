@@ -275,3 +275,19 @@ export interface RefreshRequest {
     mr_iid: number;
   };
 }
+
+/** A saved filter preset */
+export interface FilterPreset {
+  id: string;
+  name: string;
+  filter: MergeRequestFilter;
+  search_query: string | null;
+  created_at: string;
+}
+
+/** Request to create a filter preset */
+export interface CreateFilterPresetRequest {
+  name: string;
+  filter: MergeRequestFilter;
+  search_query?: string;
+}

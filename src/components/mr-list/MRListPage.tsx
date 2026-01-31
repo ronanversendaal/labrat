@@ -3,8 +3,10 @@
  * Wires MRList to Tauri backend via useGitLab hooks
  */
 
+import { useMemo } from 'react';
 import { useMergeRequests, useRefresh, useAccounts } from '../../hooks/useGitLab';
 import { MRList } from './MRList';
+import { MRFilters } from './MRFilters';
 import { useMRStore } from '../../stores';
 import { MRDetail } from './MRDetail';
 
@@ -20,6 +22,28 @@ export function MRListPage() {
   };
 
   const hasActiveAccount = accounts?.some((a) => a.is_active);
+
+  // Extract unique projects and authors from MRs for filter dropdowns
+  const { projects, authors } = useMemo(() => {
+    if (!mergeRequests?.length) {
+      return { projects: [], authors: [] };
+    }
+
+    const projectMap = new Map<number, string>();
+    const authorMap = new Map<string, string>();
+
+    for (const mr of mergeRequests) {
+      if (mr.project_path) {
+        projectMap.set(mr.project_id, mr.project_path);
+      }
+      authorMap.set(mr.author.username, mr.author.name);
+    }
+
+    return {
+      projects: Array.from(projectMap.entries()).map(([id, path]) => ({ id, path })),
+      authors: Array.from(authorMap.entries()).map(([username, name]) => ({ username, name })),
+    };
+  }, [mergeRequests]);
 
   // If no accounts configured, show setup prompt
   if (!isLoading && accounts && accounts.length === 0) {
@@ -62,6 +86,8 @@ export function MRListPage() {
               <RefreshIcon spinning={refreshMutation.isPending} />
             </button>
           </div>
+
+          <MRFilters projects={projects} authors={authors} />
 
           <MRList
             mergeRequests={mergeRequests ?? []}

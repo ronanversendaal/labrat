@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import type { MergeRequest, MergeRequestFilter, MergeRequestSort } from '../types/gitlab';
 import type { AISuggestion } from '../types/ai';
 
@@ -36,52 +37,68 @@ const defaultSort: MergeRequestSort = {
   direction: 'desc',
 };
 
-export const useMRStore = create<MRState>((set) => ({
-  // Initial state
-  selectedMrId: null,
-  selectedMr: null,
-  filter: defaultFilter,
-  sort: defaultSort,
-  searchQuery: '',
-  groupBy: 'none',
-  expandedFiles: new Set(),
-  selectedSuggestion: null,
-
-  // Actions
-  setSelectedMr: (mr) =>
-    set({
-      selectedMr: mr,
-      selectedMrId: mr?.id ?? null,
-      selectedSuggestion: null, // Clear suggestion when changing MR
-    }),
-
-  setFilter: (newFilter) =>
-    set((state) => ({
-      filter: { ...state.filter, ...newFilter },
-    })),
-
-  setSort: (sort) => set({ sort }),
-
-  setSearchQuery: (searchQuery) => set({ searchQuery }),
-
-  setGroupBy: (groupBy) => set({ groupBy }),
-
-  clearFilters: () =>
-    set({
+export const useMRStore = create<MRState>()(
+  persist(
+    (set) => ({
+      // Initial state
+      selectedMrId: null,
+      selectedMr: null,
       filter: defaultFilter,
+      sort: defaultSort,
       searchQuery: '',
-    }),
+      groupBy: 'none',
+      expandedFiles: new Set(),
+      selectedSuggestion: null,
 
-  toggleFileExpanded: (filePath) =>
-    set((state) => {
-      const newExpanded = new Set(state.expandedFiles);
-      if (newExpanded.has(filePath)) {
-        newExpanded.delete(filePath);
-      } else {
-        newExpanded.add(filePath);
-      }
-      return { expandedFiles: newExpanded };
-    }),
+      // Actions
+      setSelectedMr: (mr) =>
+        set({
+          selectedMr: mr,
+          selectedMrId: mr?.id ?? null,
+          selectedSuggestion: null, // Clear suggestion when changing MR
+        }),
 
-  setSelectedSuggestion: (selectedSuggestion) => set({ selectedSuggestion }),
-}));
+      setFilter: (newFilter) =>
+        set((state) => ({
+          filter: { ...state.filter, ...newFilter },
+        })),
+
+      setSort: (sort) => set({ sort }),
+
+      setSearchQuery: (searchQuery) => set({ searchQuery }),
+
+      setGroupBy: (groupBy) => set({ groupBy }),
+
+      clearFilters: () =>
+        set({
+          filter: defaultFilter,
+          searchQuery: '',
+        }),
+
+      toggleFileExpanded: (filePath) =>
+        set((state) => {
+          const newExpanded = new Set(state.expandedFiles);
+          if (newExpanded.has(filePath)) {
+            newExpanded.delete(filePath);
+          } else {
+            newExpanded.add(filePath);
+          }
+          return { expandedFiles: newExpanded };
+        }),
+
+      setSelectedSuggestion: (selectedSuggestion) => set({ selectedSuggestion }),
+    }),
+    {
+      name: 'gitlab-mr-review-filters',
+      version: 1,
+      storage: createJSONStorage(() => localStorage),
+      // Only persist filter-related state
+      partialize: (state) => ({
+        filter: state.filter,
+        sort: state.sort,
+        searchQuery: state.searchQuery,
+        groupBy: state.groupBy,
+      }),
+    }
+  )
+);

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-type ModalType = 'addAccount' | 'settings' | 'aiProvider' | 'postComment' | null;
+type ModalType = 'addAccount' | 'settings' | 'aiProvider' | 'postComment' | 'saveFilterPreset' | null;
 
 interface UIState {
   // Sidebar
@@ -19,6 +19,9 @@ interface UIState {
   isRefreshing: boolean;
   isAnalyzing: boolean;
 
+  // Filter panel
+  filterPanelExpanded: boolean;
+
   // Actions
   toggleSidebar: () => void;
   setSidebarCollapsed: (collapsed: boolean) => void;
@@ -29,6 +32,8 @@ interface UIState {
   setFontSize: (size: number) => void;
   setRefreshing: (isRefreshing: boolean) => void;
   setAnalyzing: (isAnalyzing: boolean) => void;
+  toggleFilterPanel: () => void;
+  setFilterPanelExpanded: (expanded: boolean) => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -41,6 +46,7 @@ export const useUIStore = create<UIState>((set) => ({
   fontSize: 14,
   isRefreshing: false,
   isAnalyzing: false,
+  filterPanelExpanded: true,
 
   // Actions
   toggleSidebar: () =>
@@ -64,4 +70,9 @@ export const useUIStore = create<UIState>((set) => ({
   setRefreshing: (isRefreshing) => set({ isRefreshing }),
 
   setAnalyzing: (isAnalyzing) => set({ isAnalyzing }),
+
+  toggleFilterPanel: () =>
+    set((state) => ({ filterPanelExpanded: !state.filterPanelExpanded })),
+
+  setFilterPanelExpanded: (filterPanelExpanded) => set({ filterPanelExpanded }),
 }));
