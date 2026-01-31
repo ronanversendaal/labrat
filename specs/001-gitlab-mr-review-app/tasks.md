@@ -189,20 +189,20 @@
 
 ### Backend Implementation for US4
 
-- [ ] T086 [US4] Define AIProvider trait in `src-tauri/src/ai/provider.rs`
-- [ ] T087 [US4] Implement Claude CLI backend in `src-tauri/src/ai/claude_cli.rs` (subprocess with stdin/stdout JSON)
-- [ ] T088 [US4] Implement `ai_check_cli_available` command to detect Claude CLI in `src-tauri/src/commands/ai.rs`
-- [ ] T089 [US4] Implement Anthropic API backend in `src-tauri/src/ai/anthropic.rs`
-- [ ] T090 [US4] Implement OpenAI API backend in `src-tauri/src/ai/openai.rs`
-- [ ] T091 [US4] Implement AI provider storage in `ai_providers` table in `src-tauri/src/cache/db.rs`
-- [ ] T092 [US4] Implement `ai_list_providers` command in `src-tauri/src/commands/ai.rs`
-- [ ] T093 [US4] Implement `ai_add_provider` command with API key storage in keychain in `src-tauri/src/commands/ai.rs`
-- [ ] T094 [US4] Implement `ai_set_default_provider` command in `src-tauri/src/commands/ai.rs`
-- [ ] T095 [US4] Implement diff analysis prompt construction in `src-tauri/src/ai/mod.rs`
-- [ ] T096 [US4] Implement `ai_analyze_diff` command with streaming progress in `src-tauri/src/commands/ai.rs`
+- [x] T086 [US4] Define AIProvider trait in `src-tauri/src/ai/provider.rs`
+- [x] T087 [US4] Implement Claude CLI backend in `src-tauri/src/ai/claude_cli.rs` (subprocess with stdin/stdout JSON)
+- [x] T088 [US4] Implement `ai_check_cli_available` command to detect Claude CLI in `src-tauri/src/commands/ai.rs`
+- [x] T089 [US4] Implement Anthropic API backend in `src-tauri/src/ai/anthropic.rs`
+- [x] T090 [US4] Implement OpenAI API backend in `src-tauri/src/ai/openai.rs`
+- [x] T091 [US4] Implement AI provider storage in `ai_providers` table in `src-tauri/src/cache/db.rs`
+- [x] T092 [US4] Implement `ai_list_providers` command in `src-tauri/src/commands/ai.rs`
+- [x] T093 [US4] Implement `ai_add_provider` command with API key storage in keychain in `src-tauri/src/commands/ai.rs`
+- [x] T094 [US4] Implement `ai_set_default_provider` command in `src-tauri/src/commands/ai.rs`
+- [x] T095 [US4] Implement diff analysis prompt construction in `src-tauri/src/ai/mod.rs`
+- [x] T096 [US4] Implement `ai_analyze_diff` command with streaming progress in `src-tauri/src/commands/ai.rs`
 - [ ] T097 [US4] Implement `ai:analysis_progress` event emission in `src-tauri/src/commands/ai.rs`
-- [ ] T098 [US4] Implement AISuggestion storage in `ai_suggestions` table in `src-tauri/src/cache/db.rs`
-- [ ] T099 [US4] Implement `ai_update_suggestion_status` command (pending/accepted/dismissed) in `src-tauri/src/commands/ai.rs`
+- [x] T098 [US4] Implement AISuggestion storage in `ai_suggestions` table in `src-tauri/src/cache/db.rs`
+- [x] T099 [US4] Implement `ai_update_suggestion_status` command (pending/accepted/dismissed) in `src-tauri/src/commands/ai.rs`
 
 ### Frontend Implementation for US4
 

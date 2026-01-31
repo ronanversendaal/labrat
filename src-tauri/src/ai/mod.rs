@@ -9,4 +9,8 @@ pub mod openai;
 pub mod provider;
 pub mod types;
 
+pub use anthropic::AnthropicProvider;
+pub use claude_cli::ClaudeCliProvider;
+pub use openai::OpenAIProvider;
+pub use provider::{AIError, AIProvider, AnalysisContext, FileContext, build_analysis_prompt};
 pub use types::*;

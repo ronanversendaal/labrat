@@ -196,6 +196,7 @@ pub fn run() {
             commands::ai::ai_analyze_diff,
             commands::ai::ai_update_suggestion_status,
             commands::ai::ai_check_cli_available,
+            commands::ai::ai_get_suggestions,
             // Settings commands
             commands::settings::settings_get,
             commands::settings::settings_update,
