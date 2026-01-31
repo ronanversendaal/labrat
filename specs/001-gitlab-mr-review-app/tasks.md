@@ -70,8 +70,8 @@
 - [x] T028 [P] Create Skeleton loader component in `src/components/common/Skeleton.tsx`
 - [x] T029 [P] Create Toast notification component in `src/components/common/Toast.tsx`
 - [x] T030 Create app layout with Sidebar, Header, MainContent in `src/components/layout/`
-- [ ] T031 Setup React Query provider in `src/App.tsx`
-- [ ] T032 Setup Zustand stores structure in `src/stores/` (mrStore, uiStore, settingsStore)
+- [x] T031 Setup React Query provider in `src/App.tsx`
+- [x] T032 Setup Zustand stores structure in `src/stores/` (mrStore, uiStore, settingsStore)
 
 ### GitLab API Client Foundation
 
