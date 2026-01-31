@@ -10,6 +10,7 @@ import type { UpdateSettingsRequest, ClearCacheRequest } from '../types';
 export const settingsQueryKeys = {
   settings: ['settings'] as const,
   cacheStats: ['cache', 'stats'] as const,
+  secureStorage: ['settings', 'secureStorage'] as const,
 };
 
 /**
@@ -87,5 +88,17 @@ export function useEvictCache() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: settingsQueryKeys.cacheStats });
     },
+  });
+}
+
+/**
+ * Hook to check if secure storage (keychain) is available
+ */
+export function useSecureStorageStatus() {
+  return useQuery({
+    queryKey: settingsQueryKeys.secureStorage,
+    queryFn: api.checkSecureStorage,
+    staleTime: Infinity, // Check once per session
+    gcTime: Infinity, // Never garbage collect
   });
 }

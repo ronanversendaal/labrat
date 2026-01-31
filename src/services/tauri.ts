@@ -39,6 +39,7 @@ import type {
   ClearCacheRequest,
   EvictCacheResponse,
   TauriError,
+  SecureStorageStatus,
 } from '../types/settings';
 
 /**
@@ -270,6 +271,13 @@ export async function evictOldCache(): Promise<EvictCacheResponse> {
  */
 export async function checkConnection(accountId: string): Promise<ConnectionStatusEvent> {
   return invokeCommand<ConnectionStatusEvent>('gitlab_check_connection', { accountId });
+}
+
+/**
+ * Check if secure storage (keychain) is available
+ */
+export async function checkSecureStorage(): Promise<SecureStorageStatus> {
+  return invokeCommand<SecureStorageStatus>('settings_check_secure_storage');
 }
 
 // ============================================================================

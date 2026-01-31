@@ -279,7 +279,7 @@
 - [x] T141 [US6] Implement auto-analyze toggle in `src/components/settings/AISettings.tsx`
 - [x] T142 [US6] Create GeneralSettings panel (theme, refresh interval, cache) in `src/components/settings/GeneralSettings.tsx`
 - [x] T143 [US6] Implement "Reset to defaults" with confirmation dialog in `src/components/settings/SettingsPage.tsx`
-- [ ] T144 [US6] Display connection status indicators for each service in settings
+- [x] T144 [US6] Display connection status indicators for each service in settings
 
 **Checkpoint**: User Story 6 complete - Users can configure all app settings
 
@@ -330,7 +330,7 @@
 - [x] T165 Handle invalid/rate-limited API keys with clear feedback
 - [x] T166 Handle account switching mid-session safely
 - [x] T167 Handle corrupted settings with reset option
-- [ ] T168 Handle secure storage unavailable with fallback warning
+- [x] T168 Handle secure storage unavailable with fallback warning
 - [x] T169 Handle cache full condition with auto-eviction
 - [x] T170 Handle slow network with timeout and retry
 

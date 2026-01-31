@@ -202,6 +202,7 @@ pub fn run() {
             commands::settings::settings_get,
             commands::settings::settings_update,
             commands::settings::settings_reset,
+            commands::settings::settings_check_secure_storage,
             // Cache commands
             commands::cache::cache_get_stats,
             commands::cache::cache_clear,

@@ -2,16 +2,25 @@
  * GitLabSettings - GitLab account management settings panel
  */
 
-import { useState } from 'react';
-import { useAccounts, useAddAccount, useRemoveAccount, useSetActiveAccount } from '../../hooks/useGitLab';
+import { useState, useEffect } from 'react';
+import {
+  useAccounts,
+  useAddAccount,
+  useRemoveAccount,
+  useSetActiveAccount,
+  useCheckConnection,
+  useConnectionStatus,
+} from '../../hooks/useGitLab';
 import { Button, Input, Modal, Skeleton } from '../common';
-import type { AddAccountRequest } from '../../types';
+import type { AddAccountRequest, ConnectionStatus } from '../../types';
 
 export function GitLabSettings() {
   const { data: accounts, isLoading } = useAccounts();
   const addMutation = useAddAccount();
   const removeMutation = useRemoveAccount();
   const setActiveMutation = useSetActiveAccount();
+  const checkConnectionMutation = useCheckConnection();
+  const [connectionStatuses, setConnectionStatuses] = useState<Record<string, ConnectionStatus>>({});
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [showRemoveModal, setShowRemoveModal] = useState<string | null>(null);
@@ -20,6 +29,23 @@ export function GitLabSettings() {
     instance_url: 'https://gitlab.com',
     access_token: '',
   });
+
+  // Listen for connection status events
+  useConnectionStatus(undefined, (event) => {
+    setConnectionStatuses((prev) => ({
+      ...prev,
+      [event.account_id]: event.status,
+    }));
+  });
+
+  // Check connection status for all accounts on mount
+  useEffect(() => {
+    if (accounts?.length) {
+      accounts.forEach((account) => {
+        checkConnectionMutation.mutate(account.id);
+      });
+    }
+  }, [accounts?.length]); // Only run when accounts change
 
   const handleAddAccount = (e: React.FormEvent) => {
     e.preventDefault();
@@ -118,6 +144,10 @@ export function GitLabSettings() {
                         Active
                       </span>
                     )}
+                    <ConnectionStatusIndicator
+                      status={connectionStatuses[account.id]}
+                      onRefresh={() => checkConnectionMutation.mutate(account.id)}
+                    />
                   </div>
                   <span className="text-sm text-gray-500 dark:text-gray-400">
                     {account.instance_url}
@@ -227,5 +257,44 @@ export function GitLabSettings() {
         </div>
       </Modal>
     </div>
+  );
+}
+
+function ConnectionStatusIndicator({
+  status,
+  onRefresh,
+}: {
+  status?: ConnectionStatus;
+  onRefresh?: () => void;
+}) {
+  if (!status) {
+    return (
+      <span className="inline-flex items-center gap-1 text-xs text-gray-400">
+        <span className="w-2 h-2 rounded-full bg-gray-300 dark:bg-gray-600" />
+        Unknown
+      </span>
+    );
+  }
+
+  const statusConfig: Record<ConnectionStatus, { color: string; bgColor: string; label: string }> = {
+    connected: { color: 'text-green-600 dark:text-green-400', bgColor: 'bg-green-500', label: 'Connected' },
+    disconnected: { color: 'text-red-600 dark:text-red-400', bgColor: 'bg-red-500', label: 'Disconnected' },
+    checking: { color: 'text-yellow-600 dark:text-yellow-400', bgColor: 'bg-yellow-500', label: 'Checking...' },
+    error: { color: 'text-red-600 dark:text-red-400', bgColor: 'bg-red-500', label: 'Error' },
+  };
+
+  const config = statusConfig[status];
+
+  return (
+    <button
+      onClick={onRefresh}
+      className={`inline-flex items-center gap-1 text-xs ${config.color} hover:opacity-80`}
+      title="Click to refresh connection status"
+    >
+      <span
+        className={`w-2 h-2 rounded-full ${config.bgColor} ${status === 'checking' ? 'animate-pulse' : ''}`}
+      />
+      {config.label}
+    </button>
   );
 }

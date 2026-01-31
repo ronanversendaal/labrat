@@ -84,3 +84,9 @@ export type ErrorCode =
   | 'invalid_token'
   | 'invalid_url'
   | 'duplicate_name';
+
+/** Secure storage availability status */
+export interface SecureStorageStatus {
+  available: boolean;
+  warning: string | null;
+}

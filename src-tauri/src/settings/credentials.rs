@@ -168,6 +168,28 @@ impl Default for CredentialStore {
 pub struct CredentialManager;
 
 impl CredentialManager {
+    /// Check if secure storage (keyring) is available on this system
+    /// Returns Ok(true) if available, Ok(false) if not, or an error if check failed
+    pub fn is_secure_storage_available() -> Result<bool, CredentialError> {
+        // Try to create a test entry to verify keyring access
+        let test_name = "storage-check-test";
+        let entry = Entry::new(SERVICE_NAME, test_name)
+            .map_err(|e| CredentialError::KeyringAccess(e.to_string()))?;
+
+        // Try to store and immediately delete a test value
+        match entry.set_password("test") {
+            Ok(()) => {
+                // Storage works, clean up
+                let _ = entry.delete_credential();
+                Ok(true)
+            }
+            Err(e) => {
+                warn!("Secure storage check failed: {}", e);
+                Ok(false)
+            }
+        }
+    }
+
     /// Store a GitLab token for an account
     pub fn store_token(account_id: &str, token: &str) -> Result<(), CredentialError> {
         CredentialStore::new().store(CredentialType::GitLabToken, account_id, token)

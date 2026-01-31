@@ -3,7 +3,9 @@
 //! This module contains all settings-related IPC commands.
 
 use crate::settings::config::{DiffViewMode, Settings, Theme, UpdateSettingsRequest};
+use crate::settings::credentials::CredentialManager;
 use crate::{SharedAppState, TauriError, TauriResult};
+use serde::{Deserialize, Serialize};
 use tauri::State;
 use tracing::info;
 
@@ -139,4 +141,34 @@ async fn save_settings(pool: &sqlx::SqlitePool, settings: &Settings) -> TauriRes
     .map_err(|e| TauriError::cache_error(e.to_string()))?;
 
     Ok(())
+}
+
+/// Response from secure storage availability check
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SecureStorageStatus {
+    pub available: bool,
+    pub warning: Option<String>,
+}
+
+/// Check if secure storage (keychain/keyring) is available
+#[tauri::command]
+pub async fn settings_check_secure_storage() -> TauriResult<SecureStorageStatus> {
+    match CredentialManager::is_secure_storage_available() {
+        Ok(true) => Ok(SecureStorageStatus {
+            available: true,
+            warning: None,
+        }),
+        Ok(false) => Ok(SecureStorageStatus {
+            available: false,
+            warning: Some(
+                "Secure storage is not available on this system. Credentials will be stored less securely. \
+                 Consider installing a keyring daemon (e.g., GNOME Keyring, KWallet) for better security."
+                    .to_string(),
+            ),
+        }),
+        Err(e) => Ok(SecureStorageStatus {
+            available: false,
+            warning: Some(format!("Failed to check secure storage: {}", e)),
+        }),
+    }
 }
