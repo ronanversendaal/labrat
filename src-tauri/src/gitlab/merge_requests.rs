@@ -14,15 +14,19 @@ impl GitLabClient {
     ///
     /// This combines MRs where the user is a reviewer with MRs where they are assigned
     pub async fn get_assigned_merge_requests(&self) -> Result<Vec<MergeRequest>, GitLabClientError> {
-        // Fetch MRs where the current user is a reviewer
+        // Get current user ID for reviewer query (some GitLab versions don't support "self")
+        let current_user = self.get_current_user().await?;
+        let user_id = current_user.id;
+
+        // Fetch MRs where the current user is assigned
         let path = "/merge_requests?scope=assigned_to_me&state=opened";
         debug!("Fetching assigned MRs: {}", path);
         let assigned: Vec<MergeRequest> = self.get_all_pages(path, DEFAULT_PER_PAGE).await?;
 
-        // Fetch MRs where the current user is a reviewer
-        let review_path = "/merge_requests?scope=all&reviewer_id=self&state=opened";
+        // Fetch MRs where the current user is a reviewer (use numeric ID for compatibility)
+        let review_path = format!("/merge_requests?scope=all&reviewer_id={}&state=opened", user_id);
         debug!("Fetching review MRs: {}", review_path);
-        let for_review: Vec<MergeRequest> = self.get_all_pages(review_path, DEFAULT_PER_PAGE).await?;
+        let for_review: Vec<MergeRequest> = self.get_all_pages(&review_path, DEFAULT_PER_PAGE).await?;
 
         // Merge and deduplicate by ID
         let mut all_mrs = assigned;

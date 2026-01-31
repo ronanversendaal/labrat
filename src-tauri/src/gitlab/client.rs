@@ -2,12 +2,15 @@
 //!
 //! This module provides a wrapper around reqwest for making
 //! authenticated requests to the GitLab API with proper
-//! error handling, rate limiting, and retry logic.
+//! error handling, rate limiting, retry logic, and request cancellation.
 
 use reqwest::{header, Client, Response, StatusCode};
 use serde::de::DeserializeOwned;
+use std::sync::Arc;
 use std::time::Duration;
 use thiserror::Error;
+use tokio::select;
+use tokio_util::sync::CancellationToken;
 use tracing::{debug, warn};
 
 /// Default timeout for API requests
@@ -45,6 +48,9 @@ pub enum GitLabClientError {
 
     #[error("JSON parsing error: {0}")]
     JsonError(#[from] serde_json::Error),
+
+    #[error("Request cancelled")]
+    Cancelled,
 }
 
 /// GitLab API client
@@ -86,66 +92,107 @@ impl GitLabClient {
 
     /// Make a GET request to the GitLab API
     pub async fn get<T: DeserializeOwned>(&self, path: &str) -> Result<T, GitLabClientError> {
+        self.get_with_cancel(path, None).await
+    }
+
+    /// Make a GET request to the GitLab API with cancellation support
+    pub async fn get_with_cancel<T: DeserializeOwned>(
+        &self,
+        path: &str,
+        cancel_token: Option<CancellationToken>,
+    ) -> Result<T, GitLabClientError> {
         let url = format!("{}{}", self.base_url, path);
         debug!("GET {}", url);
 
-        let response = self.execute_with_retry(|| async {
-            self.client
-                .get(&url)
-                .header(header::AUTHORIZATION, format!("Bearer {}", self.access_token))
-                .header(header::ACCEPT, "application/json")
-                .send()
-                .await
-        })
-        .await?;
+        let response = self
+            .execute_with_retry_and_cancel(
+                || async {
+                    self.client
+                        .get(&url)
+                        .header(header::AUTHORIZATION, format!("Bearer {}", self.access_token))
+                        .header(header::ACCEPT, "application/json")
+                        .send()
+                        .await
+                },
+                cancel_token.clone(),
+            )
+            .await?;
 
         self.handle_response(response).await
     }
 
     /// Make a POST request to the GitLab API
-    pub async fn post<T: DeserializeOwned, B: serde::Serialize>(
+    pub async fn post<T: DeserializeOwned, B: serde::Serialize + Sync>(
         &self,
         path: &str,
         body: &B,
     ) -> Result<T, GitLabClientError> {
+        self.post_with_cancel(path, body, None).await
+    }
+
+    /// Make a POST request to the GitLab API with cancellation support
+    pub async fn post_with_cancel<T: DeserializeOwned, B: serde::Serialize + Sync>(
+        &self,
+        path: &str,
+        body: &B,
+        cancel_token: Option<CancellationToken>,
+    ) -> Result<T, GitLabClientError> {
         let url = format!("{}{}", self.base_url, path);
         debug!("POST {}", url);
 
-        let response = self.execute_with_retry(|| async {
-            self.client
-                .post(&url)
-                .header(header::AUTHORIZATION, format!("Bearer {}", self.access_token))
-                .header(header::ACCEPT, "application/json")
-                .header(header::CONTENT_TYPE, "application/json")
-                .json(body)
-                .send()
-                .await
-        })
-        .await?;
+        let response = self
+            .execute_with_retry_and_cancel(
+                || async {
+                    self.client
+                        .post(&url)
+                        .header(header::AUTHORIZATION, format!("Bearer {}", self.access_token))
+                        .header(header::ACCEPT, "application/json")
+                        .header(header::CONTENT_TYPE, "application/json")
+                        .json(body)
+                        .send()
+                        .await
+                },
+                cancel_token.clone(),
+            )
+            .await?;
 
         self.handle_response(response).await
     }
 
     /// Make a PUT request to the GitLab API
-    pub async fn put<T: DeserializeOwned, B: serde::Serialize>(
+    pub async fn put<T: DeserializeOwned, B: serde::Serialize + Sync>(
         &self,
         path: &str,
         body: &B,
     ) -> Result<T, GitLabClientError> {
+        self.put_with_cancel(path, body, None).await
+    }
+
+    /// Make a PUT request to the GitLab API with cancellation support
+    pub async fn put_with_cancel<T: DeserializeOwned, B: serde::Serialize + Sync>(
+        &self,
+        path: &str,
+        body: &B,
+        cancel_token: Option<CancellationToken>,
+    ) -> Result<T, GitLabClientError> {
         let url = format!("{}{}", self.base_url, path);
         debug!("PUT {}", url);
 
-        let response = self.execute_with_retry(|| async {
-            self.client
-                .put(&url)
-                .header(header::AUTHORIZATION, format!("Bearer {}", self.access_token))
-                .header(header::ACCEPT, "application/json")
-                .header(header::CONTENT_TYPE, "application/json")
-                .json(body)
-                .send()
-                .await
-        })
-        .await?;
+        let response = self
+            .execute_with_retry_and_cancel(
+                || async {
+                    self.client
+                        .put(&url)
+                        .header(header::AUTHORIZATION, format!("Bearer {}", self.access_token))
+                        .header(header::ACCEPT, "application/json")
+                        .header(header::CONTENT_TYPE, "application/json")
+                        .json(body)
+                        .send()
+                        .await
+                },
+                cancel_token.clone(),
+            )
+            .await?;
 
         self.handle_response(response).await
     }
@@ -156,10 +203,45 @@ impl GitLabClient {
         F: Fn() -> Fut,
         Fut: std::future::Future<Output = Result<Response, reqwest::Error>>,
     {
+        self.execute_with_retry_and_cancel(make_request, None).await
+    }
+
+    /// Execute a request with exponential backoff retry and cancellation support
+    async fn execute_with_retry_and_cancel<F, Fut>(
+        &self,
+        make_request: F,
+        cancel_token: Option<CancellationToken>,
+    ) -> Result<Response, GitLabClientError>
+    where
+        F: Fn() -> Fut,
+        Fut: std::future::Future<Output = Result<Response, reqwest::Error>>,
+    {
         let mut last_error = None;
 
         for attempt in 0..MAX_RETRIES {
-            match make_request().await {
+            // Check for cancellation before each attempt
+            if let Some(ref token) = cancel_token {
+                if token.is_cancelled() {
+                    debug!("Request cancelled before attempt {}", attempt + 1);
+                    return Err(GitLabClientError::Cancelled);
+                }
+            }
+
+            // Execute request with optional cancellation
+            let request_future = make_request();
+            let result = if let Some(ref token) = cancel_token {
+                select! {
+                    res = request_future => res,
+                    _ = token.cancelled() => {
+                        debug!("Request cancelled during execution");
+                        return Err(GitLabClientError::Cancelled);
+                    }
+                }
+            } else {
+                request_future.await
+            };
+
+            match result {
                 Ok(response) => {
                     let status = response.status();
 
@@ -177,7 +259,19 @@ impl GitLabClient {
                             "Server error ({}), retrying in {}ms (attempt {}/{})",
                             status, delay, attempt + 1, MAX_RETRIES
                         );
-                        tokio::time::sleep(Duration::from_millis(delay)).await;
+
+                        // Sleep with cancellation support
+                        if let Some(ref token) = cancel_token {
+                            select! {
+                                _ = tokio::time::sleep(Duration::from_millis(delay)) => {}
+                                _ = token.cancelled() => {
+                                    debug!("Request cancelled during retry delay");
+                                    return Err(GitLabClientError::Cancelled);
+                                }
+                            }
+                        } else {
+                            tokio::time::sleep(Duration::from_millis(delay)).await;
+                        }
                         continue;
                     }
 
@@ -192,7 +286,19 @@ impl GitLabClient {
                                 "Connection error: {}, retrying in {}ms (attempt {}/{})",
                                 e, delay, attempt + 1, MAX_RETRIES
                             );
-                            tokio::time::sleep(Duration::from_millis(delay)).await;
+
+                            // Sleep with cancellation support
+                            if let Some(ref token) = cancel_token {
+                                select! {
+                                    _ = tokio::time::sleep(Duration::from_millis(delay)) => {}
+                                    _ = token.cancelled() => {
+                                        debug!("Request cancelled during retry delay");
+                                        return Err(GitLabClientError::Cancelled);
+                                    }
+                                }
+                            } else {
+                                tokio::time::sleep(Duration::from_millis(delay)).await;
+                            }
                             last_error = Some(e);
                             continue;
                         }
@@ -270,14 +376,32 @@ impl GitLabClient {
         path: &str,
         per_page: u32,
     ) -> Result<Vec<T>, GitLabClientError> {
+        self.get_all_pages_with_cancel(path, per_page, None).await
+    }
+
+    /// Make a paginated GET request with cancellation support
+    pub async fn get_all_pages_with_cancel<T: DeserializeOwned + Clone>(
+        &self,
+        path: &str,
+        per_page: u32,
+        cancel_token: Option<CancellationToken>,
+    ) -> Result<Vec<T>, GitLabClientError> {
         let mut all_items = Vec::new();
         let mut page = 1;
 
         loop {
+            // Check for cancellation before each page request
+            if let Some(ref token) = cancel_token {
+                if token.is_cancelled() {
+                    debug!("Pagination cancelled at page {}", page);
+                    return Err(GitLabClientError::Cancelled);
+                }
+            }
+
             let separator = if path.contains('?') { '&' } else { '?' };
             let paginated_path = format!("{}{}per_page={}&page={}", path, separator, per_page, page);
 
-            let items: Vec<T> = self.get(&paginated_path).await?;
+            let items: Vec<T> = self.get_with_cancel(&paginated_path, cancel_token.clone()).await?;
 
             if items.is_empty() {
                 break;
@@ -295,6 +419,63 @@ impl GitLabClient {
         }
 
         Ok(all_items)
+    }
+}
+
+/// Request manager for tracking and cancelling in-flight requests
+#[derive(Clone)]
+pub struct RequestManager {
+    tokens: Arc<std::sync::Mutex<std::collections::HashMap<String, CancellationToken>>>,
+}
+
+impl Default for RequestManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl RequestManager {
+    /// Create a new request manager
+    pub fn new() -> Self {
+        Self {
+            tokens: Arc::new(std::sync::Mutex::new(std::collections::HashMap::new())),
+        }
+    }
+
+    /// Create a cancellation token for a named request
+    pub fn create_token(&self, name: &str) -> CancellationToken {
+        let token = CancellationToken::new();
+        let mut tokens = self.tokens.lock().unwrap();
+
+        // Cancel any existing request with the same name
+        if let Some(old_token) = tokens.remove(name) {
+            old_token.cancel();
+        }
+
+        tokens.insert(name.to_string(), token.clone());
+        token
+    }
+
+    /// Cancel a named request
+    pub fn cancel(&self, name: &str) {
+        let mut tokens = self.tokens.lock().unwrap();
+        if let Some(token) = tokens.remove(name) {
+            token.cancel();
+        }
+    }
+
+    /// Cancel all in-flight requests
+    pub fn cancel_all(&self) {
+        let mut tokens = self.tokens.lock().unwrap();
+        for (_, token) in tokens.drain() {
+            token.cancel();
+        }
+    }
+
+    /// Remove a completed request's token
+    pub fn complete(&self, name: &str) {
+        let mut tokens = self.tokens.lock().unwrap();
+        tokens.remove(name);
     }
 }
 

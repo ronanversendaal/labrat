@@ -7,7 +7,7 @@ import { useMemo } from 'react';
 import { useMergeRequests, useRefresh, useAccounts } from '../../hooks/useGitLab';
 import { MRList } from './MRList';
 import { MRFilters } from './MRFilters';
-import { useMRStore } from '../../stores';
+import { useMRStore, useUIStore } from '../../stores';
 import { MRDetailView } from '../mr-detail';
 
 export function MRListPage() {
@@ -111,6 +111,8 @@ export function MRListPage() {
 }
 
 function NoAccountsState() {
+  const { openModal } = useUIStore();
+
   return (
     <>
       <svg
@@ -133,7 +135,10 @@ function NoAccountsState() {
         Add a GitLab account to start reviewing merge requests. You'll need a personal access token
         with <code className="text-sm bg-gray-100 dark:bg-gray-800 px-1 rounded">api</code> scope.
       </p>
-      <button className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+      <button
+        onClick={() => openModal('addAccount')}
+        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+      >
         Add GitLab Account
       </button>
     </>

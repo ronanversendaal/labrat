@@ -167,7 +167,7 @@
 
 - [x] T075 [US3] Create MRDetail container component in `src/components/mr-detail/MRDetail.tsx`
 - [x] T076 [US3] Create MRDescription component showing description, labels, milestone in `src/components/mr-detail/MRDescription.tsx`
-- [ ] T077 [US3] [DEFERRED] Integrate Monaco Editor for diff rendering in `src/components/mr-detail/DiffView.tsx`
+- [x] T077 [US3] Implement diff rendering in `src/components/mr-detail/DiffView.tsx` (Alternative: VirtualizedDiff.tsx with react-window v2 used instead of Monaco Editor for better performance with large diffs)
 - [x] T078 [US3] Implement unified/split diff view modes in `src/components/mr-detail/DiffView.tsx`
 - [x] T079 [US3] Implement line numbers with addition/deletion/modification highlighting in `src/components/mr-detail/DiffView.tsx`
 - [x] T080 [US3] Create FileTree component with expand/collapse in `src/components/mr-detail/FileTree.tsx`
@@ -175,7 +175,7 @@
 - [x] T082 [US3] Create CommitList component in `src/components/mr-detail/CommitList.tsx`
 - [x] T083 [US3] Implement "Open in GitLab" button with external link in `src/components/mr-detail/MRDetail.tsx`
 - [x] T084 [US3] Implement progressive loading UI with skeleton for large diffs in `src/components/mr-detail/DiffView.tsx`
-- [ ] T085 [US3] [DEFERRED] Implement virtualized scrolling for smooth 60fps on large diffs in `src/components/mr-detail/DiffView.tsx`
+- [x] T085 [US3] Implement virtualized scrolling for smooth 60fps on large diffs in `src/components/mr-detail/DiffView.tsx` using react-window v2
 
 **Checkpoint**: User Story 3 complete - Users can view MR details and navigate syntax-highlighted diffs
 
@@ -319,7 +319,7 @@
 ### Error Handling & Edge Cases
 
 - [x] T156 Handle expired/invalid GitLab token with re-authentication prompt
-- [ ] T157 [DEFERRED] Handle extremely large diffs (10,000+ lines) with chunked loading
+- [x] T157 Handle extremely large diffs (10,000+ lines) with virtualization (VIRTUALIZATION_THRESHOLD=1000 lines)
 - [x] T158 Handle "no MRs assigned" empty state with helpful message
 - [x] T159 Handle GitLab unreachable with offline mode fallback
 - [x] T160 Handle MR updated/closed while viewing with refresh prompt
@@ -336,10 +336,10 @@
 
 ### Performance Optimization
 
-- [ ] T171 [P] [DEFERRED] Implement request cancellation when navigating away in `src-tauri/src/gitlab/client.rs`
-- [ ] T172 [P] [DEFERRED] Implement request batching for GitLab API calls in `src-tauri/src/gitlab/client.rs`
-- [ ] T173 [P] [DEFERRED] Optimize diff rendering with virtualization in `src/components/mr-detail/DiffView.tsx`
-- [ ] T174 [P] [DEFERRED] Implement lazy loading for off-screen diff content
+- [x] T171 [P] Implement request cancellation when navigating away in `src-tauri/src/gitlab/client.rs`
+- [x] T172 [P] Implement request batching for GitLab API calls in `src-tauri/src/gitlab/client.rs`
+- [x] T173 [P] Optimize diff rendering with virtualization in `src/components/mr-detail/VirtualizedDiff.tsx`
+- [x] T174 [P] Implement lazy loading for off-screen diff content via react-window virtualization
 - [x] T175 [P] Add performance tracing with tracing crate in Rust backend
 
 ### Final Polish

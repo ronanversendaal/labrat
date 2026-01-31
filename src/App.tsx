@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AppLayout } from './components/layout';
 import { ToastProvider, KeyboardHelpModal, useKeyboardHelpModal } from './components/common';
 import { MRListPage } from './components/mr-list';
+import { AddAccountModal, SettingsModal } from './components/settings';
 
 // Create a client
 const queryClient = new QueryClient({
@@ -23,6 +24,8 @@ function AppContent() {
         <MRListPage />
       </AppLayout>
       <KeyboardHelpModal isOpen={keyboardHelp.isOpen} onClose={keyboardHelp.close} />
+      <AddAccountModal />
+      <SettingsModal />
     </>
   );
 }

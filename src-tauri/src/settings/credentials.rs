@@ -68,17 +68,29 @@ impl CredentialStore {
         secret: &str,
     ) -> Result<(), CredentialError> {
         let entry_name = self.entry_name(credential_type, account_id);
-        debug!("Storing credential: {}", entry_name);
+        debug!("Storing credential: {} (service: {})", entry_name, SERVICE_NAME);
 
-        let entry = Entry::new(SERVICE_NAME, &entry_name)
-            .map_err(|e| CredentialError::KeyringAccess(e.to_string()))?;
+        let entry = match Entry::new(SERVICE_NAME, &entry_name) {
+            Ok(e) => {
+                debug!("Keyring entry created successfully");
+                e
+            }
+            Err(e) => {
+                warn!("Failed to create keyring entry: {:?}", e);
+                return Err(CredentialError::KeyringAccess(e.to_string()));
+            }
+        };
 
-        entry
-            .set_password(secret)
-            .map_err(|e| CredentialError::StoreFailed(e.to_string()))?;
-
-        debug!("Credential stored successfully");
-        Ok(())
+        match entry.set_password(secret) {
+            Ok(()) => {
+                debug!("Password set successfully in keyring");
+                Ok(())
+            }
+            Err(e) => {
+                warn!("Failed to set password in keyring: {:?}", e);
+                Err(CredentialError::StoreFailed(e.to_string()))
+            }
+        }
     }
 
     /// Retrieve a credential

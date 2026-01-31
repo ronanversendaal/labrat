@@ -69,8 +69,14 @@ pub async fn gitlab_add_account(
 
     // Store token securely
     let id = Uuid::new_v4().to_string();
-    CredentialManager::store_token(&id, &request.access_token)
-        .map_err(|e| TauriError::cache_error(e.to_string()))?;
+    info!("Attempting to store token in keyring for account id: {}", id);
+    match CredentialManager::store_token(&id, &request.access_token) {
+        Ok(()) => info!("Token stored successfully in keyring"),
+        Err(e) => {
+            warn!("Failed to store token in keyring: {:?}", e);
+            return Err(TauriError::cache_error(format!("Failed to store token: {}", e)));
+        }
+    }
 
     let now = Utc::now();
     let now_str = now.to_rfc3339();

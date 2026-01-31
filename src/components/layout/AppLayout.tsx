@@ -2,6 +2,8 @@ import { useState, type ReactNode } from 'react';
 import { Sidebar, SidebarItem, SidebarSection } from './Sidebar';
 import { Header } from './Header';
 import { MainContent } from './MainContent';
+import { useAccounts, useSetActiveAccount } from '../../hooks/useGitLab';
+import { useUIStore, useMRStore } from '../../stores';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -9,6 +11,16 @@ interface AppLayoutProps {
 
 export function AppLayout({ children }: AppLayoutProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const { data: accounts } = useAccounts();
+  const setActiveAccount = useSetActiveAccount();
+  const { openModal } = useUIStore();
+  const { setFilter, clearFilters } = useMRStore();
+
+  const activeAccount = accounts?.find((a) => a.is_active);
+
+  const handleSelectAccount = (accountId: string) => {
+    setActiveAccount.mutate(accountId);
+  };
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-100 dark:bg-gray-900">
@@ -24,6 +36,44 @@ export function AppLayout({ children }: AppLayoutProps) {
         collapsed={sidebarCollapsed}
         onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
       >
+        {/* Account selector */}
+        {accounts && accounts.length > 0 && (
+          <SidebarSection title="Accounts" collapsed={sidebarCollapsed}>
+            {accounts.map((account) => (
+              <SidebarItem
+                key={account.id}
+                icon={
+                  account.avatar_url ? (
+                    <img
+                      src={account.avatar_url}
+                      alt={account.name}
+                      className="w-5 h-5 rounded-full"
+                    />
+                  ) : (
+                    <div className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs font-medium">
+                      {account.name.charAt(0).toUpperCase()}
+                    </div>
+                  )
+                }
+                label={account.name}
+                active={account.is_active}
+                collapsed={sidebarCollapsed}
+                onClick={() => handleSelectAccount(account.id)}
+              />
+            ))}
+            <SidebarItem
+              icon={
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+              }
+              label="Add Account"
+              collapsed={sidebarCollapsed}
+              onClick={() => openModal('addAccount')}
+            />
+          </SidebarSection>
+        )}
+
         <SidebarSection collapsed={sidebarCollapsed}>
           <SidebarItem
             icon={
@@ -39,21 +89,7 @@ export function AppLayout({ children }: AppLayoutProps) {
             label="My Reviews"
             active
             collapsed={sidebarCollapsed}
-            badge={5}
-          />
-          <SidebarItem
-            icon={
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
-                />
-              </svg>
-            }
-            label="Authored MRs"
-            collapsed={sidebarCollapsed}
+            onClick={() => clearFilters()}
           />
         </SidebarSection>
 
@@ -71,7 +107,7 @@ export function AppLayout({ children }: AppLayoutProps) {
             }
             label="Has Conflicts"
             collapsed={sidebarCollapsed}
-            badge={2}
+            onClick={() => setFilter({ has_conflicts: true })}
           />
           <SidebarItem
             icon={
@@ -86,7 +122,7 @@ export function AppLayout({ children }: AppLayoutProps) {
             }
             label="Pipeline Failed"
             collapsed={sidebarCollapsed}
-            badge={1}
+            onClick={() => setFilter({ pipeline_failed: true })}
           />
         </SidebarSection>
 
@@ -110,13 +146,14 @@ export function AppLayout({ children }: AppLayoutProps) {
             }
             label="Settings"
             collapsed={sidebarCollapsed}
+            onClick={() => openModal('settings')}
           />
         </SidebarSection>
       </Sidebar>
 
       {/* Main content area */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        <Header title="My Pending Reviews" />
+        <Header title={activeAccount ? `${activeAccount.name} - My Reviews` : 'My Pending Reviews'} />
         <MainContent>{children}</MainContent>
       </div>
     </div>

@@ -1,11 +1,18 @@
 /**
  * DiffView - Display syntax-highlighted diff with line numbers
- * Supports unified and split view modes
+ * Supports unified and split view modes with virtualization for large diffs
  */
 
 import { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import type { DiffFile, LineType } from '../../types';
 import { useUIStore } from '../../stores';
+import {
+  VirtualizedUnifiedDiff,
+  VirtualizedSplitDiff,
+  shouldVirtualize,
+  type ParsedLine,
+  type SplitPair,
+} from './VirtualizedDiff';
 
 interface DiffViewProps {
   file: DiffFile;
@@ -142,36 +149,105 @@ export function DiffView({ file, onNextFile, onPrevFile, targetLine }: DiffViewP
       </div>
 
       {/* Diff content */}
-      <div ref={containerRef} className="flex-1 overflow-auto font-mono text-sm">
-        {diffViewMode === 'unified' ? (
-          <UnifiedDiff
-            lines={lines}
-            showWhitespace={showWhitespace}
-            collapsedHunks={collapsedHunks}
-            onToggleHunk={toggleHunk}
-            highlightedLine={highlightedLine}
-          />
-        ) : (
-          <SplitDiff
-            lines={lines}
-            showWhitespace={showWhitespace}
-            collapsedHunks={collapsedHunks}
-            onToggleHunk={toggleHunk}
-            highlightedLine={highlightedLine}
-          />
-        )}
-      </div>
+      <DiffContent
+        containerRef={containerRef}
+        diffViewMode={diffViewMode}
+        lines={lines}
+        showWhitespace={showWhitespace}
+        collapsedHunks={collapsedHunks}
+        onToggleHunk={toggleHunk}
+        highlightedLine={highlightedLine}
+      />
     </div>
   );
 }
 
-interface ParsedLine {
-  type: LineType;
-  oldLine: number | null;
-  newLine: number | null;
-  content: string;
-  isHunkHeader: boolean;
-  hunkIndex: number;
+// Separate component for diff content to handle virtualization
+function DiffContent({
+  containerRef,
+  diffViewMode,
+  lines,
+  showWhitespace,
+  collapsedHunks,
+  onToggleHunk,
+  highlightedLine,
+}: {
+  containerRef: React.RefObject<HTMLDivElement | null>;
+  diffViewMode: 'unified' | 'split';
+  lines: ParsedLine[];
+  showWhitespace: boolean;
+  collapsedHunks: Set<number>;
+  onToggleHunk: (index: number) => void;
+  highlightedLine: number | null;
+}) {
+  const [containerHeight, setContainerHeight] = useState(500);
+  const useVirtualization = shouldVirtualize(lines.length);
+  const splitPairs = useMemo(() => buildSplitPairs(lines), [lines]);
+
+  // Track container size for virtualized rendering
+  useEffect(() => {
+    if (!useVirtualization || !containerRef.current) return;
+
+    const updateHeight = () => {
+      if (containerRef.current) {
+        setContainerHeight(containerRef.current.clientHeight);
+      }
+    };
+
+    updateHeight();
+    const resizeObserver = new ResizeObserver(updateHeight);
+    resizeObserver.observe(containerRef.current);
+
+    return () => resizeObserver.disconnect();
+  }, [useVirtualization, containerRef]);
+
+  if (useVirtualization) {
+    return (
+      <div ref={containerRef} className="flex-1 overflow-hidden font-mono text-sm">
+        {diffViewMode === 'unified' ? (
+          <VirtualizedUnifiedDiff
+            lines={lines}
+            showWhitespace={showWhitespace}
+            collapsedHunks={collapsedHunks}
+            onToggleHunk={onToggleHunk}
+            highlightedLine={highlightedLine}
+            height={containerHeight}
+          />
+        ) : (
+          <VirtualizedSplitDiff
+            pairs={splitPairs}
+            showWhitespace={showWhitespace}
+            collapsedHunks={collapsedHunks}
+            onToggleHunk={onToggleHunk}
+            highlightedLine={highlightedLine}
+            height={containerHeight}
+          />
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div ref={containerRef} className="flex-1 overflow-auto font-mono text-sm">
+      {diffViewMode === 'unified' ? (
+        <UnifiedDiff
+          lines={lines}
+          showWhitespace={showWhitespace}
+          collapsedHunks={collapsedHunks}
+          onToggleHunk={onToggleHunk}
+          highlightedLine={highlightedLine}
+        />
+      ) : (
+        <SplitDiff
+          lines={lines}
+          showWhitespace={showWhitespace}
+          collapsedHunks={collapsedHunks}
+          onToggleHunk={onToggleHunk}
+          highlightedLine={highlightedLine}
+        />
+      )}
+    </div>
+  );
 }
 
 function parseDiffLines(diff: string): ParsedLine[] {
@@ -367,14 +443,6 @@ function SplitDiff({
       </tbody>
     </table>
   );
-}
-
-interface SplitPair {
-  left: ParsedLine | null;
-  right: ParsedLine | null;
-  isHunkHeader: boolean;
-  hunkIndex: number;
-  content?: string;
 }
 
 function buildSplitPairs(lines: ParsedLine[]): SplitPair[] {
