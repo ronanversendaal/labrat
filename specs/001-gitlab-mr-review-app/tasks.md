@@ -19,7 +19,7 @@
 
 - [x] T001 Initialize Tauri 2.x project with `pnpm create tauri-app`
 - [x] T002 [P] Configure Cargo.toml with dependencies: reqwest, tokio, serde, sqlx, keyring, syntect, uuid, chrono
-- [ ] T003 [P] Configure package.json with dependencies: react, typescript, tailwindcss, @tanstack/react-query, zustand, monaco-editor
+- [x] T003 [P] Configure package.json with dependencies: react, typescript, tailwindcss, @tanstack/react-query, zustand, monaco-editor
 - [ ] T004 [P] Configure TailwindCSS in `src/styles/globals.css` and `tailwind.config.js`
 - [ ] T005 [P] Configure rustfmt.toml and .prettierrc for consistent formatting
 - [ ] T006 [P] Configure ESLint and clippy settings for linting
