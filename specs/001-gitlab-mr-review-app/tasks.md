@@ -75,9 +75,9 @@
 
 ### GitLab API Client Foundation
 
-- [ ] T033 Implement base HTTP client with auth headers in `src-tauri/src/gitlab/client.rs`
-- [ ] T034 Implement rate limit handling and retry logic in `src-tauri/src/gitlab/client.rs`
-- [ ] T035 Implement error mapping for GitLab API errors in `src-tauri/src/gitlab/client.rs`
+- [x] T033 Implement base HTTP client with auth headers in `src-tauri/src/gitlab/client.rs`
+- [x] T034 Implement rate limit handling and retry logic in `src-tauri/src/gitlab/client.rs`
+- [x] T035 Implement error mapping for GitLab API errors in `src-tauri/src/gitlab/client.rs`
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
