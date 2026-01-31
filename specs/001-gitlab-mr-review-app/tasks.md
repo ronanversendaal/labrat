@@ -165,16 +165,16 @@
 
 ### Frontend Implementation for US3
 
-- [ ] T075 [US3] Create MRDetail container component in `src/components/mr-detail/MRDetail.tsx`
-- [ ] T076 [US3] Create MRDescription component showing description, labels, milestone in `src/components/mr-detail/MRDescription.tsx`
+- [x] T075 [US3] Create MRDetail container component in `src/components/mr-detail/MRDetail.tsx`
+- [x] T076 [US3] Create MRDescription component showing description, labels, milestone in `src/components/mr-detail/MRDescription.tsx`
 - [ ] T077 [US3] Integrate Monaco Editor for diff rendering in `src/components/mr-detail/DiffView.tsx`
-- [ ] T078 [US3] Implement unified/split diff view modes in `src/components/mr-detail/DiffView.tsx`
-- [ ] T079 [US3] Implement line numbers with addition/deletion/modification highlighting in `src/components/mr-detail/DiffView.tsx`
-- [ ] T080 [US3] Create FileTree component with expand/collapse in `src/components/mr-detail/FileTree.tsx`
-- [ ] T081 [US3] Implement file navigation (next/previous file) in `src/components/mr-detail/DiffView.tsx`
+- [x] T078 [US3] Implement unified/split diff view modes in `src/components/mr-detail/DiffView.tsx`
+- [x] T079 [US3] Implement line numbers with addition/deletion/modification highlighting in `src/components/mr-detail/DiffView.tsx`
+- [x] T080 [US3] Create FileTree component with expand/collapse in `src/components/mr-detail/FileTree.tsx`
+- [x] T081 [US3] Implement file navigation (next/previous file) in `src/components/mr-detail/DiffView.tsx`
 - [ ] T082 [US3] Create CommitList component in `src/components/mr-detail/CommitList.tsx`
-- [ ] T083 [US3] Implement "Open in GitLab" button with external link in `src/components/mr-detail/MRDetail.tsx`
-- [ ] T084 [US3] Implement progressive loading UI with skeleton for large diffs in `src/components/mr-detail/DiffView.tsx`
+- [x] T083 [US3] Implement "Open in GitLab" button with external link in `src/components/mr-detail/MRDetail.tsx`
+- [x] T084 [US3] Implement progressive loading UI with skeleton for large diffs in `src/components/mr-detail/DiffView.tsx`
 - [ ] T085 [US3] Implement virtualized scrolling for smooth 60fps on large diffs in `src/components/mr-detail/DiffView.tsx`
 
 **Checkpoint**: User Story 3 complete - Users can view MR details and navigate syntax-highlighted diffs

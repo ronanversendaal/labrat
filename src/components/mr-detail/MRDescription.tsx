@@ -1,0 +1,155 @@
+/**
+ * MR Description - Display MR description, labels, milestone, and metadata
+ */
+
+import type { MergeRequest } from '../../types';
+
+interface MRDescriptionProps {
+  mr: MergeRequest;
+}
+
+export function MRDescription({ mr }: MRDescriptionProps) {
+  return (
+    <div className="space-y-6">
+      {/* Description */}
+      {mr.description && (
+        <div>
+          <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
+            Description
+          </h3>
+          <div className="prose prose-sm dark:prose-invert max-w-none">
+            <p className="whitespace-pre-wrap text-gray-700 dark:text-gray-300">
+              {mr.description}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Labels */}
+      {mr.labels.length > 0 && (
+        <div>
+          <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
+            Labels
+          </h3>
+          <div className="flex flex-wrap gap-2">
+            {mr.labels.map((label) => (
+              <span
+                key={label}
+                className="px-2 py-1 text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded"
+              >
+                {label}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Milestone */}
+      {mr.milestone && (
+        <div>
+          <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
+            Milestone
+          </h3>
+          <div className="flex items-center gap-2">
+            <MilestoneIcon />
+            <span className="text-sm text-gray-700 dark:text-gray-300">
+              {mr.milestone.title}
+            </span>
+            {mr.milestone.due_date && (
+              <span className="text-xs text-gray-500 dark:text-gray-400">
+                Due: {new Date(mr.milestone.due_date).toLocaleDateString()}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Assignees */}
+      {mr.assignees.length > 0 && (
+        <div>
+          <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
+            Assignees
+          </h3>
+          <div className="flex flex-wrap gap-3">
+            {mr.assignees.map((assignee) => (
+              <UserBadge key={assignee.id} user={assignee} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Reviewers */}
+      {mr.reviewers.length > 0 && (
+        <div>
+          <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
+            Reviewers
+          </h3>
+          <div className="flex flex-wrap gap-3">
+            {mr.reviewers.map((reviewer) => (
+              <UserBadge key={reviewer.id} user={reviewer} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Branch info */}
+      <div>
+        <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
+          Branches
+        </h3>
+        <div className="flex items-center gap-2 text-sm">
+          <code className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded">
+            {mr.source_branch}
+          </code>
+          <ArrowIcon />
+          <code className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded">
+            {mr.target_branch}
+          </code>
+        </div>
+      </div>
+
+      {/* Timestamps */}
+      <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
+        <div>Created: {new Date(mr.created_at).toLocaleString()}</div>
+        <div>Updated: {new Date(mr.updated_at).toLocaleString()}</div>
+        {mr.merged_at && <div>Merged: {new Date(mr.merged_at).toLocaleString()}</div>}
+      </div>
+    </div>
+  );
+}
+
+function UserBadge({ user }: { user: { id: number; name: string; avatar_url: string | null } }) {
+  return (
+    <div className="flex items-center gap-2">
+      {user.avatar_url ? (
+        <img src={user.avatar_url} alt={user.name} className="w-6 h-6 rounded-full" />
+      ) : (
+        <div className="w-6 h-6 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-xs font-medium">
+          {user.name.charAt(0).toUpperCase()}
+        </div>
+      )}
+      <span className="text-sm text-gray-700 dark:text-gray-300">{user.name}</span>
+    </div>
+  );
+}
+
+function MilestoneIcon() {
+  return (
+    <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+      />
+    </svg>
+  );
+}
+
+function ArrowIcon() {
+  return (
+    <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+    </svg>
+  );
+}

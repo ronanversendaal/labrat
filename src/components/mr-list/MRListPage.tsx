@@ -8,7 +8,7 @@ import { useMergeRequests, useRefresh, useAccounts } from '../../hooks/useGitLab
 import { MRList } from './MRList';
 import { MRFilters } from './MRFilters';
 import { useMRStore } from '../../stores';
-import { MRDetail } from './MRDetail';
+import { MRDetailView } from '../mr-detail';
 
 export function MRListPage() {
   const { selectedMr, groupBy } = useMRStore();
@@ -102,8 +102,8 @@ export function MRListPage() {
 
       {/* MR Detail Panel */}
       {selectedMr && (
-        <div className="flex-1 overflow-y-auto">
-          <MRDetail mr={selectedMr} />
+        <div className="flex-1 overflow-hidden">
+          <MRDetailView mr={selectedMr} onClose={() => useMRStore.getState().setSelectedMr(null)} />
         </div>
       )}
     </div>
