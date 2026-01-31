@@ -1,1 +1,3 @@
-// Component exports - will be populated as components are implemented
+// Component exports
+export * from './common';
+export * from './layout';
