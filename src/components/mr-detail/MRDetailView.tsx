@@ -8,7 +8,7 @@ import { useDiff, useDiscussions, useMergeRequest } from '../../hooks/useGitLab'
 import { useAISuggestions } from '../../hooks/useAI';
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 import { MRDescription } from './MRDescription';
-import { DiffView } from './DiffView';
+import { MonacoDiffView } from './MonacoDiffView';
 import { FileTree } from './FileTree';
 import { QuickFilePicker } from './QuickFilePicker';
 import { ImpedimentBadge } from '../mr-list/ImpedimentBadge';
@@ -296,7 +296,7 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
                   <Skeleton variant="rectangular" height={300} />
                 </div>
               ) : selectedFile ? (
-                <DiffView
+                <MonacoDiffView
                   file={selectedFile}
                   onNextFile={handleNextFile}
                   onPrevFile={handlePrevFile}
