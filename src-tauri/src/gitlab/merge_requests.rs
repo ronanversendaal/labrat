@@ -10,6 +10,33 @@ use tracing::debug;
 const DEFAULT_PER_PAGE: u32 = 100;
 
 impl GitLabClient {
+    /// Get all merge requests assigned to the current user (as reviewer or assignee)
+    ///
+    /// This combines MRs where the user is a reviewer with MRs where they are assigned
+    pub async fn get_assigned_merge_requests(&self) -> Result<Vec<MergeRequest>, GitLabClientError> {
+        // Fetch MRs where the current user is a reviewer
+        let path = "/merge_requests?scope=assigned_to_me&state=opened";
+        debug!("Fetching assigned MRs: {}", path);
+        let assigned: Vec<MergeRequest> = self.get_all_pages(path, DEFAULT_PER_PAGE).await?;
+
+        // Fetch MRs where the current user is a reviewer
+        let review_path = "/merge_requests?scope=all&reviewer_id=self&state=opened";
+        debug!("Fetching review MRs: {}", review_path);
+        let for_review: Vec<MergeRequest> = self.get_all_pages(review_path, DEFAULT_PER_PAGE).await?;
+
+        // Merge and deduplicate by ID
+        let mut all_mrs = assigned;
+        let existing_ids: std::collections::HashSet<_> = all_mrs.iter().map(|mr| mr.id).collect();
+
+        for mr in for_review {
+            if !existing_ids.contains(&mr.id) {
+                all_mrs.push(mr);
+            }
+        }
+
+        Ok(all_mrs)
+    }
+
     /// List merge requests assigned to the current user for review
     ///
     /// GET /merge_requests?reviewer_username={username}&state=opened

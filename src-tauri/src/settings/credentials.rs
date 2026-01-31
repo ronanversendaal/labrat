@@ -164,6 +164,49 @@ impl Default for CredentialStore {
     }
 }
 
+/// Convenience functions for managing GitLab tokens
+pub struct CredentialManager;
+
+impl CredentialManager {
+    /// Store a GitLab token for an account
+    pub fn store_token(account_id: &str, token: &str) -> Result<(), CredentialError> {
+        CredentialStore::new().store(CredentialType::GitLabToken, account_id, token)
+    }
+
+    /// Get a GitLab token for an account
+    pub fn get_token(account_id: &str) -> Result<Option<String>, CredentialError> {
+        match CredentialStore::new().get(CredentialType::GitLabToken, account_id) {
+            Ok(token) => Ok(Some(token)),
+            Err(CredentialError::NotFound(_)) => Ok(None),
+            Err(e) => Err(e),
+        }
+    }
+
+    /// Delete a GitLab token for an account
+    pub fn delete_token(account_id: &str) -> Result<(), CredentialError> {
+        CredentialStore::new().delete(CredentialType::GitLabToken, account_id)
+    }
+
+    /// Store an AI API key for a provider
+    pub fn store_ai_key(provider_id: &str, api_key: &str) -> Result<(), CredentialError> {
+        CredentialStore::new().store(CredentialType::AiApiKey, provider_id, api_key)
+    }
+
+    /// Get an AI API key for a provider
+    pub fn get_ai_key(provider_id: &str) -> Result<Option<String>, CredentialError> {
+        match CredentialStore::new().get(CredentialType::AiApiKey, provider_id) {
+            Ok(key) => Ok(Some(key)),
+            Err(CredentialError::NotFound(_)) => Ok(None),
+            Err(e) => Err(e),
+        }
+    }
+
+    /// Delete an AI API key for a provider
+    pub fn delete_ai_key(provider_id: &str) -> Result<(), CredentialError> {
+        CredentialStore::new().delete(CredentialType::AiApiKey, provider_id)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

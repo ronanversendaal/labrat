@@ -10,7 +10,33 @@ pub mod gitlab;
 pub mod settings;
 pub mod utils;
 
+use cache::db::Database;
 use serde::{Deserialize, Serialize};
+use sqlx::SqlitePool;
+use std::sync::Arc;
+use tauri::Manager;
+use tokio::sync::RwLock;
+
+/// Application state shared across all commands
+pub struct AppState {
+    /// Database connection pool
+    pub db_pool: SqlitePool,
+}
+
+impl AppState {
+    /// Create a new app state with initialized database
+    pub async fn new() -> Result<Self, Box<dyn std::error::Error>> {
+        let db_path = Database::default_path();
+        let db = Database::new(db_path).await?;
+
+        Ok(Self {
+            db_pool: db.pool().clone(),
+        })
+    }
+}
+
+/// Thread-safe wrapper for app state
+pub type SharedAppState = Arc<RwLock<AppState>>;
 
 /// Error type for Tauri IPC commands
 ///
@@ -133,6 +159,22 @@ pub type TauriResult<T> = Result<T, TauriError>;
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
+        .setup(|app| {
+            // Initialize app state asynchronously
+            let handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                match AppState::new().await {
+                    Ok(state) => {
+                        handle.manage(Arc::new(RwLock::new(state)));
+                        tracing::info!("App state initialized successfully");
+                    }
+                    Err(e) => {
+                        tracing::error!("Failed to initialize app state: {}", e);
+                    }
+                }
+            });
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             // GitLab commands
             commands::gitlab::gitlab_list_accounts,
