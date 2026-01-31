@@ -23,7 +23,7 @@
 - [x] T004 [P] Configure TailwindCSS in `src/styles/globals.css` and `tailwind.config.js`
 - [x] T005 [P] Configure rustfmt.toml and .prettierrc for consistent formatting
 - [x] T006 [P] Configure ESLint and clippy settings for linting
-- [ ] T007 Create base folder structure per plan.md: `src-tauri/src/commands/`, `src-tauri/src/gitlab/`, `src-tauri/src/ai/`, `src-tauri/src/cache/`, `src-tauri/src/settings/`
+- [x] T007 Create base folder structure per plan.md: `src-tauri/src/commands/`, `src-tauri/src/gitlab/`, `src-tauri/src/ai/`, `src-tauri/src/cache/`, `src-tauri/src/settings/`
 - [ ] T008 [P] Create frontend folder structure: `src/components/`, `src/hooks/`, `src/services/`, `src/stores/`, `src/types/`
 
 ---

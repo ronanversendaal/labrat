@@ -1,0 +1,1 @@
+//! GitLab HTTP client wrapper
