@@ -7,3 +7,6 @@ pub mod anthropic;
 pub mod claude_cli;
 pub mod openai;
 pub mod provider;
+pub mod types;
+
+pub use types::*;

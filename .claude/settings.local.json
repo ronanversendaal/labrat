@@ -17,7 +17,8 @@
       "Bash(PATH=\"/Users/ronan/.cargo/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:$PATH\")",
       "Bash(SHELL=/bin/bash /bin/bash -c 'cd /Users/ronan/dev/gitlab-review-app/src-tauri && cargo check 2>&1')",
       "Bash(SHELL=/bin/bash /bin/bash -c 'git add -A && git commit -m \"\"[speckit] Implement: T010 database connection pool in src-tauri/src/cache/db.rs\n\n- Added Database struct with SqlitePool connection management\n- Configured WAL journal mode for optimal performance\n- Implemented automatic migrations from SQL files\n- Added platform-specific default database paths\n- Added tempfile dev dependency for tests\"\"')",
-      "Bash(SHELL=/bin/bash /bin/bash -c 'git add -A && git commit -m \"\"[speckit] Implement: T011 secure credential storage in src-tauri/src/settings/credentials.rs\n\n- Added CredentialStore for secure OS keychain access\n- Supports GitLab tokens and AI API keys\n- Uses keyring crate for cross-platform support\n- Includes store/get/delete/exists operations\"\"')"
+      "Bash(SHELL=/bin/bash /bin/bash -c 'git add -A && git commit -m \"\"[speckit] Implement: T011 secure credential storage in src-tauri/src/settings/credentials.rs\n\n- Added CredentialStore for secure OS keychain access\n- Supports GitLab tokens and AI API keys\n- Uses keyring crate for cross-platform support\n- Includes store/get/delete/exists operations\"\"')",
+      "Bash(SHELL=/bin/bash /bin/bash -c 'git add -A && git commit -m \"\"[speckit] Implement: T012-T019 Rust backend types\n\n- T012-T016: GitLab types \\(Account, Project, MergeRequest, Author, Milestone, Pipeline, Diff\\)\n- T017: AI types \\(Provider, Suggestion with categories/severity\\)\n- T018: Settings struct with defaults and partial updates\n- T019: TauriError with error codes for IPC\"\"')"
     ]
   }
 }

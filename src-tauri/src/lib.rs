@@ -10,6 +10,122 @@ pub mod gitlab;
 pub mod settings;
 pub mod utils;
 
+use serde::{Deserialize, Serialize};
+
+/// Error type for Tauri IPC commands
+///
+/// All errors returned from Tauri commands should use this type
+/// for consistent error handling on the frontend.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TauriError {
+    /// Machine-readable error code
+    pub code: String,
+    /// Human-readable error message
+    pub message: String,
+    /// Additional context (optional)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub details: Option<serde_json::Value>,
+}
+
+impl TauriError {
+    /// Create a new error
+    pub fn new(code: impl Into<String>, message: impl Into<String>) -> Self {
+        Self {
+            code: code.into(),
+            message: message.into(),
+            details: None,
+        }
+    }
+
+    /// Create a new error with details
+    pub fn with_details(
+        code: impl Into<String>,
+        message: impl Into<String>,
+        details: serde_json::Value,
+    ) -> Self {
+        Self {
+            code: code.into(),
+            message: message.into(),
+            details: Some(details),
+        }
+    }
+
+    /// No active GitLab account
+    pub fn not_authenticated() -> Self {
+        Self::new("not_authenticated", "No active GitLab account configured")
+    }
+
+    /// Network error reaching GitLab
+    pub fn network_error(message: impl Into<String>) -> Self {
+        Self::new("network_error", message)
+    }
+
+    /// GitLab API returned an error
+    pub fn api_error(message: impl Into<String>) -> Self {
+        Self::new("api_error", message)
+    }
+
+    /// Hit GitLab rate limit
+    pub fn rate_limited(retry_after: Option<u64>) -> Self {
+        let mut error = Self::new("rate_limited", "GitLab API rate limit exceeded");
+        if let Some(seconds) = retry_after {
+            error.details = Some(serde_json::json!({ "retry_after_seconds": seconds }));
+        }
+        error
+    }
+
+    /// Invalid request parameters
+    pub fn invalid_input(message: impl Into<String>) -> Self {
+        Self::new("invalid_input", message)
+    }
+
+    /// Resource not found
+    pub fn not_found(resource: impl Into<String>) -> Self {
+        Self::new("not_found", format!("{} not found", resource.into()))
+    }
+
+    /// Insufficient permissions
+    pub fn permission_denied(message: impl Into<String>) -> Self {
+        Self::new("permission_denied", message)
+    }
+
+    /// AI analysis failed
+    pub fn ai_error(message: impl Into<String>) -> Self {
+        Self::new("ai_error", message)
+    }
+
+    /// Cache operation failed
+    pub fn cache_error(message: impl Into<String>) -> Self {
+        Self::new("cache_error", message)
+    }
+
+    /// Invalid token
+    pub fn invalid_token(message: impl Into<String>) -> Self {
+        Self::new("invalid_token", message)
+    }
+
+    /// Invalid URL
+    pub fn invalid_url(message: impl Into<String>) -> Self {
+        Self::new("invalid_url", message)
+    }
+
+    /// Duplicate name
+    pub fn duplicate_name(name: impl Into<String>) -> Self {
+        Self::new("duplicate_name", format!("Name '{}' already exists", name.into()))
+    }
+}
+
+impl std::fmt::Display for TauriError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "[{}] {}", self.code, self.message)
+    }
+}
+
+impl std::error::Error for TauriError {}
+
+/// Result type for Tauri commands
+pub type TauriResult<T> = Result<T, TauriError>;
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()

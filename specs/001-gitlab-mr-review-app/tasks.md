@@ -42,14 +42,14 @@
 
 ### Base Types & Models
 
-- [ ] T012 [P] Define GitLabAccount struct in `src-tauri/src/gitlab/types.rs`
-- [ ] T013 [P] Define Project struct in `src-tauri/src/gitlab/types.rs`
-- [ ] T014 [P] Define MergeRequest struct with all fields in `src-tauri/src/gitlab/types.rs`
-- [ ] T015 [P] Define Author, Milestone, PipelineStatus enums in `src-tauri/src/gitlab/types.rs`
-- [ ] T016 [P] Define Diff, DiffFile structs in `src-tauri/src/gitlab/types.rs`
-- [ ] T017 [P] Define AIProvider, AISuggestion structs in `src-tauri/src/ai/mod.rs`
-- [ ] T018 [P] Define Settings struct in `src-tauri/src/settings/config.rs`
-- [ ] T019 [P] Define TauriError struct with error codes in `src-tauri/src/lib.rs`
+- [x] T012 [P] Define GitLabAccount struct in `src-tauri/src/gitlab/types.rs`
+- [x] T013 [P] Define Project struct in `src-tauri/src/gitlab/types.rs`
+- [x] T014 [P] Define MergeRequest struct with all fields in `src-tauri/src/gitlab/types.rs`
+- [x] T015 [P] Define Author, Milestone, PipelineStatus enums in `src-tauri/src/gitlab/types.rs`
+- [x] T016 [P] Define Diff, DiffFile structs in `src-tauri/src/gitlab/types.rs`
+- [x] T017 [P] Define AIProvider, AISuggestion structs in `src-tauri/src/ai/types.rs`
+- [x] T018 [P] Define Settings struct in `src-tauri/src/settings/config.rs`
+- [x] T019 [P] Define TauriError struct with error codes in `src-tauri/src/lib.rs`
 
 ### Frontend Base Types
 
