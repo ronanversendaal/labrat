@@ -91,10 +91,10 @@
 
 ### Backend Implementation for US1
 
-- [ ] T036 [US1] Implement `GET /user` endpoint wrapper in `src-tauri/src/gitlab/client.rs`
-- [ ] T037 [US1] Implement `GET /merge_requests` endpoint with reviewer filter in `src-tauri/src/gitlab/merge_requests.rs`
-- [ ] T038 [US1] Implement pagination handling (keyset) for MR list in `src-tauri/src/gitlab/merge_requests.rs`
-- [ ] T039 [US1] Implement MR cache storage/retrieval in `src-tauri/src/cache/mr_cache.rs`
+- [x] T036 [US1] Implement `GET /user` endpoint wrapper in `src-tauri/src/gitlab/user.rs`
+- [x] T037 [US1] Implement `GET /merge_requests` endpoint with reviewer filter in `src-tauri/src/gitlab/merge_requests.rs`
+- [x] T038 [US1] Implement pagination handling (keyset) for MR list in `src-tauri/src/gitlab/merge_requests.rs`
+- [x] T039 [US1] Implement MR cache storage/retrieval in `src-tauri/src/cache/mr_cache.rs`
 - [ ] T040 [US1] Implement `gitlab_list_accounts` command in `src-tauri/src/commands/gitlab.rs`
 - [ ] T041 [US1] Implement `gitlab_add_account` command with token validation in `src-tauri/src/commands/gitlab.rs`
 - [ ] T042 [US1] Implement `gitlab_validate_token` command in `src-tauri/src/commands/gitlab.rs`
