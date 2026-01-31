@@ -1,1 +1,2 @@
-// Service exports - will be populated as services are implemented
+// Service exports
+export * from './tauri';
