@@ -78,9 +78,10 @@ function ToastItem({ toast, onRemove }: { toast: Toast; onRemove: () => void }) 
       <p className="text-sm font-medium">{toast.message}</p>
       <button
         onClick={onRemove}
-        className="ml-auto flex-shrink-0 opacity-70 hover:opacity-100 focus:outline-none"
+        className="ml-auto flex-shrink-0 opacity-70 hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-current rounded"
+        aria-label="Dismiss notification"
       >
-        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
         </svg>
       </button>

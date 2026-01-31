@@ -4,3 +4,4 @@ export { MRDescription } from './MRDescription';
 export { DiffView } from './DiffView';
 export { FileTree } from './FileTree';
 export { CommitList } from './CommitList';
+export { QuickFilePicker } from './QuickFilePicker';

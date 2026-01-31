@@ -65,9 +65,12 @@ export function SuggestionCard({
       `}
     >
       {/* Header */}
-      <div
-        className="flex items-start gap-3 p-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50"
+      <button
+        type="button"
+        className="w-full flex items-start gap-3 p-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 text-left focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
         onClick={() => setIsExpanded(!isExpanded)}
+        aria-expanded={isExpanded}
+        aria-controls={`suggestion-${suggestion.id}-content`}
       >
         {/* Severity indicator */}
         <span className={`text-lg font-bold ${severity.color}`}>{severity.icon}</span>
@@ -112,14 +115,15 @@ export function SuggestionCard({
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
+          aria-hidden="true"
         >
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>
-      </div>
+      </button>
 
       {/* Expanded content */}
       {isExpanded && (
-        <div className="border-t border-gray-200 dark:border-gray-700">
+        <div id={`suggestion-${suggestion.id}-content`} className="border-t border-gray-200 dark:border-gray-700">
           <div className="p-3">
             <p className="text-sm text-gray-700 dark:text-gray-300 mb-3">{suggestion.description}</p>
 

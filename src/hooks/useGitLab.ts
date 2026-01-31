@@ -109,12 +109,14 @@ export function useMergeRequests(request?: ListMergeRequestsRequest) {
 
 /**
  * Hook to get a single merge request
+ * @param refetchInterval - Optional interval in ms to refetch (default: undefined, no polling)
  */
-export function useMergeRequest(projectId: number, mrIid: number) {
+export function useMergeRequest(projectId: number, mrIid: number, refetchInterval?: number) {
   return useQuery({
     queryKey: queryKeys.mergeRequest(projectId, mrIid),
     queryFn: () => api.getMergeRequest(projectId, mrIid),
     enabled: projectId > 0 && mrIid > 0,
+    refetchInterval,
   });
 }
 

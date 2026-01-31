@@ -240,8 +240,8 @@
 - [x] T118 [P] [US5] Implement commit navigation: `c` next, `x` previous
 - [x] T119 [P] [US5] Implement context shortcuts: `e` edit, `l` labels, `a` assignee, `m` milestone, `b` copy branch
 - [x] T120 [P] [US5] Implement review shortcuts: `⌘+Enter` add to review, `Shift+⌘+Enter` publish, `r` reply with quote
-- [ ] T121 [US5] Implement `⌘+p`/`t` quick file picker modal in `src/components/mr-detail/QuickFilePicker.tsx`
-- [ ] T122 [US5] Ensure all interactive elements are focusable and keyboard-accessible
+- [x] T121 [US5] Implement `⌘+p`/`t` quick file picker modal in `src/components/mr-detail/QuickFilePicker.tsx`
+- [x] T122 [US5] Ensure all interactive elements are focusable and keyboard-accessible
 
 **Checkpoint**: User Story 5 complete - Users can navigate the entire app using keyboard shortcuts
 
@@ -322,7 +322,7 @@
 - [ ] T157 Handle extremely large diffs (10,000+ lines) with chunked loading
 - [x] T158 Handle "no MRs assigned" empty state with helpful message
 - [x] T159 Handle GitLab unreachable with offline mode fallback
-- [ ] T160 Handle MR updated/closed while viewing with refresh prompt
+- [x] T160 Handle MR updated/closed while viewing with refresh prompt
 - [x] T161 Handle project access revoked gracefully
 - [x] T162 Handle AI analysis timeout with retry option
 - [x] T163 Handle posting to merged/closed MR with error message

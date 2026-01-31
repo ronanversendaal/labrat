@@ -2,15 +2,17 @@
  * MRDetailView - Full merge request detail view with tabs for description, diff, discussions, AI
  */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import type { MergeRequest, Discussion } from '../../types';
-import { useDiff, useDiscussions } from '../../hooks/useGitLab';
+import { useDiff, useDiscussions, useMergeRequest } from '../../hooks/useGitLab';
 import { useAISuggestions } from '../../hooks/useAI';
+import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 import { MRDescription } from './MRDescription';
 import { DiffView } from './DiffView';
 import { FileTree } from './FileTree';
+import { QuickFilePicker } from './QuickFilePicker';
 import { ImpedimentBadge } from '../mr-list/ImpedimentBadge';
-import { Skeleton } from '../common';
+import { Skeleton, Button } from '../common';
 import { AISuggestionsPanel } from '../ai';
 
 interface MRDetailViewProps {
@@ -25,11 +27,44 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
   const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const [targetLine, setTargetLine] = useState<number | undefined>(undefined);
+  const [dismissedUpdate, setDismissedUpdate] = useState(false);
+  const [isQuickPickerOpen, setIsQuickPickerOpen] = useState(false);
 
-  const { data: diff, isLoading: isLoadingDiff } = useDiff(mr.project_id, mr.iid);
-  const { data: discussions, isLoading: isLoadingDiscussions } = useDiscussions(mr.project_id, mr.iid);
+  // Remember when we opened this MR to detect updates
+  const initialUpdatedAt = useRef(mr.updated_at);
+  const initialState = useRef(mr.state);
+
+  // Poll for MR updates every 30 seconds
+  const { data: currentMR, refetch: refetchMR } = useMergeRequest(mr.project_id, mr.iid, 30000);
+
+  // Check if MR has been updated or state changed since we opened it
+  const hasUpdates = currentMR && !dismissedUpdate && (
+    currentMR.updated_at !== initialUpdatedAt.current ||
+    currentMR.state !== initialState.current
+  );
+  const stateChanged = currentMR && currentMR.state !== initialState.current;
+
+  // Handle refresh action
+  const handleRefresh = () => {
+    initialUpdatedAt.current = currentMR?.updated_at || mr.updated_at;
+    initialState.current = currentMR?.state || mr.state;
+    setDismissedUpdate(false);
+    // Force refetch all data
+    refetchMR();
+  };
+
+  const { data: diff, isLoading: isLoadingDiff, refetch: refetchDiff } = useDiff(mr.project_id, mr.iid);
+  const { data: discussions, isLoading: isLoadingDiscussions, refetch: refetchDiscussions } = useDiscussions(mr.project_id, mr.iid);
   const { data: aiSuggestions } = useAISuggestions(mr.iid);
   const pendingAISuggestions = aiSuggestions?.filter((s) => s.status === 'pending').length || 0;
+
+  // Auto-refresh on update detection
+  useEffect(() => {
+    if (hasUpdates && !dismissedUpdate) {
+      // When updates are detected, we can refresh data or show the banner
+      // The banner is already handled by the hasUpdates check below
+    }
+  }, [hasUpdates, dismissedUpdate]);
 
   // Auto-select first file when diff loads
   const selectedFile = useMemo(() => {
@@ -79,8 +114,67 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
     setTimeout(() => setTargetLine(undefined), 100);
   };
 
+  // Keyboard shortcut to open quick file picker
+  const openQuickPicker = useCallback(() => {
+    if (diff?.files.length) {
+      setIsQuickPickerOpen(true);
+    }
+  }, [diff?.files.length]);
+
+  // Register keyboard shortcuts for this view
+  useKeyboardShortcuts([
+    {
+      id: 'quick-file-picker',
+      label: 'Quick File',
+      description: 'Open quick file picker',
+      keys: ['meta+p', 't'],
+      category: 'diff',
+      handler: openQuickPicker,
+      preventDefault: true,
+    },
+  ], { scope: 'mr-detail' });
+
   return (
     <div className="flex flex-col h-full">
+      {/* Update notification banner */}
+      {hasUpdates && (
+        <div className="px-6 py-3 bg-blue-50 dark:bg-blue-900/20 border-b border-blue-200 dark:border-blue-800">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <svg className="w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              <span className="text-sm text-blue-700 dark:text-blue-300">
+                {stateChanged
+                  ? `This merge request has been ${currentMR?.state === 'merged' ? 'merged' : 'closed'}.`
+                  : 'This merge request has been updated.'}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="primary"
+                onClick={() => {
+                  handleRefresh();
+                  refetchDiff();
+                  refetchDiscussions();
+                }}
+              >
+                Refresh
+              </Button>
+              <button
+                onClick={() => setDismissedUpdate(true)}
+                className="p-1 text-blue-500 hover:text-blue-700 dark:hover:text-blue-300"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-start justify-between">
@@ -234,6 +328,18 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
           />
         )}
       </div>
+
+      {/* Quick file picker modal */}
+      <QuickFilePicker
+        isOpen={isQuickPickerOpen}
+        onClose={() => setIsQuickPickerOpen(false)}
+        files={diff?.files || []}
+        onSelectFile={(filePath) => {
+          setSelectedFilePath(filePath);
+          setActiveTab('changes');
+        }}
+        currentFile={selectedFilePath}
+      />
     </div>
   );
 }

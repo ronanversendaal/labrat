@@ -10,12 +10,24 @@ interface MRCardProps {
 export function MRCard({ mr, selected = false, onClick }: MRCardProps) {
   const timeAgo = getTimeAgo(new Date(mr.updated_at));
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (onClick && (e.key === 'Enter' || e.key === ' ')) {
+      e.preventDefault();
+      onClick();
+    }
+  };
+
   return (
     <div
+      role="button"
+      tabIndex={onClick ? 0 : undefined}
       onClick={onClick}
+      onKeyDown={handleKeyDown}
+      aria-selected={selected}
       className={`
         p-4 border rounded-lg cursor-pointer
         transition-colors duration-150
+        focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
         ${selected
           ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
           : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'

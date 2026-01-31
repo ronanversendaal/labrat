@@ -60,12 +60,24 @@ function CommitItem({ commit, onClick }: CommitItemProps) {
   const authorInitials = getInitials(commit.author_name);
   const formattedDate = formatDate(commit.authored_date);
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (onClick && (e.key === 'Enter' || e.key === ' ')) {
+      e.preventDefault();
+      onClick();
+    }
+  };
+
   return (
     <div
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
       className={`px-4 py-3 ${
-        onClick ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50' : ''
+        onClick
+          ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500'
+          : ''
       }`}
       onClick={onClick}
+      onKeyDown={handleKeyDown}
     >
       <div className="flex items-start gap-3">
         {/* Author avatar placeholder */}
@@ -104,11 +116,11 @@ function CommitItem({ commit, onClick }: CommitItemProps) {
             href={commit.web_url}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex-shrink-0 p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            className="flex-shrink-0 p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
             onClick={(e) => e.stopPropagation()}
-            title="View commit in GitLab"
+            aria-label={`View commit ${commit.short_id} in GitLab`}
           >
-            <ExternalLinkIcon className="w-4 h-4" />
+            <ExternalLinkIcon className="w-4 h-4" aria-hidden={true} />
           </a>
         )}
       </div>
@@ -161,9 +173,9 @@ function CommitIcon({ className = 'w-4 h-4' }: { className?: string }) {
   );
 }
 
-function ExternalLinkIcon({ className = 'w-4 h-4' }: { className?: string }) {
+function ExternalLinkIcon({ className = 'w-4 h-4', 'aria-hidden': ariaHidden }: { className?: string; 'aria-hidden'?: boolean }) {
   return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden={ariaHidden}>
       <path
         strokeLinecap="round"
         strokeLinejoin="round"
