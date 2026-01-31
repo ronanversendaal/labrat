@@ -293,20 +293,20 @@
 
 ### Backend Implementation for US7
 
-- [ ] T145 [US7] Implement `POST /projects/:id/merge_requests/:iid/discussions` wrapper in `src-tauri/src/gitlab/comments.rs`
-- [ ] T146 [US7] Implement GitLab suggestion syntax formatting (```suggestion block) in `src-tauri/src/gitlab/comments.rs`
-- [ ] T147 [US7] Implement `gitlab_post_comment` command with position data in `src-tauri/src/commands/gitlab.rs`
-- [ ] T148 [US7] Update suggestion status to 'posted' after successful post in `src-tauri/src/commands/gitlab.rs`
+- [x] T145 [US7] Implement `POST /projects/:id/merge_requests/:iid/discussions` wrapper in `src-tauri/src/gitlab/comments.rs`
+- [x] T146 [US7] Implement GitLab suggestion syntax formatting (```suggestion block) in `src-tauri/src/gitlab/comments.rs`
+- [x] T147 [US7] Implement `gitlab_post_comment` command with position data in `src-tauri/src/commands/gitlab.rs`
+- [x] T148 [US7] Update suggestion status to 'posted' after successful post in `src-tauri/src/commands/gitlab.rs`
 
 ### Frontend Implementation for US7
 
-- [ ] T149 [US7] Create PostSuggestionModal for editing before posting in `src/components/ai/PostSuggestionModal.tsx`
-- [ ] T150 [US7] Implement "Post as comment" action in `src/components/ai/SuggestionCard.tsx`
-- [ ] T151 [US7] Implement "Post as suggestion" action (GitLab apply-able format) in `src/components/ai/SuggestionCard.tsx`
-- [ ] T152 [US7] Implement suggestion text editing in `src/components/ai/PostSuggestionModal.tsx`
-- [ ] T153 [US7] Implement additional context input in `src/components/ai/PostSuggestionModal.tsx`
+- [x] T149 [US7] Create PostSuggestionModal for editing before posting in `src/components/ai/PostSuggestionModal.tsx`
+- [x] T150 [US7] Implement "Post as comment" action in `src/components/ai/SuggestionCard.tsx`
+- [x] T151 [US7] Implement "Post as suggestion" action (GitLab apply-able format) in `src/components/ai/SuggestionCard.tsx`
+- [x] T152 [US7] Implement suggestion text editing in `src/components/ai/PostSuggestionModal.tsx`
+- [x] T153 [US7] Implement additional context input in `src/components/ai/PostSuggestionModal.tsx`
 - [ ] T154 [US7] Show success confirmation with link to posted comment in `src/components/ai/PostSuggestionModal.tsx`
-- [ ] T155 [US7] Update suggestion card to show "Posted" status after successful post
+- [x] T155 [US7] Update suggestion card to show "Posted" status after successful post
 
 **Checkpoint**: User Story 7 complete - Users can post AI suggestions to GitLab
 

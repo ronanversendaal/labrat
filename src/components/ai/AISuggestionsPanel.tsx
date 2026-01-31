@@ -5,13 +5,14 @@
 import { useState } from 'react';
 import type { AISuggestion, SuggestionCategory, SuggestionStatus } from '../../types';
 import { useAISuggestions, useAnalyzeDiff, useUpdateSuggestionStatus } from '../../hooks/useAI';
+import { usePostComment, useDiff } from '../../hooks/useGitLab';
 import { SuggestionCard } from './SuggestionCard';
+import { PostSuggestionModal } from './PostSuggestionModal';
 import { Button, Skeleton } from '../common';
 
 interface AISuggestionsPanelProps {
   projectId: number;
   mrIid: number;
-  onPostSuggestion?: (suggestion: AISuggestion) => void;
 }
 
 type FilterCategory = SuggestionCategory | 'all';
@@ -36,13 +37,16 @@ const statusOptions: { value: FilterStatus; label: string }[] = [
   { value: 'posted', label: 'Posted' },
 ];
 
-export function AISuggestionsPanel({ projectId, mrIid, onPostSuggestion }: AISuggestionsPanelProps) {
+export function AISuggestionsPanel({ projectId, mrIid }: AISuggestionsPanelProps) {
   const [categoryFilter, setCategoryFilter] = useState<FilterCategory>('all');
   const [statusFilter, setStatusFilter] = useState<FilterStatus>('pending');
+  const [postingSuggestion, setPostingSuggestion] = useState<AISuggestion | null>(null);
 
   const { data: suggestions, isLoading } = useAISuggestions(mrIid);
+  const { data: diff } = useDiff(projectId, mrIid);
   const analyzeMutation = useAnalyzeDiff();
   const updateStatusMutation = useUpdateSuggestionStatus();
+  const postCommentMutation = usePostComment();
 
   const handleAnalyze = () => {
     analyzeMutation.mutate({
@@ -56,6 +60,43 @@ export function AISuggestionsPanel({ projectId, mrIid, onPostSuggestion }: AISug
       suggestion_id: suggestionId,
       status,
     });
+  };
+
+  const handlePostToGitLab = (suggestion: AISuggestion) => {
+    setPostingSuggestion(suggestion);
+  };
+
+  const handlePost = (suggestion: AISuggestion, body: string, asSuggestion: boolean) => {
+    if (!diff) return;
+
+    // Build position data
+    const position = {
+      base_sha: diff.base_commit_sha,
+      head_sha: diff.head_commit_sha,
+      new_path: suggestion.file_path,
+      new_line: suggestion.start_line,
+      position_type: 'text' as const,
+    };
+
+    postCommentMutation.mutate(
+      {
+        project_id: projectId,
+        mr_iid: mrIid,
+        body,
+        position,
+        as_suggestion: asSuggestion,
+      },
+      {
+        onSuccess: () => {
+          // Update suggestion status to 'posted'
+          updateStatusMutation.mutate({
+            suggestion_id: suggestion.id,
+            status: 'posted',
+          });
+          setPostingSuggestion(null);
+        },
+      }
+    );
   };
 
   // Filter suggestions
@@ -200,7 +241,7 @@ export function AISuggestionsPanel({ projectId, mrIid, onPostSuggestion }: AISug
                 key={suggestion.id}
                 suggestion={suggestion}
                 onUpdateStatus={handleUpdateStatus}
-                onPostToGitLab={onPostSuggestion}
+                onPostToGitLab={handlePostToGitLab}
                 isUpdating={updateStatusMutation.isPending}
               />
             ))}
@@ -222,6 +263,15 @@ export function AISuggestionsPanel({ projectId, mrIid, onPostSuggestion }: AISug
           </div>
         )}
       </div>
+
+      {/* Post suggestion modal */}
+      <PostSuggestionModal
+        isOpen={!!postingSuggestion}
+        onClose={() => setPostingSuggestion(null)}
+        suggestion={postingSuggestion}
+        onPost={handlePost}
+        isPosting={postCommentMutation.isPending}
+      />
     </div>
   );
 }
