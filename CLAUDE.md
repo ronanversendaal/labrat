@@ -96,3 +96,10 @@ export async function myCommand(arg: string): Promise<Response> {
 Backend errors use `TauriError` with standardized codes: `not_authenticated`, `network_error`, `api_error`, `rate_limited`, `invalid_token`, etc.
 
 Frontend catches these via `TauriCommandError` class in `src/services/tauri.ts`.
+
+## Active Technologies
+- TypeScript 5.x (frontend), Rust 1.75+ (backend) + React 19, Tauri 2.x, Zustand, TanStack Query, Monaco Editor, Tailwind CSS v4 (001-mr-review-ux-fixes)
+- SQLite (sqlx) for caching, localStorage for preferences (001-mr-review-ux-fixes)
+
+## Recent Changes
+- 001-mr-review-ux-fixes: Added TypeScript 5.x (frontend), Rust 1.75+ (backend) + React 19, Tauri 2.x, Zustand, TanStack Query, Monaco Editor, Tailwind CSS v4
