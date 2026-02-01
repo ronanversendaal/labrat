@@ -317,3 +317,19 @@ export interface ConnectionStatusEvent {
   error: string | null;
   latency_ms: number | null;
 }
+
+/**
+ * Snapshot of MR fields used to detect meaningful updates.
+ * Used to avoid false "MR updated" notifications when only
+ * metadata (like updated_at) changes without real changes.
+ */
+export interface MRChangeSnapshot {
+  /** HEAD commit SHA - changes when code is updated */
+  sha: string | null;
+  /** MR state - opened, merged, closed */
+  state: MergeRequestState;
+  /** Number of comments - increases when discussions occur */
+  user_notes_count: number;
+  /** Conflict status */
+  has_conflicts: boolean;
+}

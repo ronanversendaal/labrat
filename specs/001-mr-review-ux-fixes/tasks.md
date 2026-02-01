@@ -88,10 +88,10 @@ All user stories modify existing files or add to existing patterns. No new infra
 
 ### Implementation for User Story 3
 
-- [ ] T014 [US3] Create MRChangeSnapshot interface in src/types/gitlab.ts for tracking meaningful fields
-- [ ] T015 [US3] Refactor update detection in src/components/mr-detail/MRDetailView.tsx to compare sha, state, user_notes_count instead of updated_at
-- [ ] T016 [US3] Store initial snapshot on MR open in src/components/mr-detail/MRDetailView.tsx
-- [ ] T017 [US3] Update hasUpdates logic to only trigger on meaningful field changes in src/components/mr-detail/MRDetailView.tsx
+- [x] T014 [US3] Create MRChangeSnapshot interface in src/types/gitlab.ts for tracking meaningful fields
+- [x] T015 [US3] Refactor update detection in src/components/mr-detail/MRDetailView.tsx to compare sha, state, user_notes_count instead of updated_at
+- [x] T016 [US3] Store initial snapshot on MR open in src/components/mr-detail/MRDetailView.tsx
+- [x] T017 [US3] Update hasUpdates logic to only trigger on meaningful field changes in src/components/mr-detail/MRDetailView.tsx
 
 **Checkpoint**: No false update notifications - only triggers on real changes
 

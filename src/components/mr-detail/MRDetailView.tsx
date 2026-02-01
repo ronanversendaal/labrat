@@ -4,7 +4,7 @@
 
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { open } from '@tauri-apps/plugin-shell';
-import type { MergeRequest, Discussion } from '../../types';
+import type { MergeRequest, Discussion, MRChangeSnapshot } from '../../types';
 import { useDiff, useDiscussions, useMergeRequest } from '../../hooks/useGitLab';
 import { useAISuggestions } from '../../hooks/useAI';
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
@@ -32,24 +32,48 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
   const [isQuickPickerOpen, setIsQuickPickerOpen] = useState(false);
   const toast = useToast();
 
-  // Remember when we opened this MR to detect updates
-  const initialUpdatedAt = useRef(mr.updated_at);
-  const initialState = useRef(mr.state);
+  // Create initial snapshot of meaningful MR fields to detect real updates
+  // This avoids false notifications when only metadata like updated_at changes
+  const initialSnapshot = useRef<MRChangeSnapshot>({
+    sha: mr.head_pipeline?.id?.toString() || null,
+    state: mr.state,
+    user_notes_count: mr.user_notes_count,
+    has_conflicts: mr.has_conflicts,
+  });
 
   // Poll for MR updates every 30 seconds
   const { data: currentMR, refetch: refetchMR } = useMergeRequest(mr.project_id, mr.iid, 30000);
 
-  // Check if MR has been updated or state changed since we opened it
-  const hasUpdates = currentMR && !dismissedUpdate && (
-    currentMR.updated_at !== initialUpdatedAt.current ||
-    currentMR.state !== initialState.current
-  );
-  const stateChanged = currentMR && currentMR.state !== initialState.current;
+  // Check if MR has meaningful updates (not just metadata changes)
+  const hasRealUpdates = useMemo(() => {
+    if (!currentMR || dismissedUpdate) return false;
+    const current = initialSnapshot.current;
+    const newSha = currentMR.head_pipeline?.id?.toString() || null;
 
-  // Handle refresh action
+    return (
+      // Code was pushed (pipeline changed)
+      newSha !== current.sha ||
+      // State changed (opened -> merged/closed)
+      currentMR.state !== current.state ||
+      // New comments added
+      currentMR.user_notes_count > current.user_notes_count ||
+      // Conflict status changed
+      currentMR.has_conflicts !== current.has_conflicts
+    );
+  }, [currentMR, dismissedUpdate]);
+
+  const stateChanged = currentMR && currentMR.state !== initialSnapshot.current.state;
+
+  // Handle refresh action - update snapshot to current values
   const handleRefresh = () => {
-    initialUpdatedAt.current = currentMR?.updated_at || mr.updated_at;
-    initialState.current = currentMR?.state || mr.state;
+    if (currentMR) {
+      initialSnapshot.current = {
+        sha: currentMR.head_pipeline?.id?.toString() || null,
+        state: currentMR.state,
+        user_notes_count: currentMR.user_notes_count,
+        has_conflicts: currentMR.has_conflicts,
+      };
+    }
     setDismissedUpdate(false);
     // Force refetch all data
     refetchMR();
@@ -62,11 +86,11 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
 
   // Auto-refresh on update detection
   useEffect(() => {
-    if (hasUpdates && !dismissedUpdate) {
+    if (hasRealUpdates && !dismissedUpdate) {
       // When updates are detected, we can refresh data or show the banner
-      // The banner is already handled by the hasUpdates check below
+      // The banner is already handled by the hasRealUpdates check below
     }
-  }, [hasUpdates, dismissedUpdate]);
+  }, [hasRealUpdates, dismissedUpdate]);
 
   // Auto-select first file when diff loads
   const selectedFile = useMemo(() => {
@@ -149,7 +173,7 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
   return (
     <div className="flex flex-col h-full">
       {/* Update notification banner */}
-      {hasUpdates && (
+      {hasRealUpdates && (
         <div
           role="status"
           aria-live="polite"
