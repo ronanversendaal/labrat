@@ -154,13 +154,13 @@ All user stories modify existing files or add to existing patterns. No new infra
 
 ### Implementation for User Story 6
 
-- [ ] T041 [US6] Add ViewedFile interface and viewedFiles Map to src/stores/mrStore.ts
-- [ ] T042 [US6] Add markFileViewed, unmarkFileViewed, isFileViewed, clearViewedFiles actions to src/stores/mrStore.ts
-- [ ] T043 [US6] Configure viewedFiles persistence in Zustand persist middleware in src/stores/mrStore.ts
-- [ ] T044 [US6] Register 'v' keyboard shortcut using useKeyboardShortcuts in src/components/mr-detail/MRDetailView.tsx
-- [ ] T045 [US6] Add visual indicator (checkmark) for viewed files in src/components/mr-detail/FileTree.tsx
-- [ ] T046 [US6] Connect FileTree to mrStore for viewed status in src/components/mr-detail/FileTree.tsx
-- [ ] T047 [US6] Clear viewed files when MR sha changes (file content updated) in src/components/mr-detail/MRDetailView.tsx
+- [x] T041 [US6] Add ViewedFile interface and viewedFiles Map to src/stores/mrStore.ts
+- [x] T042 [US6] Add markFileViewed, unmarkFileViewed, isFileViewed, clearViewedFiles actions to src/stores/mrStore.ts
+- [x] T043 [US6] Configure viewedFiles persistence in Zustand persist middleware in src/stores/mrStore.ts
+- [x] T044 [US6] Register 'v' keyboard shortcut using useKeyboardShortcuts in src/components/mr-detail/MRDetailView.tsx
+- [x] T045 [US6] Add visual indicator (checkmark) for viewed files in src/components/mr-detail/FileTree.tsx
+- [x] T046 [US6] Connect FileTree to mrStore for viewed status in src/components/mr-detail/FileTree.tsx
+- [x] T047 [US6] Clear viewed files when MR sha changes (file content updated) in src/components/mr-detail/MRDetailView.tsx
 
 **Checkpoint**: Mark as viewed shortcut works with persistent visual indicator
 

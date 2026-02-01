@@ -6,6 +6,7 @@ import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { open } from '@tauri-apps/plugin-shell';
 import type { MergeRequest, Discussion, MRChangeSnapshot } from '../../types';
 import { useDiff, useDiscussions, useMergeRequest, useAccounts } from '../../hooks/useGitLab';
+import { useMRStore, isFileViewedSelector } from '../../stores/mrStore';
 import { useAISuggestions } from '../../hooks/useAI';
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 import { MRDescription } from './MRDescription';
@@ -34,6 +35,10 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
   const { data: accounts } = useAccounts();
   const activeAccount = accounts?.find((a) => a.is_active);
   const currentUserId = activeAccount?.user_id ?? 0;
+  const markFileViewed = useMRStore((state) => state.markFileViewed);
+  const unmarkFileViewed = useMRStore((state) => state.unmarkFileViewed);
+  const viewedFiles = useMRStore((state) => state.viewedFiles);
+  const clearViewedFiles = useMRStore((state) => state.clearViewedFiles);
 
   // Create initial snapshot of meaningful MR fields to detect real updates
   // This avoids false notifications when only metadata like updated_at changes
@@ -86,6 +91,9 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
   const { data: discussions, isLoading: isLoadingDiscussions, refetch: refetchDiscussions } = useDiscussions(mr.project_id, mr.iid);
   const { data: aiSuggestions } = useAISuggestions(mr.iid);
   const pendingAISuggestions = aiSuggestions?.filter((s) => s.status === 'pending').length || 0;
+
+  // Current SHA for file viewed tracking (use head_commit_sha from diff or pipeline id)
+  const currentSha = diff?.head_commit_sha || mr.head_pipeline?.id?.toString() || '';
 
   // Auto-refresh on update detection
   useEffect(() => {
@@ -160,6 +168,30 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
     }
   }, [mr.web_url, toast]);
 
+  // Toggle viewed status for current file
+  const toggleFileViewed = useCallback(() => {
+    if (!selectedFile || !currentSha) return;
+    const filePath = selectedFile.new_path;
+    const isCurrentlyViewed = isFileViewedSelector(viewedFiles, mr.iid, filePath, currentSha);
+
+    if (isCurrentlyViewed) {
+      unmarkFileViewed(mr.iid, filePath);
+      toast.info(`Unmarked ${filePath.split('/').pop()} as viewed`);
+    } else {
+      markFileViewed(mr.iid, filePath, currentSha);
+      toast.success(`Marked ${filePath.split('/').pop()} as viewed`);
+    }
+  }, [selectedFile, currentSha, viewedFiles, mr.iid, markFileViewed, unmarkFileViewed, toast]);
+
+  // Clear viewed files when SHA changes (MR was updated with new code)
+  useEffect(() => {
+    const prevSha = initialSnapshot.current.sha;
+    const newSha = currentMR?.head_pipeline?.id?.toString() || null;
+    if (prevSha && newSha && prevSha !== newSha) {
+      clearViewedFiles(mr.iid);
+    }
+  }, [currentMR?.head_pipeline?.id, mr.iid, clearViewedFiles]);
+
   // Register keyboard shortcuts for this view
   useKeyboardShortcuts([
     {
@@ -169,6 +201,15 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
       keys: ['meta+p', 't'],
       category: 'diff',
       handler: openQuickPicker,
+      preventDefault: true,
+    },
+    {
+      id: 'toggle-viewed',
+      label: 'Toggle Viewed',
+      description: 'Mark/unmark current file as viewed',
+      keys: ['v'],
+      category: 'diff',
+      handler: toggleFileViewed,
       preventDefault: true,
     },
   ], { scope: 'mr-detail' });
@@ -331,6 +372,8 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
                   onSelectFile={setSelectedFilePath}
                   expandedFolders={expandedFolders}
                   onToggleFolder={handleToggleFolder}
+                  mrId={mr.iid}
+                  currentSha={currentSha}
                 />
               ) : (
                 <div className="p-4 text-sm text-gray-500">No changes</div>

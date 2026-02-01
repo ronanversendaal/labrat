@@ -6,6 +6,7 @@
 import { useState, useMemo } from 'react';
 import type { DiffFile } from '../../types';
 import { useSettingsStore } from '../../stores/settingsStore';
+import { useMRStore, isFileViewedSelector } from '../../stores/mrStore';
 
 interface FileTreeProps {
   files: DiffFile[];
@@ -13,6 +14,8 @@ interface FileTreeProps {
   onSelectFile: (path: string) => void;
   expandedFolders?: Set<string>;
   onToggleFolder?: (folder: string) => void;
+  mrId: number;
+  currentSha: string;
 }
 
 export function FileTree({
@@ -21,10 +24,13 @@ export function FileTree({
   onSelectFile,
   expandedFolders = new Set(),
   onToggleFolder,
+  mrId,
+  currentSha,
 }: FileTreeProps) {
   const [localExpanded, setLocalExpanded] = useState<Set<string>>(new Set());
   const fileViewMode = useSettingsStore((state) => state.fileViewMode);
   const setFileViewMode = useSettingsStore((state) => state.setFileViewMode);
+  const viewedFiles = useMRStore((state) => state.viewedFiles);
 
   const expanded = onToggleFolder ? expandedFolders : localExpanded;
   const toggleFolder = onToggleFolder || ((folder: string) => {
@@ -81,6 +87,9 @@ export function FileTree({
               onSelectFile={onSelectFile}
               expanded={expanded}
               onToggleFolder={toggleFolder}
+              mrId={mrId}
+              currentSha={currentSha}
+              viewedFiles={viewedFiles}
             />
           ))
         ) : (
@@ -91,6 +100,7 @@ export function FileTree({
               file={file}
               isSelected={selectedFile === file.new_path}
               onSelect={() => onSelectFile(file.new_path)}
+              isViewed={isFileViewedSelector(viewedFiles, mrId, file.new_path, currentSha)}
             />
           ))
         )}
@@ -111,6 +121,10 @@ interface TreeNode {
   children: TreeNode[];
 }
 
+interface ViewedFilesState {
+  [key: string]: { viewedAt: string; sha: string };
+}
+
 function FileTreeNode({
   node,
   path,
@@ -118,6 +132,9 @@ function FileTreeNode({
   onSelectFile,
   expanded,
   onToggleFolder,
+  mrId,
+  currentSha,
+  viewedFiles,
 }: {
   node: TreeNode;
   path: string;
@@ -125,6 +142,9 @@ function FileTreeNode({
   onSelectFile: (path: string) => void;
   expanded: Set<string>;
   onToggleFolder: (folder: string) => void;
+  mrId: number;
+  currentSha: string;
+  viewedFiles: ViewedFilesState;
 }) {
   const fullPath = path ? `${path}/${node.name}` : node.name;
   const isExpanded = expanded.has(fullPath);
@@ -154,6 +174,9 @@ function FileTreeNode({
                 onSelectFile={onSelectFile}
                 expanded={expanded}
                 onToggleFolder={onToggleFolder}
+                mrId={mrId}
+                currentSha={currentSha}
+                viewedFiles={viewedFiles}
               />
             ))}
           </div>
@@ -164,6 +187,7 @@ function FileTreeNode({
 
   const file = node.file!;
   const isSelected = selectedFile === file.new_path;
+  const isViewed = isFileViewedSelector(viewedFiles, mrId, file.new_path, currentSha);
 
   return (
     <button
@@ -178,6 +202,7 @@ function FileTreeNode({
     >
       <FileIcon file={file} />
       <span className="truncate flex-1">{node.name}</span>
+      {isViewed && <ViewedIcon />}
       <FileChangeBadge file={file} />
     </button>
   );
@@ -302,10 +327,12 @@ function FlatFileItem({
   file,
   isSelected,
   onSelect,
+  isViewed,
 }: {
   file: DiffFile;
   isSelected: boolean;
   onSelect: () => void;
+  isViewed: boolean;
 }) {
   return (
     <button
@@ -322,6 +349,7 @@ function FlatFileItem({
       <span className="truncate flex-1" title={file.new_path}>
         {file.new_path}
       </span>
+      {isViewed && <ViewedIcon />}
       <FileChangeBadge file={file} />
     </button>
   );
@@ -340,5 +368,23 @@ function TreeIcon() {
     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
     </svg>
+  );
+}
+
+function ViewedIcon() {
+  return (
+    <span title="Viewed">
+      <svg
+        className="w-4 h-4 text-green-500 flex-shrink-0"
+        fill="currentColor"
+        viewBox="0 0 20 20"
+      >
+        <path
+          fillRule="evenodd"
+          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+          clipRule="evenodd"
+        />
+      </svg>
+    </span>
   );
 }
