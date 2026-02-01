@@ -3,6 +3,7 @@
  */
 
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { open } from '@tauri-apps/plugin-shell';
 import type { MergeRequest, Discussion } from '../../types';
 import { useDiff, useDiscussions, useMergeRequest } from '../../hooks/useGitLab';
 import { useAISuggestions } from '../../hooks/useAI';
@@ -12,7 +13,7 @@ import { MonacoDiffView } from './MonacoDiffView';
 import { FileTree } from './FileTree';
 import { QuickFilePicker } from './QuickFilePicker';
 import { ImpedimentBadge } from '../mr-list/ImpedimentBadge';
-import { Skeleton, Button } from '../common';
+import { Skeleton, Button, useToast } from '../common';
 import { AISuggestionsPanel } from '../ai';
 
 interface MRDetailViewProps {
@@ -29,6 +30,7 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
   const [targetLine, setTargetLine] = useState<number | undefined>(undefined);
   const [dismissedUpdate, setDismissedUpdate] = useState(false);
   const [isQuickPickerOpen, setIsQuickPickerOpen] = useState(false);
+  const toast = useToast();
 
   // Remember when we opened this MR to detect updates
   const initialUpdatedAt = useRef(mr.updated_at);
@@ -121,6 +123,16 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
     }
   }, [diff?.files.length]);
 
+  // Handle opening MR in GitLab using Tauri shell
+  const handleOpenInGitLab = useCallback(async () => {
+    try {
+      await open(mr.web_url);
+    } catch (error) {
+      console.error('Failed to open URL:', error);
+      toast.error('Could not open the GitLab URL in your default browser.');
+    }
+  }, [mr.web_url, toast]);
+
   // Register keyboard shortcuts for this view
   useKeyboardShortcuts([
     {
@@ -205,14 +217,12 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
 
           {/* Actions */}
           <div className="flex items-center gap-2 ml-4">
-            <a
-              href={mr.web_url}
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
+              onClick={handleOpenInGitLab}
               className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
             >
               Open in GitLab
-            </a>
+            </button>
             {onClose && (
               <button
                 onClick={onClose}

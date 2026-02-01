@@ -72,9 +72,9 @@ All user stories modify existing files or add to existing patterns. No new infra
 
 ### Implementation for User Story 2
 
-- [ ] T011 [US2] Replace anchor tag with Tauri shell.open() call in src/components/mr-detail/MRDetailView.tsx
-- [ ] T012 [US2] Import and configure shell plugin from @tauri-apps/plugin-shell in src/components/mr-detail/MRDetailView.tsx
-- [ ] T013 [US2] Add error handling for shell.open() failures with user feedback in src/components/mr-detail/MRDetailView.tsx
+- [x] T011 [US2] Replace anchor tag with Tauri shell.open() call in src/components/mr-detail/MRDetailView.tsx
+- [x] T012 [US2] Import and configure shell plugin from @tauri-apps/plugin-shell in src/components/mr-detail/MRDetailView.tsx
+- [x] T013 [US2] Add error handling for shell.open() failures with user feedback in src/components/mr-detail/MRDetailView.tsx
 
 **Checkpoint**: Open in GitLab button works reliably across all platforms
 
