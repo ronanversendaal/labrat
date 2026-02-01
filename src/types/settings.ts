@@ -11,6 +11,9 @@ export type Theme = 'light' | 'dark' | 'system';
 /** Diff view mode */
 export type DiffViewMode = 'unified' | 'split';
 
+/** File view mode for file tree */
+export type FileViewMode = 'flat' | 'tree';
+
 /** Application settings */
 export interface Settings {
   theme: Theme;

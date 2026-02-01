@@ -1,9 +1,11 @@
 /**
  * FileTree - Display list of changed files with expand/collapse
+ * Supports both tree view (folder hierarchy) and flat list view
  */
 
 import { useState, useMemo } from 'react';
 import type { DiffFile } from '../../types';
+import { useSettingsStore } from '../../stores/settingsStore';
 
 interface FileTreeProps {
   files: DiffFile[];
@@ -21,6 +23,8 @@ export function FileTree({
   onToggleFolder,
 }: FileTreeProps) {
   const [localExpanded, setLocalExpanded] = useState<Set<string>>(new Set());
+  const fileViewMode = useSettingsStore((state) => state.fileViewMode);
+  const setFileViewMode = useSettingsStore((state) => state.setFileViewMode);
 
   const expanded = onToggleFolder ? expandedFolders : localExpanded;
   const toggleFolder = onToggleFolder || ((folder: string) => {
@@ -38,29 +42,58 @@ export function FileTree({
   // Build file tree structure
   const tree = useMemo(() => buildFileTree(files), [files]);
 
+  // Sort files alphabetically for flat view
+  const sortedFiles = useMemo(() =>
+    [...files].sort((a, b) => a.new_path.localeCompare(b.new_path)),
+    [files]
+  );
+
   return (
     <div className="text-sm">
       <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-gray-700">
         <span className="font-medium text-gray-700 dark:text-gray-300">
           Files Changed
         </span>
-        <span className="text-xs text-gray-500 dark:text-gray-400">
-          {files.length} files
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-gray-500 dark:text-gray-400">
+            {files.length}
+          </span>
+          {/* View mode toggle button */}
+          <button
+            onClick={() => setFileViewMode(fileViewMode === 'tree' ? 'flat' : 'tree')}
+            className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400"
+            title={fileViewMode === 'tree' ? 'Switch to flat list' : 'Switch to tree view'}
+          >
+            {fileViewMode === 'tree' ? <ListIcon /> : <TreeIcon />}
+          </button>
+        </div>
       </div>
 
       <div className="divide-y divide-gray-100 dark:divide-gray-800">
-        {tree.children.map((node) => (
-          <FileTreeNode
-            key={node.name}
-            node={node}
-            path=""
-            selectedFile={selectedFile}
-            onSelectFile={onSelectFile}
-            expanded={expanded}
-            onToggleFolder={toggleFolder}
-          />
-        ))}
+        {fileViewMode === 'tree' ? (
+          // Tree view - folder hierarchy
+          tree.children.map((node) => (
+            <FileTreeNode
+              key={node.name}
+              node={node}
+              path=""
+              selectedFile={selectedFile}
+              onSelectFile={onSelectFile}
+              expanded={expanded}
+              onToggleFolder={toggleFolder}
+            />
+          ))
+        ) : (
+          // Flat view - simple list
+          sortedFiles.map((file) => (
+            <FlatFileItem
+              key={file.new_path}
+              file={file}
+              isSelected={selectedFile === file.new_path}
+              onSelect={() => onSelectFile(file.new_path)}
+            />
+          ))
+        )}
       </div>
 
       {/* Summary */}
@@ -263,4 +296,49 @@ function buildFileTree(files: DiffFile[]): TreeNode {
 function countFiles(node: TreeNode): number {
   if (node.type === 'file') return 1;
   return node.children.reduce((sum, child) => sum + countFiles(child), 0);
+}
+
+function FlatFileItem({
+  file,
+  isSelected,
+  onSelect,
+}: {
+  file: DiffFile;
+  isSelected: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <button
+      onClick={onSelect}
+      className={`
+        w-full flex items-center gap-2 px-3 py-1.5 text-left
+        ${isSelected
+          ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+          : 'hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300'
+        }
+      `}
+    >
+      <FileIcon file={file} />
+      <span className="truncate flex-1" title={file.new_path}>
+        {file.new_path}
+      </span>
+      <FileChangeBadge file={file} />
+    </button>
+  );
+}
+
+function ListIcon() {
+  return (
+    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+    </svg>
+  );
+}
+
+function TreeIcon() {
+  return (
+    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+    </svg>
+  );
 }

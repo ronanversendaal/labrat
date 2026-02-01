@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { Theme, DiffViewMode } from '../types/settings';
+import type { Theme, DiffViewMode, FileViewMode } from '../types/settings';
 
 interface SettingsState {
   // Appearance
@@ -17,6 +17,7 @@ interface SettingsState {
   sidebarCollapsed: boolean;
   diffViewMode: DiffViewMode;
   showWhitespace: boolean;
+  fileViewMode: FileViewMode;
 
   // AI
   defaultAiProviderId: string | null;
@@ -31,6 +32,7 @@ interface SettingsState {
   setSidebarCollapsed: (collapsed: boolean) => void;
   setDiffViewMode: (mode: DiffViewMode) => void;
   setShowWhitespace: (show: boolean) => void;
+  setFileViewMode: (mode: FileViewMode) => void;
   setDefaultAiProviderId: (id: string | null) => void;
   resetToDefaults: () => void;
 }
@@ -45,6 +47,7 @@ const defaultSettings = {
   sidebarCollapsed: false,
   diffViewMode: 'unified' as DiffViewMode,
   showWhitespace: false,
+  fileViewMode: 'tree' as FileViewMode,
   defaultAiProviderId: null,
 };
 
@@ -64,6 +67,7 @@ export const useSettingsStore = create<SettingsState>()(
       setSidebarCollapsed: (sidebarCollapsed) => set({ sidebarCollapsed }),
       setDiffViewMode: (diffViewMode) => set({ diffViewMode }),
       setShowWhitespace: (showWhitespace) => set({ showWhitespace }),
+      setFileViewMode: (fileViewMode) => set({ fileViewMode }),
       setDefaultAiProviderId: (defaultAiProviderId) =>
         set({ defaultAiProviderId }),
       resetToDefaults: () => set(defaultSettings),

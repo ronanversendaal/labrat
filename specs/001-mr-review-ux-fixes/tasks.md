@@ -135,12 +135,12 @@ All user stories modify existing files or add to existing patterns. No new infra
 
 ### Implementation for User Story 5
 
-- [ ] T035 [US5] Add FileViewMode type and fileViewMode state to src/stores/settingsStore.ts with default 'flat'
-- [ ] T036 [US5] Add setFileViewMode action to src/stores/settingsStore.ts
-- [ ] T037 [US5] Add flat list rendering mode to src/components/mr-detail/FileTree.tsx
-- [ ] T038 [US5] Add view mode toggle button UI in src/components/mr-detail/FileTree.tsx header
-- [ ] T039 [US5] Connect FileTree to settingsStore for view mode in src/components/mr-detail/FileTree.tsx
-- [ ] T040 [US5] Ensure view mode persists via Zustand persist middleware in src/stores/settingsStore.ts
+- [x] T035 [US5] Add FileViewMode type and fileViewMode state to src/stores/settingsStore.ts with default 'flat'
+- [x] T036 [US5] Add setFileViewMode action to src/stores/settingsStore.ts
+- [x] T037 [US5] Add flat list rendering mode to src/components/mr-detail/FileTree.tsx
+- [x] T038 [US5] Add view mode toggle button UI in src/components/mr-detail/FileTree.tsx header
+- [x] T039 [US5] Connect FileTree to settingsStore for view mode in src/components/mr-detail/FileTree.tsx
+- [x] T040 [US5] Ensure view mode persists via Zustand persist middleware in src/stores/settingsStore.ts
 
 **Checkpoint**: File view toggle works with persistent preference
 
