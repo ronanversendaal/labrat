@@ -107,21 +107,21 @@ All user stories modify existing files or add to existing patterns. No new infra
 
 - [x] T018 [P] [US4] Add ApprovalState and Approver types to src/types/gitlab.ts
 - [x] T019 [P] [US4] Add ApprovalState and ApproveResponse structs to src-tauri/src/gitlab/types.rs
-- [ ] T020 [US4] Add get_approval_state method to GitLabClient in src-tauri/src/gitlab/merge_requests.rs
-- [ ] T021 [US4] Add approve_mr method to GitLabClient in src-tauri/src/gitlab/merge_requests.rs
-- [ ] T022 [US4] Add unapprove_mr method to GitLabClient in src-tauri/src/gitlab/merge_requests.rs
-- [ ] T023 [US4] Add gitlab_get_approval_state Tauri command in src-tauri/src/commands/gitlab.rs
-- [ ] T024 [US4] Add gitlab_approve_mr Tauri command in src-tauri/src/commands/gitlab.rs
-- [ ] T025 [US4] Add gitlab_unapprove_mr Tauri command in src-tauri/src/commands/gitlab.rs
-- [ ] T026 [US4] Register new commands in src-tauri/src/lib.rs
-- [ ] T027 [US4] Add getApprovalState, approveMR, unapproveMR wrappers in src/services/tauri.ts
-- [ ] T028 [US4] Add useApprovalState query hook in src/hooks/useGitLab.ts
-- [ ] T029 [US4] Add useApproveMR mutation hook in src/hooks/useGitLab.ts
-- [ ] T030 [US4] Add useUnapproveMR mutation hook in src/hooks/useGitLab.ts
-- [ ] T031 [US4] Create ApprovalButton component in src/components/common/ApprovalButton.tsx
-- [ ] T032 [US4] Integrate ApprovalButton into MRDetailView header in src/components/mr-detail/MRDetailView.tsx
-- [ ] T033 [US4] Add approval status display showing approvers and count in src/components/mr-detail/MRDetailView.tsx
-- [ ] T034 [US4] Handle self-approval restriction (disable button for MR author) in src/components/common/ApprovalButton.tsx
+- [x] T020 [US4] Add get_approval_state method to GitLabClient in src-tauri/src/gitlab/merge_requests.rs
+- [x] T021 [US4] Add approve_mr method to GitLabClient in src-tauri/src/gitlab/merge_requests.rs
+- [x] T022 [US4] Add unapprove_mr method to GitLabClient in src-tauri/src/gitlab/merge_requests.rs
+- [x] T023 [US4] Add gitlab_get_approval_state Tauri command in src-tauri/src/commands/gitlab.rs
+- [x] T024 [US4] Add gitlab_approve_mr Tauri command in src-tauri/src/commands/gitlab.rs
+- [x] T025 [US4] Add gitlab_unapprove_mr Tauri command in src-tauri/src/commands/gitlab.rs
+- [x] T026 [US4] Register new commands in src-tauri/src/lib.rs
+- [x] T027 [US4] Add getApprovalState, approveMR, unapproveMR wrappers in src/services/tauri.ts
+- [x] T028 [US4] Add useApprovalState query hook in src/hooks/useGitLab.ts
+- [x] T029 [US4] Add useApproveMR mutation hook in src/hooks/useGitLab.ts
+- [x] T030 [US4] Add useUnapproveMR mutation hook in src/hooks/useGitLab.ts
+- [x] T031 [US4] Create ApprovalButton component in src/components/common/ApprovalButton.tsx
+- [x] T032 [US4] Integrate ApprovalButton into MRDetailView header in src/components/mr-detail/MRDetailView.tsx
+- [x] T033 [US4] Add approval status display showing approvers and count in src/components/mr-detail/MRDetailView.tsx
+- [x] T034 [US4] Handle self-approval restriction (disable button for MR author) in src/components/common/ApprovalButton.tsx
 
 **Checkpoint**: Full approval workflow functional - approve, unapprove, status display
 

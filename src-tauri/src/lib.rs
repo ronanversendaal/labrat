@@ -189,6 +189,9 @@ pub fn run() {
             commands::gitlab::gitlab_post_comment,
             commands::gitlab::gitlab_refresh,
             commands::gitlab::gitlab_check_connection,
+            commands::gitlab::gitlab_get_approval_state,
+            commands::gitlab::gitlab_approve_mr,
+            commands::gitlab::gitlab_unapprove_mr,
             // AI commands
             commands::ai::ai_list_providers,
             commands::ai::ai_add_provider,

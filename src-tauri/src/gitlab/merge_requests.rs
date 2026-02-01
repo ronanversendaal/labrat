@@ -3,7 +3,7 @@
 //! This module provides wrappers for merge request-related GitLab API endpoints.
 
 use super::client::{GitLabClient, GitLabClientError};
-use super::types::{MergeRequest, MergeRequestFilter, MergeRequestState};
+use super::types::{ApprovalState, ApproveResponse, MergeRequest, MergeRequestFilter, MergeRequestState};
 use tracing::debug;
 
 /// Default number of items per page for pagination
@@ -243,6 +243,63 @@ impl GitLabClient {
                         .unwrap_or(false)
             })
             .collect()
+    }
+
+    /// Get the approval state for a merge request
+    ///
+    /// GET /projects/{id}/merge_requests/{mr_iid}/approval_state
+    pub async fn get_approval_state(
+        &self,
+        project_id: i64,
+        mr_iid: i64,
+    ) -> Result<ApprovalState, GitLabClientError> {
+        let path = format!(
+            "/projects/{}/merge_requests/{}/approval_state",
+            project_id, mr_iid
+        );
+        debug!("Fetching approval state: {}", path);
+
+        self.get(&path).await
+    }
+
+    /// Approve a merge request
+    ///
+    /// POST /projects/{id}/merge_requests/{mr_iid}/approve
+    pub async fn approve_mr(
+        &self,
+        project_id: i64,
+        mr_iid: i64,
+        sha: Option<String>,
+    ) -> Result<ApproveResponse, GitLabClientError> {
+        let path = format!(
+            "/projects/{}/merge_requests/{}/approve",
+            project_id, mr_iid
+        );
+        debug!("Approving MR: {}", path);
+
+        let body = match sha {
+            Some(s) => serde_json::json!({ "sha": s }),
+            None => serde_json::json!({}),
+        };
+        self.post(&path, &body).await
+    }
+
+    /// Remove approval from a merge request
+    ///
+    /// POST /projects/{id}/merge_requests/{mr_iid}/unapprove
+    pub async fn unapprove_mr(
+        &self,
+        project_id: i64,
+        mr_iid: i64,
+    ) -> Result<ApproveResponse, GitLabClientError> {
+        let path = format!(
+            "/projects/{}/merge_requests/{}/unapprove",
+            project_id, mr_iid
+        );
+        debug!("Unapproving MR: {}", path);
+
+        let body = serde_json::json!({});
+        self.post(&path, &body).await
     }
 }
 

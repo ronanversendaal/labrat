@@ -6,9 +6,10 @@ use crate::cache::diff_cache::DiffCache;
 use crate::gitlab::client::GitLabClient;
 use crate::gitlab::comments::PositionData;
 use crate::gitlab::types::{
-    AddAccountRequest, ConnectionStatus, ConnectionStatusEvent, Diff, Discussion, GetDiffRequest, GitLabAccount,
-    ListMergeRequestsRequest, ListMergeRequestsResponse, MergeRequest, PostCommentRequest,
-    PostCommentResponse, RefreshRequest, ValidateTokenRequest, ValidateTokenResponse,
+    AddAccountRequest, ApprovalState, ApproveResponse, ConnectionStatus, ConnectionStatusEvent,
+    Diff, Discussion, GetDiffRequest, GitLabAccount, ListMergeRequestsRequest,
+    ListMergeRequestsResponse, MergeRequest, PostCommentRequest, PostCommentResponse,
+    RefreshRequest, ValidateTokenRequest, ValidateTokenResponse,
 };
 use crate::settings::credentials::CredentialManager;
 use crate::{SharedAppState, TauriError, TauriResult};
@@ -586,4 +587,59 @@ pub async fn gitlab_check_connection(
             Ok(event)
         }
     }
+}
+
+/// Get the approval state for a merge request
+#[tauri::command]
+pub async fn gitlab_get_approval_state(
+    state: State<'_, SharedAppState>,
+    project_id: i64,
+    mr_iid: i64,
+) -> TauriResult<ApprovalState> {
+    let (_account, client) = get_active_client(&state).await?;
+
+    let approval_state = client
+        .get_approval_state(project_id, mr_iid)
+        .await
+        .map_err(|e| TauriError::api_error(e.to_string()))?;
+
+    debug!("Fetched approval state for MR {}: approved={}", mr_iid, approval_state.approved);
+    Ok(approval_state)
+}
+
+/// Approve a merge request
+#[tauri::command]
+pub async fn gitlab_approve_mr(
+    state: State<'_, SharedAppState>,
+    project_id: i64,
+    mr_iid: i64,
+    sha: Option<String>,
+) -> TauriResult<ApproveResponse> {
+    let (_account, client) = get_active_client(&state).await?;
+
+    let response = client
+        .approve_mr(project_id, mr_iid, sha)
+        .await
+        .map_err(|e| TauriError::api_error(e.to_string()))?;
+
+    info!("Approved MR {} in project {}", mr_iid, project_id);
+    Ok(response)
+}
+
+/// Remove approval from a merge request
+#[tauri::command]
+pub async fn gitlab_unapprove_mr(
+    state: State<'_, SharedAppState>,
+    project_id: i64,
+    mr_iid: i64,
+) -> TauriResult<ApproveResponse> {
+    let (_account, client) = get_active_client(&state).await?;
+
+    let response = client
+        .unapprove_mr(project_id, mr_iid)
+        .await
+        .map_err(|e| TauriError::api_error(e.to_string()))?;
+
+    info!("Unapproved MR {} in project {}", mr_iid, project_id);
+    Ok(response)
 }

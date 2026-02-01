@@ -5,7 +5,7 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { open } from '@tauri-apps/plugin-shell';
 import type { MergeRequest, Discussion, MRChangeSnapshot } from '../../types';
-import { useDiff, useDiscussions, useMergeRequest } from '../../hooks/useGitLab';
+import { useDiff, useDiscussions, useMergeRequest, useAccounts } from '../../hooks/useGitLab';
 import { useAISuggestions } from '../../hooks/useAI';
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 import { MRDescription } from './MRDescription';
@@ -13,7 +13,7 @@ import { MonacoDiffView } from './MonacoDiffView';
 import { FileTree } from './FileTree';
 import { QuickFilePicker } from './QuickFilePicker';
 import { ImpedimentBadge } from '../mr-list/ImpedimentBadge';
-import { Skeleton, Button, useToast } from '../common';
+import { Skeleton, Button, useToast, ApprovalButton, ApprovalStatus } from '../common';
 import { AISuggestionsPanel } from '../ai';
 
 interface MRDetailViewProps {
@@ -31,6 +31,9 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
   const [dismissedUpdate, setDismissedUpdate] = useState(false);
   const [isQuickPickerOpen, setIsQuickPickerOpen] = useState(false);
   const toast = useToast();
+  const { data: accounts } = useAccounts();
+  const activeAccount = accounts?.find((a) => a.is_active);
+  const currentUserId = activeAccount?.user_id ?? 0;
 
   // Create initial snapshot of meaningful MR fields to detect real updates
   // This avoids false notifications when only metadata like updated_at changes
@@ -239,8 +242,20 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
             </div>
           </div>
 
-          {/* Actions */}
-          <div className="flex items-center gap-2 ml-4">
+          {/* Approval Status & Actions */}
+          <div className="flex items-center gap-4 ml-4">
+            {/* Approval status display */}
+            <ApprovalStatus projectId={mr.project_id} mrIid={mr.iid} />
+
+            {/* Approval button */}
+            <ApprovalButton
+              projectId={mr.project_id}
+              mrIid={mr.iid}
+              authorId={mr.author.id}
+              currentUserId={currentUserId}
+              sha={mr.head_pipeline?.id?.toString()}
+            />
+
             <button
               onClick={handleOpenInGitLab}
               className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"

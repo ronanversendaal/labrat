@@ -22,6 +22,8 @@ import type {
   PostCommentResponse,
   RefreshRequest,
   ConnectionStatusEvent,
+  ApprovalState,
+  ApproveResponse,
 } from '../types/gitlab';
 import type {
   AIProvider,
@@ -154,6 +156,31 @@ export async function postComment(request: PostCommentRequest): Promise<PostComm
  */
 export async function refresh(request: RefreshRequest = {}): Promise<void> {
   return invokeCommand<void>('gitlab_refresh', { request });
+}
+
+/**
+ * Get the approval state for a merge request
+ */
+export async function getApprovalState(projectId: number, mrIid: number): Promise<ApprovalState> {
+  return invokeCommand<ApprovalState>('gitlab_get_approval_state', { projectId, mrIid });
+}
+
+/**
+ * Approve a merge request
+ */
+export async function approveMR(
+  projectId: number,
+  mrIid: number,
+  sha?: string
+): Promise<ApproveResponse> {
+  return invokeCommand<ApproveResponse>('gitlab_approve_mr', { projectId, mrIid, sha });
+}
+
+/**
+ * Remove approval from a merge request
+ */
+export async function unapproveMR(projectId: number, mrIid: number): Promise<ApproveResponse> {
+  return invokeCommand<ApproveResponse>('gitlab_unapprove_mr', { projectId, mrIid });
 }
 
 // ============================================================================
@@ -299,6 +326,9 @@ export const gitlab = {
   getDiscussions,
   postComment,
   refresh,
+  getApprovalState,
+  approveMR,
+  unapproveMR,
 };
 
 /**

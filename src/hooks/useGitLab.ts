@@ -23,6 +23,7 @@ export const queryKeys = {
   mergeRequest: (projectId: number, mrIid: number) => ['mergeRequest', projectId, mrIid] as const,
   diff: (projectId: number, mrIid: number) => ['diff', projectId, mrIid] as const,
   discussions: (projectId: number, mrIid: number) => ['discussions', projectId, mrIid] as const,
+  approvalState: (projectId: number, mrIid: number) => ['approvalState', projectId, mrIid] as const,
 };
 
 /**
@@ -233,4 +234,51 @@ export function useConnectionStatus(
   }, []);
 
   return { status, reset };
+}
+
+/**
+ * Hook to get approval state for a merge request
+ */
+export function useApprovalState(projectId: number, mrIid: number) {
+  return useQuery({
+    queryKey: queryKeys.approvalState(projectId, mrIid),
+    queryFn: () => api.getApprovalState(projectId, mrIid),
+    enabled: projectId > 0 && mrIid > 0,
+  });
+}
+
+/**
+ * Hook to approve a merge request
+ */
+export function useApproveMR() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ projectId, mrIid, sha }: { projectId: number; mrIid: number; sha?: string }) =>
+      api.approveMR(projectId, mrIid, sha),
+    onSuccess: (_, variables) => {
+      // Invalidate approval state for this MR
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.approvalState(variables.projectId, variables.mrIid),
+      });
+    },
+  });
+}
+
+/**
+ * Hook to remove approval from a merge request
+ */
+export function useUnapproveMR() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ projectId, mrIid }: { projectId: number; mrIid: number }) =>
+      api.unapproveMR(projectId, mrIid),
+    onSuccess: (_, variables) => {
+      // Invalidate approval state for this MR
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.approvalState(variables.projectId, variables.mrIid),
+      });
+    },
+  });
 }
