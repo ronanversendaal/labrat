@@ -51,7 +51,7 @@ All user stories modify existing files or add to existing patterns. No new infra
 
 ### Implementation for User Story 1
 
-- [ ] T003 [US1] Add theme class synchronization effect in src/App.tsx to apply dark/light class to document.documentElement
+- [x] T003 [US1] Add theme class synchronization effect in src/App.tsx to apply dark/light class to document.documentElement
 - [ ] T004 [US1] Ensure settingsStore theme change triggers document class update in src/stores/settingsStore.ts
 - [ ] T005 [P] [US1] Audit and fix text colors in src/components/mr-list/MRCard.tsx for dark mode
 - [ ] T006 [P] [US1] Audit and fix text colors in src/components/mr-list/MRFilters.tsx for dark mode
