@@ -196,10 +196,10 @@ All user stories modify existing files or add to existing patterns. No new infra
 
 ### Implementation for User Story 8
 
-- [ ] T057 [US8] Create CollapsibleDescription component in src/components/mr-detail/CollapsibleDescription.tsx
-- [ ] T058 [US8] Add CollapsibleDescription above file list in Changes tab in src/components/mr-detail/MRDetailView.tsx
-- [ ] T059 [US8] Implement collapse/expand toggle with state persistence in src/components/mr-detail/CollapsibleDescription.tsx
-- [ ] T060 [US8] Render markdown description using existing MRDescription rendering in src/components/mr-detail/CollapsibleDescription.tsx
+- [x] T057 [US8] Create CollapsibleDescription component in src/components/mr-detail/CollapsibleDescription.tsx
+- [x] T058 [US8] Add CollapsibleDescription above file list in Changes tab in src/components/mr-detail/MRDetailView.tsx
+- [x] T059 [US8] Implement collapse/expand toggle with state persistence in src/components/mr-detail/CollapsibleDescription.tsx
+- [x] T060 [US8] Render markdown description using existing MRDescription rendering in src/components/mr-detail/CollapsibleDescription.tsx
 
 **Checkpoint**: Description visible in Changes tab without switching tabs
 
@@ -213,9 +213,9 @@ All user stories modify existing files or add to existing patterns. No new infra
 
 ### Implementation for User Story 9
 
-- [ ] T061 [US9] Rename "Discussions" tab to "Activity" in src/components/mr-detail/MRDetailView.tsx
-- [ ] T062 [US9] Update Tab type from 'discussions' to 'activity' in src/components/mr-detail/MRDetailView.tsx
-- [ ] T063 [US9] Verify DiscussionList component name still makes sense or rename to ActivityList in src/components/mr-detail/MRDetailView.tsx
+- [x] T061 [US9] Rename "Discussions" tab to "Activity" in src/components/mr-detail/MRDetailView.tsx
+- [x] T062 [US9] Update Tab type from 'discussions' to 'activity' in src/components/mr-detail/MRDetailView.tsx
+- [x] T063 [US9] Verify DiscussionList component name still makes sense or rename to ActivityList in src/components/mr-detail/MRDetailView.tsx
 
 **Checkpoint**: Tab renamed to Activity - content unchanged
 

@@ -1,5 +1,5 @@
 /**
- * MRDetailView - Full merge request detail view with tabs for description, diff, discussions, AI
+ * MRDetailView - Full merge request detail view with tabs for description, diff, activity, AI
  */
 
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
@@ -13,6 +13,7 @@ import { MRDescription } from './MRDescription';
 import { MonacoDiffView } from './MonacoDiffView';
 import { FileTree } from './FileTree';
 import { QuickFilePicker } from './QuickFilePicker';
+import { CollapsibleDescription } from './CollapsibleDescription';
 import { ImpedimentBadge } from '../mr-list/ImpedimentBadge';
 import { Skeleton, Button, useToast, ApprovalButton, ApprovalStatus } from '../common';
 import { AISuggestionsPanel } from '../ai';
@@ -22,7 +23,7 @@ interface MRDetailViewProps {
   onClose?: () => void;
 }
 
-type Tab = 'description' | 'changes' | 'discussions' | 'ai';
+type Tab = 'description' | 'changes' | 'activity' | 'ai';
 
 export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
   const [activeTab, setActiveTab] = useState<Tab>('changes');
@@ -331,11 +332,11 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
             Changes
           </TabButton>
           <TabButton
-            active={activeTab === 'discussions'}
-            onClick={() => setActiveTab('discussions')}
+            active={activeTab === 'activity'}
+            onClick={() => setActiveTab('activity')}
             badge={unresolvedThreads > 0 ? unresolvedThreads : undefined}
           >
-            Discussions
+            Activity
           </TabButton>
           <TabButton
             active={activeTab === 'ai'}
@@ -356,10 +357,14 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
         )}
 
         {activeTab === 'changes' && (
-          <div className="flex h-full">
-            {/* File tree sidebar */}
-            <div className="w-64 flex-shrink-0 border-r border-gray-200 dark:border-gray-700 overflow-auto">
-              {isLoadingDiff ? (
+          <div className="flex flex-col h-full">
+            {/* Collapsible description at the top */}
+            <CollapsibleDescription mr={mr} />
+
+            <div className="flex flex-1 min-h-0">
+              {/* File tree sidebar */}
+              <div className="w-64 flex-shrink-0 border-r border-gray-200 dark:border-gray-700 overflow-auto">
+                {isLoadingDiff ? (
                 <div className="p-4 space-y-2">
                   <Skeleton variant="text" width="80%" />
                   <Skeleton variant="text" width="60%" />
@@ -401,9 +406,10 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
               )}
             </div>
           </div>
+          </div>
         )}
 
-        {activeTab === 'discussions' && (
+        {activeTab === 'activity' && (
           <div className="p-6 overflow-auto h-full">
             {isLoadingDiscussions ? (
               <div className="space-y-4">
