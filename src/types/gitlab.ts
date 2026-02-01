@@ -367,3 +367,16 @@ export interface ApproveResponse {
   approvals_required: number;
   approvals_left: number;
 }
+
+/** Types of filter tokens for search-based filtering */
+export type FilterType = 'author' | 'project' | 'status' | 'label' | 'text';
+
+/** A parsed filter token from the search bar */
+export interface ParsedFilter {
+  /** Type of filter */
+  type: FilterType;
+  /** The filter value */
+  value: string;
+  /** Original raw text that was parsed */
+  raw: string;
+}

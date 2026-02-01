@@ -174,15 +174,15 @@ All user stories modify existing files or add to existing patterns. No new infra
 
 ### Implementation for User Story 7
 
-- [ ] T048 [US7] Add ParsedFilter interface and FilterType type to src/types/gitlab.ts
-- [ ] T049 [US7] Add parsedFilters state to src/stores/mrStore.ts
-- [ ] T050 [US7] Create parseFilterQuery utility function in src/utils/filterParser.ts
-- [ ] T051 [US7] Replace checkbox filter UI with search input in src/components/mr-list/MRFilters.tsx
-- [ ] T052 [US7] Add filter type suggestions dropdown (author:, project:, status:, label:) in src/components/mr-list/MRFilters.tsx
-- [ ] T053 [US7] Add autocomplete for filter values from recent MRs in src/components/mr-list/MRFilters.tsx
-- [ ] T054 [US7] Apply parsed filters to MR list filtering logic in src/components/mr-list/MRFilters.tsx
-- [ ] T055 [US7] Support free-text search across titles and descriptions in src/components/mr-list/MRFilters.tsx
-- [ ] T056 [US7] Add filter chip display for active filters in src/components/mr-list/MRFilters.tsx
+- [x] T048 [US7] Add ParsedFilter interface and FilterType type to src/types/gitlab.ts
+- [x] T049 [US7] Add parsedFilters state to src/stores/mrStore.ts
+- [x] T050 [US7] Create parseFilterQuery utility function in src/utils/filterParser.ts
+- [x] T051 [US7] Replace checkbox filter UI with search input in src/components/mr-list/MRFilters.tsx
+- [x] T052 [US7] Add filter type suggestions dropdown (author:, project:, status:, label:) in src/components/mr-list/MRFilters.tsx
+- [x] T053 [US7] Add autocomplete for filter values from recent MRs in src/components/mr-list/MRFilters.tsx
+- [x] T054 [US7] Apply parsed filters to MR list filtering logic in src/components/mr-list/MRFilters.tsx
+- [x] T055 [US7] Support free-text search across titles and descriptions in src/components/mr-list/MRFilters.tsx
+- [x] T056 [US7] Add filter chip display for active filters in src/components/mr-list/MRFilters.tsx
 
 **Checkpoint**: Search-based filtering fully functional with autocomplete
 
@@ -225,11 +225,11 @@ All user stories modify existing files or add to existing patterns. No new infra
 
 **Purpose**: Final validation and cleanup
 
-- [ ] T064 Run ESLint and fix any warnings in modified files
-- [ ] T065 Run cargo clippy and fix any warnings in modified Rust files
-- [ ] T066 Verify TypeScript compilation passes with no errors
-- [ ] T067 Run through quickstart.md validation scenarios for all user stories
-- [ ] T068 Verify all user story independent tests pass
+- [x] T064 Run ESLint and fix any warnings in modified files
+- [x] T065 Run cargo clippy and fix any warnings in modified Rust files
+- [x] T066 Verify TypeScript compilation passes with no errors
+- [x] T067 Run through quickstart.md validation scenarios for all user stories
+- [x] T068 Verify all user story independent tests pass
 
 ---
 

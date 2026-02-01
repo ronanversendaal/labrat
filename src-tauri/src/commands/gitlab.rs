@@ -306,7 +306,7 @@ pub async fn gitlab_list_merge_requests(
             .into_iter()
             .filter(|mr| {
                 mr.title.to_lowercase().contains(&query_lower)
-                    || mr.description.as_ref().map_or(false, |d| d.to_lowercase().contains(&query_lower))
+                    || mr.description.as_ref().is_some_and(|d| d.to_lowercase().contains(&query_lower))
             })
             .collect()
     } else {

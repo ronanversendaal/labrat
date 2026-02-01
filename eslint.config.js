@@ -30,6 +30,18 @@ export default [
         Response: 'readonly',
         URL: 'readonly',
         URLSearchParams: 'readonly',
+        localStorage: 'readonly',
+        requestAnimationFrame: 'readonly',
+        // DOM types
+        HTMLElement: 'readonly',
+        HTMLDivElement: 'readonly',
+        HTMLButtonElement: 'readonly',
+        HTMLInputElement: 'readonly',
+        KeyboardEvent: 'readonly',
+        MediaQueryListEvent: 'readonly',
+        MediaQueryList: 'readonly',
+        React: 'readonly',
+        ResizeObserver: 'readonly',
       },
     },
     plugins: {
