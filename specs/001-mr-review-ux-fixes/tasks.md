@@ -53,12 +53,12 @@ All user stories modify existing files or add to existing patterns. No new infra
 
 - [x] T003 [US1] Add theme class synchronization effect in src/App.tsx to apply dark/light class to document.documentElement
 - [x] T004 [US1] Ensure settingsStore theme change triggers document class update in src/stores/settingsStore.ts
-- [ ] T005 [P] [US1] Audit and fix text colors in src/components/mr-list/MRCard.tsx for dark mode
-- [ ] T006 [P] [US1] Audit and fix text colors in src/components/mr-list/MRFilters.tsx for dark mode
-- [ ] T007 [P] [US1] Audit and fix text colors in src/components/mr-detail/MRDetailView.tsx for dark mode
-- [ ] T008 [P] [US1] Audit and fix text colors in src/components/mr-detail/FileTree.tsx for dark mode
-- [ ] T009 [P] [US1] Verify Monaco Editor theme syncs with app theme in src/components/mr-detail/MonacoDiffView.tsx
-- [ ] T010 [US1] Verify CSS variables in src/styles/globals.css have sufficient contrast ratios
+- [x] T005 [P] [US1] Audit and fix text colors in src/components/mr-list/MRCard.tsx for dark mode
+- [x] T006 [P] [US1] Audit and fix text colors in src/components/mr-list/MRFilters.tsx for dark mode
+- [x] T007 [P] [US1] Audit and fix text colors in src/components/mr-detail/MRDetailView.tsx for dark mode
+- [x] T008 [P] [US1] Audit and fix text colors in src/components/mr-detail/FileTree.tsx for dark mode
+- [x] T009 [P] [US1] Verify Monaco Editor theme syncs with app theme in src/components/mr-detail/MonacoDiffView.tsx
+- [x] T010 [US1] Verify CSS variables in src/styles/globals.css have sufficient contrast ratios
 
 **Checkpoint**: Dark theme fully functional - all text readable with 4.5:1+ contrast
 
