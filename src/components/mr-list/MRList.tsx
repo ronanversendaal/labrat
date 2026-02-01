@@ -1,9 +1,10 @@
-import { useMemo } from 'react';
+import { useMemo, useCallback, useEffect } from 'react';
 import type { MergeRequest, MergeRequestSortField } from '../../types';
 import { MRCard } from './MRCard';
 import { Skeleton } from '../common';
 import { EmptyState, ErrorState } from '../layout';
 import { useMRStore } from '../../stores';
+import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 
 interface MRListProps {
   mergeRequests: MergeRequest[];
@@ -61,6 +62,59 @@ export function MRList({
       mrs,
     }));
   }, [sortedMRs, groupBy]);
+
+  // Flatten MRs for navigation
+  const flatMRs = useMemo(() => {
+    return groupedMRs.flatMap((group) => group.mrs);
+  }, [groupedMRs]);
+
+  // Get current index
+  const currentIndex = useMemo(() => {
+    if (!selectedMrId) return -1;
+    return flatMRs.findIndex((mr) => mr.id === selectedMrId);
+  }, [flatMRs, selectedMrId]);
+
+  // Navigation handlers
+  const selectNext = useCallback(() => {
+    if (flatMRs.length === 0) return;
+    const nextIndex = currentIndex < flatMRs.length - 1 ? currentIndex + 1 : 0;
+    setSelectedMr(flatMRs[nextIndex]);
+  }, [flatMRs, currentIndex, setSelectedMr]);
+
+  const selectPrev = useCallback(() => {
+    if (flatMRs.length === 0) return;
+    const prevIndex = currentIndex > 0 ? currentIndex - 1 : flatMRs.length - 1;
+    setSelectedMr(flatMRs[prevIndex]);
+  }, [flatMRs, currentIndex, setSelectedMr]);
+
+  // Select first MR when list loads if none selected
+  useEffect(() => {
+    if (flatMRs.length > 0 && selectedMrId === null) {
+      // Don't auto-select, just make keyboard navigation available
+    }
+  }, [flatMRs, selectedMrId]);
+
+  // Register keyboard shortcuts for MR list navigation
+  useKeyboardShortcuts([
+    {
+      id: 'next-mr',
+      label: 'Next MR',
+      description: 'Select next merge request',
+      keys: ['j', 'arrowdown'],
+      category: 'mr-list',
+      handler: selectNext,
+      preventDefault: true,
+    },
+    {
+      id: 'prev-mr',
+      label: 'Previous MR',
+      description: 'Select previous merge request',
+      keys: ['k', 'arrowup'],
+      category: 'mr-list',
+      handler: selectPrev,
+      preventDefault: true,
+    },
+  ], { scope: 'mr-list' });
 
   // Loading state
   if (isLoading && !mergeRequests?.length) {

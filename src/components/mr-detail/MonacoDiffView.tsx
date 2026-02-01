@@ -7,6 +7,7 @@ import { useRef, useEffect, useState, useMemo } from 'react';
 import { DiffEditor, useMonaco } from '@monaco-editor/react';
 import type { DiffFile } from '../../types';
 import { useUIStore } from '../../stores';
+import { useSettingsStore } from '../../stores/settingsStore';
 import type * as Monaco from 'monaco-editor';
 
 interface MonacoDiffViewProps {
@@ -140,19 +141,30 @@ function parseDiffContent(diff: string): { original: string; modified: string } 
 
 export function MonacoDiffView({ file, onNextFile, onPrevFile, targetLine }: MonacoDiffViewProps) {
   const { diffViewMode, setDiffViewMode, showWhitespace, toggleWhitespace } = useUIStore();
+  const appTheme = useSettingsStore((state) => state.theme);
   const monaco = useMonaco();
   const editorRef = useRef<Monaco.editor.IStandaloneDiffEditor | null>(null);
   const [theme, setTheme] = useState<'vs' | 'vs-dark'>('vs-dark');
 
-  // Detect system theme
+  // Sync Monaco theme with app theme setting
   useEffect(() => {
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    setTheme(mediaQuery.matches ? 'vs-dark' : 'vs');
+    const updateTheme = (isDark: boolean) => {
+      setTheme(isDark ? 'vs-dark' : 'vs');
+    };
 
-    const handler = (e: MediaQueryListEvent) => setTheme(e.matches ? 'vs-dark' : 'vs');
-    mediaQuery.addEventListener('change', handler);
-    return () => mediaQuery.removeEventListener('change', handler);
-  }, []);
+    if (appTheme === 'system') {
+      // Use system preference when theme is set to 'system'
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      updateTheme(mediaQuery.matches);
+
+      const handler = (e: MediaQueryListEvent) => updateTheme(e.matches);
+      mediaQuery.addEventListener('change', handler);
+      return () => mediaQuery.removeEventListener('change', handler);
+    } else {
+      // Use explicit theme setting
+      updateTheme(appTheme === 'dark');
+    }
+  }, [appTheme]);
 
   // Parse diff content
   const { original, modified } = useMemo(() => parseDiffContent(file.diff), [file.diff]);

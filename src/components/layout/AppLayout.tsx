@@ -1,9 +1,11 @@
-import { useState, type ReactNode } from 'react';
+import { useState, useMemo, type ReactNode } from 'react';
 import { Sidebar, SidebarItem, SidebarSection } from './Sidebar';
 import { Header } from './Header';
 import { MainContent } from './MainContent';
 import { useAccounts, useSetActiveAccount } from '../../hooks/useGitLab';
 import { useUIStore, useMRStore } from '../../stores';
+
+type ActiveView = 'all' | 'conflicts' | 'pipeline-failed';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -14,9 +16,16 @@ export function AppLayout({ children }: AppLayoutProps) {
   const { data: accounts } = useAccounts();
   const setActiveAccount = useSetActiveAccount();
   const { openModal } = useUIStore();
-  const { setFilter, clearFilters } = useMRStore();
+  const { filter, setFilter, clearFilters } = useMRStore();
 
   const activeAccount = accounts?.find((a) => a.is_active);
+
+  // Determine which sidebar item should be active based on current filter
+  const activeView = useMemo((): ActiveView => {
+    if (filter.has_conflicts === true) return 'conflicts';
+    if (filter.pipeline_failed === true) return 'pipeline-failed';
+    return 'all';
+  }, [filter.has_conflicts, filter.pipeline_failed]);
 
   const handleSelectAccount = (accountId: string) => {
     setActiveAccount.mutate(accountId);
@@ -87,7 +96,7 @@ export function AppLayout({ children }: AppLayoutProps) {
               </svg>
             }
             label="My Reviews"
-            active
+            active={activeView === 'all'}
             collapsed={sidebarCollapsed}
             onClick={() => clearFilters()}
           />
@@ -106,8 +115,12 @@ export function AppLayout({ children }: AppLayoutProps) {
               </svg>
             }
             label="Has Conflicts"
+            active={activeView === 'conflicts'}
             collapsed={sidebarCollapsed}
-            onClick={() => setFilter({ has_conflicts: true })}
+            onClick={() => {
+              clearFilters();
+              setFilter({ has_conflicts: true });
+            }}
           />
           <SidebarItem
             icon={
@@ -121,8 +134,12 @@ export function AppLayout({ children }: AppLayoutProps) {
               </svg>
             }
             label="Pipeline Failed"
+            active={activeView === 'pipeline-failed'}
             collapsed={sidebarCollapsed}
-            onClick={() => setFilter({ pipeline_failed: true })}
+            onClick={() => {
+              clearFilters();
+              setFilter({ pipeline_failed: true });
+            }}
           />
         </SidebarSection>
 

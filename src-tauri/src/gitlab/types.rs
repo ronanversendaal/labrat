@@ -439,17 +439,27 @@ pub struct ApproverUser {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ApprovalState {
     /// Whether the MR is fully approved
+    #[serde(default)]
     pub approved: bool,
     /// List of users who have approved
+    #[serde(default)]
     pub approved_by: Vec<Approver>,
     /// Total approvals required
+    #[serde(default)]
     pub approvals_required: i32,
     /// Approvals still needed
+    #[serde(default)]
     pub approvals_left: i32,
-    /// Whether current user has approved
+    /// Whether current user has approved (computed client-side, not from API)
+    #[serde(default)]
     pub user_has_approved: bool,
-    /// Whether current user can approve
+    /// Whether current user can approve (computed client-side, not from API)
+    #[serde(default = "default_can_approve")]
     pub user_can_approve: bool,
+}
+
+fn default_can_approve() -> bool {
+    true // Default to true, will be computed correctly on frontend
 }
 
 /// Response from approve/unapprove actions

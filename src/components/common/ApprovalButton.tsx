@@ -30,6 +30,11 @@ export function ApprovalButton({
   const isUnapproving = unapproveMutation.isPending;
   const isBusy = isApproving || isUnapproving;
 
+  // Compute user approval status from approved_by list since API doesn't provide it directly
+  const userHasApproved = approvalState?.approved_by?.some(
+    (approver) => approver.user.id === currentUserId
+  ) ?? false;
+
   const handleApprove = async () => {
     try {
       await approveMutation.mutateAsync({ projectId, mrIid, sha });
@@ -80,22 +85,8 @@ export function ApprovalButton({
     );
   }
 
-  // Check if user can approve based on API response
-  if (!approvalState?.user_can_approve && !approvalState?.user_has_approved) {
-    return (
-      <Button
-        variant="secondary"
-        size="sm"
-        disabled
-        title="You don't have permission to approve this merge request"
-      >
-        Approve
-      </Button>
-    );
-  }
-
   // User has already approved - show unapprove button
-  if (approvalState?.user_has_approved) {
+  if (userHasApproved) {
     return (
       <Button
         variant="secondary"
