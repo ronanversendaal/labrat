@@ -26,8 +26,8 @@
 
 **Purpose**: Verify environment and ensure dependencies are ready
 
-- [ ] T001 Verify Tauri shell plugin is configured for external URLs in src-tauri/tauri.conf.json
-- [ ] T002 [P] Verify @tauri-apps/plugin-shell is installed in package.json
+- [x] T001 Verify Tauri shell plugin is configured for external URLs in src-tauri/tauri.conf.json
+- [x] T002 [P] Verify @tauri-apps/plugin-shell is installed in package.json
 
 **Checkpoint**: Environment ready for feature development
 
