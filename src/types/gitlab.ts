@@ -333,3 +333,37 @@ export interface MRChangeSnapshot {
   /** Conflict status */
   has_conflicts: boolean;
 }
+
+/** A user who has approved an MR */
+export interface Approver {
+  user: {
+    id: number;
+    username: string;
+    name: string;
+    avatar_url: string | null;
+  };
+  approved_at: string;
+}
+
+/** Approval state for a merge request */
+export interface ApprovalState {
+  /** Whether the MR is fully approved */
+  approved: boolean;
+  /** List of users who have approved */
+  approved_by: Approver[];
+  /** Total approvals required */
+  approvals_required: number;
+  /** Approvals still needed */
+  approvals_left: number;
+  /** Whether current user has approved */
+  user_has_approved: boolean;
+  /** Whether current user can approve (not author, has permission) */
+  user_can_approve: boolean;
+}
+
+/** Response from approve/unapprove actions */
+export interface ApproveResponse {
+  approved: boolean;
+  approvals_required: number;
+  approvals_left: number;
+}

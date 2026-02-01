@@ -418,3 +418,44 @@ pub struct ConnectionStatusEvent {
     pub error: Option<String>,
     pub latency_ms: Option<u64>,
 }
+
+/// A user who has approved an MR
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Approver {
+    pub user: ApproverUser,
+    pub approved_at: String,
+}
+
+/// User info within an Approver
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ApproverUser {
+    pub id: i64,
+    pub username: String,
+    pub name: String,
+    pub avatar_url: Option<String>,
+}
+
+/// Approval state for a merge request
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ApprovalState {
+    /// Whether the MR is fully approved
+    pub approved: bool,
+    /// List of users who have approved
+    pub approved_by: Vec<Approver>,
+    /// Total approvals required
+    pub approvals_required: i32,
+    /// Approvals still needed
+    pub approvals_left: i32,
+    /// Whether current user has approved
+    pub user_has_approved: bool,
+    /// Whether current user can approve
+    pub user_can_approve: bool,
+}
+
+/// Response from approve/unapprove actions
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ApproveResponse {
+    pub approved: bool,
+    pub approvals_required: i32,
+    pub approvals_left: i32,
+}

@@ -105,8 +105,8 @@ All user stories modify existing files or add to existing patterns. No new infra
 
 ### Implementation for User Story 4
 
-- [ ] T018 [P] [US4] Add ApprovalState and Approver types to src/types/gitlab.ts
-- [ ] T019 [P] [US4] Add ApprovalState and ApproveResponse structs to src-tauri/src/gitlab/types.rs
+- [x] T018 [P] [US4] Add ApprovalState and Approver types to src/types/gitlab.ts
+- [x] T019 [P] [US4] Add ApprovalState and ApproveResponse structs to src-tauri/src/gitlab/types.rs
 - [ ] T020 [US4] Add get_approval_state method to GitLabClient in src-tauri/src/gitlab/merge_requests.rs
 - [ ] T021 [US4] Add approve_mr method to GitLabClient in src-tauri/src/gitlab/merge_requests.rs
 - [ ] T022 [US4] Add unapprove_mr method to GitLabClient in src-tauri/src/gitlab/merge_requests.rs
