@@ -197,15 +197,6 @@ impl GitLabClient {
         self.handle_response(response).await
     }
 
-    /// Execute a request with exponential backoff retry for transient errors
-    async fn execute_with_retry<F, Fut>(&self, make_request: F) -> Result<Response, GitLabClientError>
-    where
-        F: Fn() -> Fut,
-        Fut: std::future::Future<Output = Result<Response, reqwest::Error>>,
-    {
-        self.execute_with_retry_and_cancel(make_request, None).await
-    }
-
     /// Execute a request with exponential backoff retry and cancellation support
     async fn execute_with_retry_and_cancel<F, Fut>(
         &self,
