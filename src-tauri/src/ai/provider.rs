@@ -205,7 +205,9 @@ pub fn build_analysis_prompt(context: &AnalysisContext) -> String {
 
         prompt.push_str(&header);
         prompt.push_str("```diff\n");
-        prompt.push_str(&annotate_diff_lines(&file.diff));
+        let annotated = annotate_diff_lines(&file.diff);
+        tracing::debug!("Annotated diff for {}:\n{}", file.path, annotated);
+        prompt.push_str(&annotated);
         prompt.push_str("```\n\n");
     }
 
@@ -266,6 +268,10 @@ fn annotate_diff_lines(diff: &str) -> String {
                     new_line = after_plus[..comma_or_space].parse().unwrap_or(0);
                 }
             }
+            result.push_str(line);
+            result.push('\n');
+        } else if line.starts_with("--- ") || line.starts_with("+++ ") || line.starts_with('\\') {
+            // File headers and "\ No newline at end of file" — pass through without annotation
             result.push_str(line);
             result.push('\n');
         } else if line.starts_with('-') {
@@ -388,6 +394,38 @@ That's all!"#;
         let suggestions = parse_suggestions_response(response).unwrap();
         assert_eq!(suggestions.len(), 1);
         assert_eq!(suggestions[0].original_code, "");
+    }
+
+    #[test]
+    fn test_annotate_diff_lines_skips_headers_and_no_newline() {
+        let diff = "\
+--- a/src/styles.scss
++++ b/src/styles.scss
+@@ -10,4 +10,4 @@ .header {
+ context line
+-  color: #dedede;
++  color: $greyscale--200;
+ another context
+\\ No newline at end of file";
+
+        let result = annotate_diff_lines(diff);
+
+        let lines: Vec<&str> = result.lines().collect();
+        // File headers should pass through without L-prefix
+        assert_eq!(lines[0], "--- a/src/styles.scss");
+        assert_eq!(lines[1], "+++ b/src/styles.scss");
+        // Hunk header passes through as-is
+        assert!(lines[2].starts_with("@@ "));
+        // Context line at new_line=10
+        assert_eq!(lines[3], "L10  : context line");
+        // Removed line — no line number
+        assert_eq!(lines[4], "      :-  color: #dedede;");
+        // Added line at new_line=11
+        assert_eq!(lines[5], "L11  :+  color: $greyscale--200;");
+        // Context line at new_line=12
+        assert_eq!(lines[6], "L12  : another context");
+        // No-newline marker — no L-prefix
+        assert_eq!(lines[7], "\\ No newline at end of file");
     }
 
     #[test]

@@ -246,6 +246,7 @@ export interface GetDiffRequest {
 /** Position for a comment */
 export interface CommentPosition {
   base_sha: string;
+  start_sha?: string;
   head_sha: string;
   old_path?: string;
   new_path: string;

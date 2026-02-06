@@ -531,7 +531,11 @@ pub async fn post_comment_inner(
     };
 
     let position = request.position.map(|p| {
-        let start_sha = p.base_sha.clone();
+        let start_sha = p.start_sha.unwrap_or_else(|| p.base_sha.clone());
+        debug!(
+            "Posting comment position: new_path={} new_line={} old_line={:?} old_path={:?} base_sha={} start_sha={} head_sha={}",
+            p.new_path, p.new_line, p.old_line, p.old_path, p.base_sha, start_sha, p.head_sha
+        );
         PositionData {
             base_sha: p.base_sha,
             head_sha: p.head_sha,

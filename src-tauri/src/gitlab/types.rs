@@ -413,6 +413,8 @@ pub struct PostCommentRequest {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CommentPosition {
     pub base_sha: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub start_sha: Option<String>,
     pub head_sha: String,
     pub old_path: Option<String>,
     pub new_path: String,

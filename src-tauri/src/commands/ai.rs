@@ -420,6 +420,10 @@ pub async fn analyze_diff_inner(
     for (i, raw) in raw_suggestions.into_iter().enumerate() {
         let suggestion_id = Uuid::new_v4().to_string();
         let suggestion = raw.to_suggestion(suggestion_id.clone(), mr_global_id, provider_id.clone());
+        debug!(
+            "AI suggestion '{}': file={} start_line={} end_line={} original_code={:?}",
+            suggestion.title, suggestion.file_path, suggestion.start_line, suggestion.end_line, suggestion.original_code
+        );
 
         let now = Utc::now().to_rfc3339();
         if let Err(e) = sqlx::query(

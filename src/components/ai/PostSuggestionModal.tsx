@@ -27,22 +27,24 @@ export function PostSuggestionModal({
   if (!suggestion) return null;
 
   const handlePost = () => {
-    // Build the comment body
-    let body = `**${suggestion.title}**\n\n${suggestion.description}`;
+    // Build the comment body with full context
+    const category = formatCategory(suggestion.category);
+    const severity = suggestion.severity;
+    let body = `**${category}** | ${severity}\n\n**${suggestion.title}**\n\n${suggestion.description}`;
 
     if (additionalContext.trim()) {
       body += `\n\n${additionalContext.trim()}`;
     }
 
     if (postAsSuggestion && suggestion.suggested_code) {
-      // When posting as suggestion, the backend will format it with ```suggestion
-      body = suggestion.suggested_code;
-      if (additionalContext.trim()) {
-        body = `${additionalContext.trim()}\n\n${body}`;
-      }
+      // Format the suggestion block ourselves so we can include the description prefix
+      const suggestionBlock = `\`\`\`suggestion\n${suggestion.suggested_code}\n\`\`\``;
+      body += `\n\n${suggestionBlock}`;
+      // We formatted it ourselves, so don't let the backend wrap it again
+      onPost(suggestion, body, false);
+    } else {
+      onPost(suggestion, body, false);
     }
-
-    onPost(suggestion, body, postAsSuggestion && !!suggestion.suggested_code);
   };
 
   const handleClose = () => {

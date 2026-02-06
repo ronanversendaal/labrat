@@ -78,7 +78,9 @@ export function AISuggestionsPanel({ projectId, mrIid, onJumpToLine }: AISuggest
     // Build position data
     const position = {
       base_sha: diff.base_commit_sha,
+      start_sha: diff.start_commit_sha,
       head_sha: diff.head_commit_sha,
+      old_path: suggestion.file_path,
       new_path: suggestion.file_path,
       new_line: suggestion.start_line,
       position_type: 'text' as const,
@@ -115,22 +117,24 @@ export function AISuggestionsPanel({ projectId, mrIid, onJumpToLine }: AISuggest
   const [includeDescription, setIncludeDescription] = useState(true);
 
   const buildPostBody = useCallback((suggestion: AISuggestion) => {
+    const categoryLabel = categoryOptions.find(c => c.value === suggestion.category)?.label || suggestion.category;
+    const header = `**${categoryLabel}** | ${suggestion.severity}`;
     const desc = includeDescription
-      ? `**${suggestion.title}**\n\n${suggestion.description}`
-      : '';
+      ? `${header}\n\n**${suggestion.title}**\n\n${suggestion.description}`
+      : header;
 
     if (suggestion.suggested_code) {
-      // Format as GitLab suggestion block with optional description prefix
+      // Format as GitLab suggestion block with description prefix
       const suggestionBlock = `\`\`\`suggestion\n${suggestion.suggested_code}\n\`\`\``;
       return {
-        body: desc ? `${desc}\n\n${suggestionBlock}` : suggestionBlock,
+        body: `${desc}\n\n${suggestionBlock}`,
         // We format the suggestion block ourselves, so don't let the backend wrap it again
         asSuggestion: false,
       };
     }
 
     return {
-      body: desc || suggestion.title,
+      body: desc,
       asSuggestion: false,
     };
   }, [includeDescription]);
@@ -147,7 +151,9 @@ export function AISuggestionsPanel({ projectId, mrIid, onJumpToLine }: AISuggest
     for (const suggestion of acceptedSuggestions) {
       const position = {
         base_sha: diff.base_commit_sha,
+        start_sha: diff.start_commit_sha,
         head_sha: diff.head_commit_sha,
+        old_path: suggestion.file_path,
         new_path: suggestion.file_path,
         new_line: suggestion.start_line,
         position_type: 'text' as const,
