@@ -72,37 +72,46 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
     diffViewRef.current?.scrollUp();
   }, []);
 
-  // Create initial snapshot of meaningful MR fields to detect real updates
-  // This avoids false notifications when only metadata like updated_at changes
-  const initialSnapshot = useRef<MRChangeSnapshot>({
-    sha: mr.head_pipeline?.id?.toString() || null,
-    state: mr.state,
-    user_notes_count: mr.user_notes_count,
-    has_conflicts: mr.has_conflicts,
-  });
+  // Snapshot of MR fields from the first poll response, used to detect real updates.
+  // We intentionally wait for the first useMergeRequest response rather than using
+  // the mr prop, because the prop comes from the list endpoint (possibly cached)
+  // and may differ from the individual MR endpoint, causing false update banners.
+  const initialSnapshot = useRef<MRChangeSnapshot | null>(null);
+  const snapshotInitialized = useRef(false);
 
   // Poll for MR updates every 30 seconds
   const { data: currentMR, refetch: refetchMR } = useMergeRequest(mr.project_id, mr.iid, 30000);
 
+  // Initialize snapshot from first poll response
+  if (currentMR && !snapshotInitialized.current) {
+    snapshotInitialized.current = true;
+    initialSnapshot.current = {
+      sha: currentMR.head_pipeline?.id?.toString() || null,
+      state: currentMR.state,
+      user_notes_count: currentMR.user_notes_count,
+      has_conflicts: currentMR.has_conflicts,
+    };
+  }
+
   // Check if MR has meaningful updates (not just metadata changes)
   const hasRealUpdates = useMemo(() => {
-    if (!currentMR || dismissedUpdate) return false;
-    const current = initialSnapshot.current;
+    if (!currentMR || !initialSnapshot.current || dismissedUpdate) return false;
+    const snapshot = initialSnapshot.current;
     const newSha = currentMR.head_pipeline?.id?.toString() || null;
 
     return (
       // Code was pushed (pipeline changed)
-      newSha !== current.sha ||
+      newSha !== snapshot.sha ||
       // State changed (opened -> merged/closed)
-      currentMR.state !== current.state ||
+      currentMR.state !== snapshot.state ||
       // New comments added
-      currentMR.user_notes_count > current.user_notes_count ||
+      currentMR.user_notes_count > snapshot.user_notes_count ||
       // Conflict status changed
-      currentMR.has_conflicts !== current.has_conflicts
+      currentMR.has_conflicts !== snapshot.has_conflicts
     );
   }, [currentMR, dismissedUpdate]);
 
-  const stateChanged = currentMR && currentMR.state !== initialSnapshot.current.state;
+  const stateChanged = currentMR && initialSnapshot.current && currentMR.state !== initialSnapshot.current.state;
 
   // Handle refresh action - update snapshot to current values
   const handleRefresh = () => {
@@ -294,7 +303,7 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
 
   // Clear viewed files when SHA changes (MR was updated with new code)
   useEffect(() => {
-    const prevSha = initialSnapshot.current.sha;
+    const prevSha = initialSnapshot.current?.sha ?? null;
     const newSha = currentMR?.head_pipeline?.id?.toString() || null;
     if (prevSha && newSha && prevSha !== newSha) {
       clearViewedFiles(mr.iid);
