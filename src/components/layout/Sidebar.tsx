@@ -19,7 +19,7 @@ export function Sidebar({ collapsed = false, onToggleCollapse, children }: Sideb
       {/* Logo/Brand */}
       <div className="flex items-center justify-between h-14 px-4 border-b border-gray-800">
         {!collapsed && (
-          <span className="font-semibold text-lg whitespace-nowrap">GitLab MR Review</span>
+          <span className="font-semibold text-lg whitespace-nowrap">LabRat</span>
         )}
         <button
           onClick={onToggleCollapse}

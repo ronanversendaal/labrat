@@ -1,6 +1,6 @@
-//! GitLab MR Review App Backend
+//! LabRat App Backend
 //!
-//! This is the Rust backend for the GitLab MR Review application,
+//! This is the Rust backend for the LabRat application,
 //! providing API clients, caching, and AI integration.
 
 pub mod ai;
@@ -16,6 +16,7 @@ use sqlx::SqlitePool;
 use std::sync::Arc;
 use tauri::Manager;
 use tokio::sync::RwLock;
+use tracing_subscriber::prelude::*;
 
 /// Application state shared across all commands
 pub struct AppState {
@@ -157,6 +158,14 @@ pub type TauriResult<T> = Result<T, TauriError>;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Initialize logging
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::from_default_env()
+                .add_directive(tracing::Level::INFO.into()),
+        )
+        .init();
+
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .setup(|app| {
@@ -185,6 +194,7 @@ pub fn run() {
             commands::gitlab::gitlab_list_merge_requests,
             commands::gitlab::gitlab_get_merge_request,
             commands::gitlab::gitlab_get_diff,
+            commands::gitlab::gitlab_get_file_content,
             commands::gitlab::gitlab_get_discussions,
             commands::gitlab::gitlab_post_comment,
             commands::gitlab::gitlab_refresh,
@@ -192,6 +202,9 @@ pub fn run() {
             commands::gitlab::gitlab_get_approval_state,
             commands::gitlab::gitlab_approve_mr,
             commands::gitlab::gitlab_unapprove_mr,
+            commands::gitlab::gitlab_fetch_avatar,
+            commands::gitlab::gitlab_reply_to_discussion,
+            commands::gitlab::gitlab_resolve_discussion,
             // AI commands
             commands::ai::ai_list_providers,
             commands::ai::ai_add_provider,

@@ -73,7 +73,7 @@ export const useSettingsStore = create<SettingsState>()(
       resetToDefaults: () => set(defaultSettings),
     }),
     {
-      name: 'gitlab-mr-review-settings',
+      name: 'labrat-settings',
       version: 1,
     }
   )

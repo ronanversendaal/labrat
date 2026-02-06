@@ -1,9 +1,23 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import type { MergeRequest, MergeRequestFilter, MergeRequestSort } from '../types/gitlab';
+import type { MergeRequest, MergeRequestFilter, MergeRequestSort, FilterType } from '../types/gitlab';
 import type { AISuggestion } from '../types/ai';
 
 type GroupByOption = 'project' | 'author' | 'date' | 'none';
+
+/** Negated filter for client-side filtering */
+export interface NegatedFilter {
+  type: FilterType;
+  value: string;
+}
+
+/** Special filters that require additional data fetching */
+export interface SpecialFilters {
+  /** Exclude MRs already approved by current user */
+  excludeApprovedByMe: boolean;
+  /** Only show MRs where current user is explicitly a reviewer */
+  reviewerIsMe: boolean;
+}
 
 /**
  * Tracks which files have been viewed in a specific MR
@@ -20,9 +34,12 @@ interface MRState {
   // Selected MR
   selectedMrId: number | null;
   selectedMr: MergeRequest | null;
+  isDetailOpen: boolean; // Whether to show the detail view (Enter opens, ESC closes)
 
   // Filters and sorting
   filter: MergeRequestFilter;
+  negatedFilters: NegatedFilter[];
+  specialFilters: SpecialFilters;
   sort: MergeRequestSort;
   searchQuery: string;
   groupBy: GroupByOption;
@@ -36,7 +53,11 @@ interface MRState {
 
   // Actions
   setSelectedMr: (mr: MergeRequest | null) => void;
+  openDetail: () => void;
+  closeDetail: () => void;
   setFilter: (filter: Partial<MergeRequestFilter>) => void;
+  setNegatedFilters: (filters: NegatedFilter[]) => void;
+  setSpecialFilters: (filters: Partial<SpecialFilters>) => void;
   setSort: (sort: MergeRequestSort) => void;
   setSearchQuery: (query: string) => void;
   setGroupBy: (groupBy: GroupByOption) => void;
@@ -63,7 +84,13 @@ export const useMRStore = create<MRState>()(
       // Initial state
       selectedMrId: null,
       selectedMr: null,
+      isDetailOpen: false,
       filter: defaultFilter,
+      negatedFilters: [],
+      specialFilters: {
+        excludeApprovedByMe: false,
+        reviewerIsMe: false,
+      },
       sort: defaultSort,
       searchQuery: '',
       groupBy: 'none',
@@ -79,9 +106,20 @@ export const useMRStore = create<MRState>()(
           selectedSuggestion: null, // Clear suggestion when changing MR
         }),
 
+      openDetail: () => set({ isDetailOpen: true }),
+
+      closeDetail: () => set({ isDetailOpen: false }),
+
       setFilter: (newFilter) =>
         set((state) => ({
           filter: { ...state.filter, ...newFilter },
+        })),
+
+      setNegatedFilters: (negatedFilters) => set({ negatedFilters }),
+
+      setSpecialFilters: (specialFilters) =>
+        set((state) => ({
+          specialFilters: { ...state.specialFilters, ...specialFilters },
         })),
 
       setSort: (sort) => set({ sort }),
@@ -93,6 +131,11 @@ export const useMRStore = create<MRState>()(
       clearFilters: () =>
         set({
           filter: defaultFilter,
+          negatedFilters: [],
+          specialFilters: {
+            excludeApprovedByMe: false,
+            reviewerIsMe: false,
+          },
           searchQuery: '',
         }),
 
@@ -144,7 +187,7 @@ export const useMRStore = create<MRState>()(
         }),
     }),
     {
-      name: 'gitlab-mr-review-filters',
+      name: 'labrat-filters',
       version: 2, // Bump version for new viewedFiles state
       storage: createJSONStorage(() => localStorage),
       // Persist filter-related state and viewed files

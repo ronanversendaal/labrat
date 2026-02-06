@@ -9,7 +9,7 @@ use thiserror::Error;
 use tracing::{debug, warn};
 
 /// Service name used for keyring entries
-const SERVICE_NAME: &str = "com.gitlab-mr-review";
+const SERVICE_NAME: &str = "com.labrat";
 
 /// Credential storage errors
 #[derive(Debug, Error)]

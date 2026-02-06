@@ -89,7 +89,7 @@ impl Database {
 
     /// Get the default database path for the current platform
     pub fn default_path() -> PathBuf {
-        let app_name = "com.gitlab-mr-review";
+        let app_name = "com.labrat";
 
         #[cfg(target_os = "macos")]
         {

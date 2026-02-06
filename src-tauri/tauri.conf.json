@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "GitLab MR Review",
+  "productName": "LabRat",
   "version": "0.1.0",
-  "identifier": "com.gitlab-mr-review.app",
+  "identifier": "com.labrat.app",
   "build": {
     "beforeDevCommand": "pnpm dev",
     "devUrl": "http://localhost:1420",
@@ -13,7 +13,7 @@
     "withGlobalTauri": false,
     "windows": [
       {
-        "title": "GitLab MR Review",
+        "title": "LabRat",
         "width": 1200,
         "height": 800,
         "resizable": true,
@@ -29,6 +29,13 @@
   "bundle": {
     "active": true,
     "targets": "all",
-    "icon": []
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico",
+      "icons/icon.png"
+    ]
   }
 }

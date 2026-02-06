@@ -2,5 +2,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    gitlab_mr_review_lib::run()
+    labrat_lib::run()
 }

@@ -1,12 +1,16 @@
 [package]
-name = "gitlab-mr-review"
+name = "labrat"
 version = "0.1.0"
-description = "A GitLab MR Review App"
+description = "LabRat - A GitLab MR Review App"
 authors = ["you"]
 edition = "2021"
 
+[[bin]]
+name = "LabRat"
+path = "src/main.rs"
+
 [lib]
-name = "gitlab_mr_review_lib"
+name = "labrat_lib"
 crate-type = ["lib", "cdylib", "staticlib"]
 
 [build-dependencies]
@@ -47,6 +51,7 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 async-trait = "0.1"
 which = "7"
+base64 = "0.22"
 
 [dev-dependencies]
 tempfile = "3"

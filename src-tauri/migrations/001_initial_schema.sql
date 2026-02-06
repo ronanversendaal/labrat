@@ -1,4 +1,4 @@
--- Initial database schema for GitLab MR Review App
+-- Initial database schema for LabRat App
 -- Migration: 001_initial_schema
 
 -- GitLab Accounts
