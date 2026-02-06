@@ -12,7 +12,6 @@ import { useSettingsStore } from '../../stores/settingsStore';
 import { useAISuggestions } from '../../hooks/useAI';
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 import { useFocusStore } from '../../hooks/useFocusManager';
-import { MRDescription } from './MRDescription';
 import { MonacoDiffView, type MonacoDiffViewHandle } from './MonacoDiffView';
 import { FileTree } from './FileTree';
 import { QuickFilePicker } from './QuickFilePicker';
@@ -27,7 +26,7 @@ interface MRDetailViewProps {
   onClose?: () => void;
 }
 
-type Tab = 'description' | 'changes' | 'activity' | 'ai';
+type Tab = 'changes' | 'activity' | 'ai';
 
 export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
   const [activeTab, setActiveTab] = useState<Tab>('changes');
@@ -454,11 +453,15 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
       <div className="px-6 py-4 border-b border-edge">
         <div className="flex items-start justify-between">
           <div className="flex-1 min-w-0">
-            {/* Project path */}
+            {/* Project path + branches */}
             <div className="flex items-center gap-2 text-sm text-content-secondary mb-1">
               <span>{mr.project_path || `Project #${mr.project_id}`}</span>
               <span>•</span>
               <span>!{mr.iid}</span>
+              <span>•</span>
+              <code className="px-1.5 py-0.5 text-xs bg-surface-alt rounded">{mr.source_branch}</code>
+              <span className="text-content-tertiary">&rarr;</span>
+              <code className="px-1.5 py-0.5 text-xs bg-surface-alt rounded">{mr.target_branch}</code>
             </div>
 
             {/* Title */}
@@ -508,12 +511,6 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
         {/* Tabs */}
         <div className="flex items-center gap-1 mt-4 -mb-4">
           <TabButton
-            active={activeTab === 'description'}
-            onClick={() => setActiveTab('description')}
-          >
-            Description
-          </TabButton>
-          <TabButton
             active={activeTab === 'changes'}
             onClick={() => setActiveTab('changes')}
             badge={diff?.files.length}
@@ -539,12 +536,6 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
 
       {/* Content */}
       <div className="flex-1 overflow-hidden">
-        {activeTab === 'description' && (
-          <div className="p-6 overflow-auto h-full">
-            <MRDescription mr={mr} />
-          </div>
-        )}
-
         {activeTab === 'changes' && (
           <div className="flex flex-col h-full">
             {/* Collapsible description at the top */}
