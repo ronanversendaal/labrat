@@ -10,7 +10,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { useMRStore, useUIStore } from '../../stores';
+import { useMRStore } from '../../stores';
 import type { ParsedFilter } from '../../types';
 import {
   parseFilterQuery,
@@ -42,25 +42,18 @@ interface MRFiltersProps {
 }
 
 export function MRFilters({ projects = [], authors = [], labels = [] }: MRFiltersProps) {
-  const { filter, setFilter, setNegatedFilters, negatedFilters, specialFilters, setSpecialFilters, setSearchQuery, clearFilters, groupBy, setGroupBy } = useMRStore();
-  const { filterPanelExpanded, toggleFilterPanel } = useUIStore();
+  const { appliedFilters, addAppliedFilter, removeAppliedFilter, replaceFilter, setNegatedFilters, specialFilters, setSpecialFilters, setSearchQuery, setSort, sort, clearFilters, groupBy, setGroupBy, toolbarVisible, searchVisible, setSearchVisible } = useMRStore();
 
-  // Local state for the search input
+  // Local state for the search input (only used for composing new filters / free text)
   const [localQuery, setLocalQuery] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
   const inputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
-  // Track if user has interacted with search - prevents overwriting default filters on mount
-  const hasInteractedWithSearch = useRef(false);
+  // eslint-disable-next-line no-undef
+  const toolbarFirstRef = useRef<HTMLSelectElement>(null);
 
   const debouncedQuery = useDebounce(localQuery, 300);
-
-  // Parse the query into structured filters
-  const parsedFilters = useMemo(
-    () => parseFilterQuery(debouncedQuery),
-    [debouncedQuery]
-  );
 
   // Get the current word being typed for suggestions
   const currentWord = useMemo(() => {
@@ -70,10 +63,10 @@ export function MRFilters({ projects = [], authors = [], labels = [] }: MRFilter
     return words[words.length - 1] || '';
   }, [localQuery]);
 
-  // Get suggestions based on current input
+  // Get suggestions based on current input, excluding already-applied filters
   const suggestions = useMemo(
-    () => getFilterSuggestions(currentWord, { authors, projects, labels }),
-    [currentWord, authors, projects, labels]
+    () => getFilterSuggestions(currentWord, { authors, projects, labels }, appliedFilters),
+    [currentWord, authors, projects, labels, appliedFilters]
   );
 
   // Build project lookup map
@@ -90,50 +83,96 @@ export function MRFilters({ projects = [], authors = [], labels = [] }: MRFilter
     return map;
   }, [projects]);
 
-  // Apply parsed filters to store when debounced query changes
+  // Sync applied filters → store filter + negatedFilters (replace, not merge)
   useEffect(() => {
-    const { filter: newFilter, searchText, negatedFilters: parsedNegatedFilters } = filtersToMRFilter(parsedFilters, projectLookup);
-    setFilter(newFilter);
-    // Only update negated filters if user has interacted with search
-    // This prevents overwriting programmatic filters (like default "not author:me") on initial load
-    if (hasInteractedWithSearch.current) {
-      setNegatedFilters(parsedNegatedFilters);
-    }
-    setSearchQuery(searchText);
-  }, [parsedFilters, projectLookup, setFilter, setNegatedFilters, setSearchQuery]);
+    const { filter: newFilter, negatedFilters: parsedNegatedFilters } = filtersToMRFilter(appliedFilters, projectLookup);
+    replaceFilter(newFilter);
+    setNegatedFilters(parsedNegatedFilters);
+  }, [appliedFilters, projectLookup, replaceFilter, setNegatedFilters]);
+
+  // Sync free text from input → searchQuery
+  useEffect(() => {
+    const parsed = parseFilterQuery(debouncedQuery);
+    const textParts = parsed.filter((f) => f.type === 'text').map((f) => f.value);
+    setSearchQuery(textParts.join(' '));
+  }, [debouncedQuery, setSearchQuery]);
 
   // Handle suggestion selection
+  const isFilterPrefix = (value: string) => value.endsWith(':') || value.endsWith(':!=');
+
   const applySuggestion = useCallback((suggestion: { value: string }) => {
     const cursorPos = inputRef.current?.selectionStart ?? localQuery.length;
     const beforeCursor = localQuery.slice(0, cursorPos);
     const afterCursor = localQuery.slice(cursorPos);
-
-    // Find the start of the current word
     const words = beforeCursor.split(/\s+/);
     const currentWordStart = beforeCursor.length - (words[words.length - 1]?.length ?? 0);
 
-    // Replace the current word with the suggestion
-    const newQuery =
-      localQuery.slice(0, currentWordStart) +
-      suggestion.value +
-      (suggestion.value.endsWith(':') ? '' : ' ') +
-      afterCursor.trimStart();
+    if (isFilterPrefix(suggestion.value)) {
+      // Prefix suggestion — keep in input for further typing
+      const newQuery =
+        localQuery.slice(0, currentWordStart) +
+        suggestion.value +
+        afterCursor.trimStart();
+      setLocalQuery(newQuery);
+      setShowSuggestions(true);
+      setSelectedSuggestionIndex(-1);
+      setTimeout(() => {
+        inputRef.current?.focus();
+        const pos = currentWordStart + suggestion.value.length;
+        inputRef.current?.setSelectionRange(pos, pos);
+      }, 0);
+    } else {
+      // Complete filter — add to store and clear from input
+      const parsed = parseFilterQuery(suggestion.value);
+      if (parsed.length > 0) {
+        addAppliedFilter(parsed[0]);
+      }
+      const newQuery = (localQuery.slice(0, currentWordStart) + afterCursor.trimStart()).trim();
+      setLocalQuery(newQuery);
+      setShowSuggestions(false);
+      setSelectedSuggestionIndex(-1);
+      setTimeout(() => inputRef.current?.focus(), 0);
+    }
+  }, [localQuery, addAppliedFilter]);
 
-    setLocalQuery(newQuery);
-    setShowSuggestions(false);
-    setSelectedSuggestionIndex(-1);
-
-    // Focus input and move cursor after the suggestion
-    setTimeout(() => {
-      inputRef.current?.focus();
-      const newCursorPos = currentWordStart + suggestion.value.length + (suggestion.value.endsWith(':') ? 0 : 1);
-      inputRef.current?.setSelectionRange(newCursorPos, newCursorPos);
-    }, 0);
-  }, [localQuery]);
-
-  // Handle keyboard navigation in suggestions
+  // Handle keyboard navigation in suggestions + Escape to hide search
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
+      // Stop all handled keys from bubbling to parent handlers (e.g. MR list Enter/Escape)
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        if (showSuggestions && suggestions.length > 0) {
+          // First Escape: close suggestions, keep search bar
+          setShowSuggestions(false);
+          setSelectedSuggestionIndex(-1);
+        } else {
+          // Second Escape: hide search bar and blur input
+          setSearchVisible(false);
+          inputRef.current?.blur();
+        }
+        return;
+      }
+
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        e.stopPropagation();
+        if (showSuggestions && suggestions.length > 0 && selectedSuggestionIndex >= 0) {
+          applySuggestion(suggestions[selectedSuggestionIndex]);
+        } else {
+          // Commit any structured filters from input, keep free text
+          const currentParsed = parseFilterQuery(localQuery);
+          const structured = currentParsed.filter((f) => f.type !== 'text');
+          const freeText = currentParsed.filter((f) => f.type === 'text').map((f) => f.value).join(' ');
+          for (const sf of structured) {
+            addAppliedFilter(sf);
+          }
+          setLocalQuery(freeText);
+          setShowSuggestions(false);
+          setSelectedSuggestionIndex(-1);
+        }
+        return;
+      }
+
       if (!showSuggestions || suggestions.length === 0) return;
 
       switch (e.key) {
@@ -149,21 +188,31 @@ export function MRFilters({ projects = [], authors = [], labels = [] }: MRFilter
             prev > 0 ? prev - 1 : suggestions.length - 1
           );
           break;
-        case 'Enter':
         case 'Tab':
+          e.preventDefault();
           if (selectedSuggestionIndex >= 0) {
-            e.preventDefault();
             applySuggestion(suggestions[selectedSuggestionIndex]);
+          } else {
+            // Auto-complete with first suggestion
+            applySuggestion(suggestions[0]);
           }
-          break;
-        case 'Escape':
-          setShowSuggestions(false);
-          setSelectedSuggestionIndex(-1);
           break;
       }
     },
-    [showSuggestions, suggestions, selectedSuggestionIndex, applySuggestion]
+    [showSuggestions, suggestions, selectedSuggestionIndex, applySuggestion, setSearchVisible, localQuery, addAppliedFilter]
   );
+
+  // Scroll selected suggestion into view
+  useEffect(() => {
+    if (selectedSuggestionIndex >= 0 && suggestionsRef.current) {
+      const selected = suggestionsRef.current.querySelector(
+        `[data-suggestion-index="${selectedSuggestionIndex}"]`
+      );
+      if (selected) {
+        selected.scrollIntoView({ block: 'nearest' });
+      }
+    }
+  }, [selectedSuggestionIndex]);
 
   // Close suggestions when clicking outside
   useEffect(() => {
@@ -182,23 +231,15 @@ export function MRFilters({ projects = [], authors = [], labels = [] }: MRFilter
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Remove a specific filter chip
-  const removeFilter = useCallback((filterToRemove: ParsedFilter) => {
-    // Remove the filter's raw text from the query
-    const newQuery = localQuery
-      .replace(filterToRemove.raw, '')
-      .replace(/\s+/g, ' ')
-      .trim();
-    setLocalQuery(newQuery);
-  }, [localQuery]);
+  // Focus first toolbar element when toolbar becomes visible
+  useEffect(() => {
+    if (toolbarVisible) {
+      requestAnimationFrame(() => toolbarFirstRef.current?.focus());
+    }
+  }, [toolbarVisible]);
 
   const hasSpecialFilters = specialFilters.excludeApprovedByMe || specialFilters.reviewerIsMe;
-  const hasActiveFilters = parsedFilters.length > 0 || negatedFilters.length > 0 || hasSpecialFilters;
-
-  // Remove a negated filter from the store
-  const removeNegatedFilter = useCallback((index: number) => {
-    setNegatedFilters(negatedFilters.filter((_, i) => i !== index));
-  }, [negatedFilters, setNegatedFilters]);
+  const hasActiveFilters = appliedFilters.length > 0 || hasSpecialFilters;
 
   // Remove a special filter
   const removeSpecialFilter = useCallback((filterKey: keyof typeof specialFilters) => {
@@ -207,197 +248,141 @@ export function MRFilters({ projects = [], authors = [], labels = [] }: MRFilter
 
   return (
     <div className="mb-4">
-      {/* Search input with suggestions */}
-      <div className="flex items-center gap-2 mb-2">
-        <div className="relative flex-1">
-          <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input
-            ref={inputRef}
-            type="text"
-            aria-label="Filter merge requests"
-            placeholder="Filter: author:name project:path status:draft or free text..."
-            value={localQuery}
-            onChange={(e) => {
-              hasInteractedWithSearch.current = true;
-              setLocalQuery(e.target.value);
-              setShowSuggestions(true);
-              setSelectedSuggestionIndex(-1);
-            }}
-            onFocus={() => setShowSuggestions(true)}
-            onKeyDown={handleKeyDown}
-            className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
-          {localQuery && (
-            <button
-              onClick={() => {
-                hasInteractedWithSearch.current = true;
-                setLocalQuery('');
-                clearFilters();
-              }}
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-              aria-label="Clear filter"
-            >
-              <CloseIcon className="w-4 h-4" aria-hidden="true" />
-            </button>
-          )}
-
-          {/* Suggestions dropdown */}
-          {showSuggestions && suggestions.length > 0 && (
-            <div
-              ref={suggestionsRef}
-              className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg max-h-60 overflow-auto"
-            >
-              {suggestions.map((suggestion, index) => (
+      {/* Search input + filter chips (toggled via `/` keybinding) */}
+      {searchVisible && (
+        <>
+          <div className="flex items-center gap-2 mb-2">
+            <div className="relative flex-1">
+              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                ref={inputRef}
+                type="text"
+                aria-label="Filter merge requests"
+                placeholder="Filter: author:name project:path status:draft or free text..."
+                value={localQuery}
+                onChange={(e) => {
+                  setLocalQuery(e.target.value);
+                  setShowSuggestions(true);
+                  setSelectedSuggestionIndex(-1);
+                }}
+                onFocus={() => setShowSuggestions(true)}
+                onKeyDown={handleKeyDown}
+                className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              {localQuery && (
                 <button
-                  key={suggestion.value}
-                  onClick={() => applySuggestion(suggestion)}
-                  className={`
-                    w-full px-3 py-2 text-left text-sm flex items-center justify-between
-                    ${index === selectedSuggestionIndex
-                      ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
-                      : 'hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100'
-                    }
-                  `}
+                  onClick={() => {
+                    setLocalQuery('');
+                    clearFilters();
+                  }}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  aria-label="Clear filter"
                 >
-                  <span className="font-mono">{suggestion.label}</span>
-                  {suggestion.description && (
-                    <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
-                      {suggestion.description}
-                    </span>
-                  )}
+                  <CloseIcon className="w-4 h-4" aria-hidden="true" />
                 </button>
-              ))}
-            </div>
-          )}
-        </div>
+              )}
 
-        {/* Filter toggle button for advanced options */}
-        <button
-          onClick={toggleFilterPanel}
-          className={`
-            p-2 rounded-md border transition-colors
-            ${filterPanelExpanded
-              ? 'border-blue-500 bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
-              : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
-            }
-          `}
-          aria-label={filterPanelExpanded ? 'Hide options' : 'Show options'}
-          aria-expanded={filterPanelExpanded}
-        >
-          <SettingsIcon className="w-5 h-5" aria-hidden="true" />
-        </button>
-      </div>
-
-      {/* Active filter chips */}
-      {hasActiveFilters && (
-        <div className="flex flex-wrap items-center gap-2 mb-2">
-          {/* Special filters */}
-          {specialFilters.reviewerIsMe && (
-            <SpecialFilterChip
-              label="Reviewer: Me"
-              onRemove={() => removeSpecialFilter('reviewerIsMe')}
-            />
-          )}
-          {specialFilters.excludeApprovedByMe && (
-            <SpecialFilterChip
-              label="NOT Approved by me"
-              onRemove={() => removeSpecialFilter('excludeApprovedByMe')}
-            />
-          )}
-          {/* Store negated filters (applied programmatically, e.g., default "not authored by me") */}
-          {negatedFilters.map((nf, index) => (
-            <FilterChip
-              key={`store-negated-${nf.type}-${nf.value}-${index}`}
-              filter={{ type: nf.type, value: nf.value, raw: `${nf.type}:!=${nf.value}`, negated: true }}
-              onRemove={() => removeNegatedFilter(index)}
-            />
-          ))}
-          {/* Parsed filters from search input */}
-          {parsedFilters.map((pf, index) => (
-            <FilterChip
-              key={`${pf.type}-${pf.value}-${index}`}
-              filter={pf}
-              onRemove={() => removeFilter(pf)}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* Expanded options panel (grouping, etc.) */}
-      {filterPanelExpanded && (
-        <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Group by */}
-            <div>
-              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                Group by
-              </label>
-              <select
-                value={groupBy}
-                onChange={(e) => setGroupBy(e.target.value as 'project' | 'author' | 'date' | 'none')}
-                className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-              >
-                <option value="none">No grouping</option>
-                <option value="project">Project</option>
-                <option value="author">Author</option>
-                <option value="date">Last updated</option>
-              </select>
-            </div>
-
-            {/* Quick filter buttons */}
-            <div>
-              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                Quick filters
-              </label>
-              <div className="flex flex-wrap gap-1">
-                <QuickFilterButton
-                  label="Drafts"
-                  isActive={filter.is_draft === true}
-                  onClick={() => {
-                    if (filter.is_draft) {
-                      setLocalQuery(localQuery.replace(/\bstatus:draft\b\s*/g, '').trim());
-                    } else {
-                      setLocalQuery((localQuery + ' status:draft').trim());
-                    }
-                  }}
-                />
-                <QuickFilterButton
-                  label="Conflicts"
-                  isActive={filter.has_conflicts === true}
-                  onClick={() => {
-                    if (filter.has_conflicts) {
-                      setLocalQuery(localQuery.replace(/\bstatus:conflicts\b\s*/g, '').trim());
-                    } else {
-                      setLocalQuery((localQuery + ' status:conflicts').trim());
-                    }
-                  }}
-                />
-                <QuickFilterButton
-                  label="Failed"
-                  isActive={filter.pipeline_failed === true}
-                  onClick={() => {
-                    if (filter.pipeline_failed) {
-                      setLocalQuery(localQuery.replace(/\bstatus:failed\b\s*/g, '').trim());
-                    } else {
-                      setLocalQuery((localQuery + ' status:failed').trim());
-                    }
-                  }}
-                />
-              </div>
+              {/* Suggestions dropdown */}
+              {showSuggestions && suggestions.length > 0 && (
+                <div
+                  ref={suggestionsRef}
+                  className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg max-h-60 overflow-auto"
+                >
+                  {suggestions.map((suggestion, index) => (
+                    <button
+                      key={suggestion.value}
+                      tabIndex={-1}
+                      data-suggestion-index={index}
+                      onClick={() => applySuggestion(suggestion)}
+                      className={`
+                        w-full px-3 py-2 text-left text-sm flex items-center justify-between
+                        ${index === selectedSuggestionIndex
+                          ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                          : 'hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100'
+                        }
+                      `}
+                    >
+                      <span className="font-mono">{suggestion.label}</span>
+                      {suggestion.description && (
+                        <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
+                          {suggestion.description}
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Filter syntax help */}
-          <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              <span className="font-medium">Filter syntax:</span>{' '}
-              <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">author:name</code>{' '}
-              <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">author:!=name</code>{' '}
-              <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">project:path</code>{' '}
-              <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">status:draft|conflicts|failed|ready</code>{' '}
-              <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">label:name</code>{' '}
-              or free text. Use <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">:!=</code> to negate.
-            </p>
+          {/* Active filter chips */}
+          {hasActiveFilters && (
+            <div className="flex flex-wrap items-center gap-2 mb-2">
+              {specialFilters.reviewerIsMe && (
+                <SpecialFilterChip
+                  label="Reviewer: Me"
+                  onRemove={() => removeSpecialFilter('reviewerIsMe')}
+                />
+              )}
+              {specialFilters.excludeApprovedByMe && (
+                <SpecialFilterChip
+                  label="NOT Approved by me"
+                  onRemove={() => removeSpecialFilter('excludeApprovedByMe')}
+                />
+              )}
+              {appliedFilters.map((af, index) => (
+                <FilterChip
+                  key={`${af.negated ? 'neg-' : ''}${af.type}-${af.value}-${index}`}
+                  filter={af}
+                  onRemove={() => removeAppliedFilter(af)}
+                />
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Unified toolbar: group + sort (toggled via `g` keybinding) */}
+      {toolbarVisible && (
+        <div className="mb-2 flex items-center gap-4 p-2 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+          <div className="flex items-center gap-1.5">
+            <label className="text-xs font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap">
+              Group by
+            </label>
+            <select
+              ref={toolbarFirstRef}
+              value={groupBy}
+              onChange={(e) => setGroupBy(e.target.value as 'project' | 'author' | 'date' | 'none')}
+              className="px-2 py-1 text-sm border border-gray-200 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+            >
+              <option value="none">None</option>
+              <option value="project">Project</option>
+              <option value="author">Author</option>
+              <option value="date">Last updated</option>
+            </select>
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            <label className="text-xs font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap">
+              Sort
+            </label>
+            <select
+              value={sort.field}
+              onChange={(e) => setSort({ ...sort, field: e.target.value as 'updated_at' | 'created_at' | 'title' })}
+              className="px-2 py-1 text-sm border border-gray-200 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+            >
+              <option value="updated_at">Updated</option>
+              <option value="created_at">Created</option>
+              <option value="title">Title</option>
+            </select>
+            <button
+              onClick={() => setSort({ ...sort, direction: sort.direction === 'asc' ? 'desc' : 'asc' })}
+              className="p-1 rounded-md text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+              aria-label={`Sort ${sort.direction === 'asc' ? 'descending' : 'ascending'}`}
+              title={sort.direction === 'asc' ? 'Ascending' : 'Descending'}
+            >
+              <SortDirectionIcon direction={sort.direction} className="w-4 h-4" />
+            </button>
           </div>
         </div>
       )}
@@ -474,32 +459,6 @@ function SpecialFilterChip({ label, onRemove }: { label: string; onRemove: () =>
   );
 }
 
-// Quick filter button
-function QuickFilterButton({
-  label,
-  isActive,
-  onClick,
-}: {
-  label: string;
-  isActive: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={`
-        px-2 py-1 text-xs rounded transition-colors
-        ${isActive
-          ? 'bg-blue-500 text-white'
-          : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
-        }
-      `}
-    >
-      {label}
-    </button>
-  );
-}
-
 // Icons
 function SearchIcon({ className }: { className?: string }) {
   return (
@@ -514,15 +473,14 @@ function SearchIcon({ className }: { className?: string }) {
   );
 }
 
-function SettingsIcon({ className }: { className?: string }) {
+function SortDirectionIcon({ direction, className }: { direction: 'asc' | 'desc'; className?: string }) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={2}
-        d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"
-      />
+      {direction === 'asc' ? (
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+      ) : (
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+      )}
     </svg>
   );
 }

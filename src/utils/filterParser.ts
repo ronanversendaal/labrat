@@ -178,10 +178,22 @@ export function getFilterSuggestions(
     authors?: Array<{ username: string; name: string }>;
     projects?: Array<{ id: number; path: string }>;
     labels?: string[];
-  }
+  },
+  activeFilters?: ParsedFilter[]
 ): Array<{ label: string; value: string; description?: string }> {
   const suggestions: Array<{ label: string; value: string; description?: string }> = [];
   const lower = input.toLowerCase();
+
+  // Build a set of already-applied filter values for deduplication
+  const applied = new Set<string>();
+  if (activeFilters) {
+    for (const f of activeFilters) {
+      if (f.type !== 'text') {
+        const prefix = f.negated ? `${f.type}:!=` : `${f.type}:`;
+        applied.add(`${prefix}${f.value}`.toLowerCase());
+      }
+    }
+  }
 
   // If input is empty or just spaces, show filter type hints
   if (!input.trim()) {
@@ -189,8 +201,11 @@ export function getFilterSuggestions(
       { label: 'author:', value: 'author:', description: 'Filter by author username' },
       { label: 'author:!=', value: 'author:!=', description: 'Exclude author username' },
       { label: 'project:', value: 'project:', description: 'Filter by project' },
+      { label: 'project:!=', value: 'project:!=', description: 'Exclude project' },
       { label: 'status:', value: 'status:', description: 'Filter by status (draft, conflicts, failed, ready)' },
+      { label: 'status:!=', value: 'status:!=', description: 'Exclude status' },
       { label: 'label:', value: 'label:', description: 'Filter by label' },
+      { label: 'label:!=', value: 'label:!=', description: 'Exclude label' },
     ];
   }
 
@@ -202,6 +217,24 @@ export function getFilterSuggestions(
         label: prefix,
         value: prefix,
         description: `Filter by ${prefix.slice(0, -1)}`,
+      });
+      // Also suggest negated variant
+      const negated = `${prefix}!=`;
+      if (negated.startsWith(lower)) {
+        suggestions.push({
+          label: negated,
+          value: negated,
+          description: `Exclude ${prefix.slice(0, -1)}`,
+        });
+      }
+    }
+    // Handle when user has typed the full prefix — suggest negated if they start typing !=
+    const negated = `${prefix}!=`;
+    if (lower.startsWith(prefix) && negated.startsWith(lower) && negated !== lower) {
+      suggestions.push({
+        label: negated,
+        value: negated,
+        description: `Exclude ${prefix.slice(0, -1)}`,
       });
     }
   }
@@ -225,54 +258,71 @@ export function getFilterSuggestions(
     }
   }
 
-  // If typing after project:, suggest projects
+  // If typing after project:, suggest projects (including negated)
   if (lower.startsWith('project:') && context.projects) {
-    const partial = input.slice(8).toLowerCase();
+    const afterColon = input.slice(8);
+    const isNegated = afterColon.startsWith('!=');
+    const partial = (isNegated ? afterColon.slice(2) : afterColon).toLowerCase();
+    const prefix = isNegated ? 'project:!=' : 'project:';
+
     for (const project of context.projects) {
       if (project.path.toLowerCase().includes(partial)) {
         suggestions.push({
-          label: `project:${project.path}`,
-          value: `project:${project.path}`,
-          description: project.path,
+          label: `${prefix}${project.path}`,
+          value: `${prefix}${project.path}`,
+          description: isNegated ? `Exclude ${project.path}` : project.path,
         });
       }
     }
   }
 
-  // If typing after status:, suggest status values
+  // If typing after status:, suggest status values (including negated)
   if (lower.startsWith('status:')) {
-    const partial = input.slice(7).toLowerCase();
+    const afterColon = input.slice(7);
+    const isNegated = afterColon.startsWith('!=');
+    const partial = (isNegated ? afterColon.slice(2) : afterColon).toLowerCase();
+    const prefix = isNegated ? 'status:!=' : 'status:';
     const statuses = [
-      { value: 'draft', description: 'Show draft MRs' },
-      { value: 'conflicts', description: 'Show MRs with conflicts' },
-      { value: 'failed', description: 'Show MRs with failed pipelines' },
-      { value: 'ready', description: 'Show MRs ready to merge' },
+      { value: 'draft', description: 'draft MRs' },
+      { value: 'conflicts', description: 'MRs with conflicts' },
+      { value: 'failed', description: 'MRs with failed pipelines' },
+      { value: 'ready', description: 'MRs ready to merge' },
     ];
     for (const status of statuses) {
       if (status.value.startsWith(partial)) {
         suggestions.push({
-          label: `status:${status.value}`,
-          value: `status:${status.value}`,
-          description: status.description,
+          label: `${prefix}${status.value}`,
+          value: `${prefix}${status.value}`,
+          description: isNegated ? `Exclude ${status.description}` : `Show ${status.description}`,
         });
       }
     }
   }
 
-  // If typing after label:, suggest labels
+  // If typing after label:, suggest labels (including negated)
   if (lower.startsWith('label:') && context.labels) {
-    const partial = input.slice(6).toLowerCase();
+    const afterColon = input.slice(6);
+    const isNegated = afterColon.startsWith('!=');
+    const partial = (isNegated ? afterColon.slice(2) : afterColon).toLowerCase();
+    const prefix = isNegated ? 'label:!=' : 'label:';
+
     for (const label of context.labels) {
       if (label.toLowerCase().includes(partial)) {
         suggestions.push({
-          label: `label:${label}`,
-          value: `label:${label}`,
+          label: `${prefix}${label}`,
+          value: `${prefix}${label}`,
+          description: isNegated ? `Exclude label ${label}` : undefined,
         });
       }
     }
   }
 
-  return suggestions.slice(0, 10); // Limit to 10 suggestions
+  // Remove suggestions that match already-applied filters
+  const filtered = applied.size > 0
+    ? suggestions.filter((s) => !applied.has(s.value.toLowerCase()))
+    : suggestions;
+
+  return filtered.slice(0, 10); // Limit to 10 suggestions
 }
 
 /**

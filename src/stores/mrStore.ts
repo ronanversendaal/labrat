@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import type { MergeRequest, MergeRequestFilter, MergeRequestSort, FilterType } from '../types/gitlab';
+import type { MergeRequest, MergeRequestFilter, MergeRequestSort, FilterType, ParsedFilter } from '../types/gitlab';
 import type { AISuggestion } from '../types/ai';
 
 type GroupByOption = 'project' | 'author' | 'date' | 'none';
@@ -39,10 +39,13 @@ interface MRState {
   // Filters and sorting
   filter: MergeRequestFilter;
   negatedFilters: NegatedFilter[];
+  appliedFilters: ParsedFilter[];
   specialFilters: SpecialFilters;
   sort: MergeRequestSort;
   searchQuery: string;
   groupBy: GroupByOption;
+  toolbarVisible: boolean;
+  searchVisible: boolean;
 
   // UI state
   expandedFiles: Set<string>;
@@ -56,11 +59,16 @@ interface MRState {
   openDetail: () => void;
   closeDetail: () => void;
   setFilter: (filter: Partial<MergeRequestFilter>) => void;
+  replaceFilter: (filter: Partial<MergeRequestFilter>) => void;
   setNegatedFilters: (filters: NegatedFilter[]) => void;
+  addAppliedFilter: (filter: ParsedFilter) => void;
+  removeAppliedFilter: (filter: ParsedFilter) => void;
   setSpecialFilters: (filters: Partial<SpecialFilters>) => void;
   setSort: (sort: MergeRequestSort) => void;
   setSearchQuery: (query: string) => void;
   setGroupBy: (groupBy: GroupByOption) => void;
+  toggleToolbar: () => void;
+  setSearchVisible: (visible: boolean) => void;
   clearFilters: () => void;
   toggleFileExpanded: (filePath: string) => void;
   setSelectedSuggestion: (suggestion: AISuggestion | null) => void;
@@ -77,23 +85,57 @@ const defaultSort: MergeRequestSort = {
   field: 'updated_at',
   direction: 'desc',
 };
+const defaultSpecialFilters: SpecialFilters = {
+  excludeApprovedByMe: false,
+  reviewerIsMe: false,
+};
+
+/** Read persisted state synchronously so the very first render uses saved filters. */
+function loadPersistedState(): Record<string, unknown> | null {
+  try {
+    const raw = localStorage.getItem('labrat-filters');
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed.version === 6 && parsed.state) return parsed.state;
+    // v5 → v6: add appliedFilters
+    if (parsed.version === 5 && parsed.state) {
+      return { ...parsed.state, appliedFilters: [] };
+    }
+    // v4 → v6 migration: rename groupingVisible → toolbarVisible
+    if (parsed.version === 4 && parsed.state) {
+      const { groupingVisible, ...rest } = parsed.state;
+      return { ...rest, toolbarVisible: groupingVisible ?? false };
+    }
+    // v3 → v5 migration: add toolbarVisible
+    if (parsed.version === 3 && parsed.state) {
+      return { ...parsed.state, toolbarVisible: false };
+    }
+    // v2 → v5 migration: add negatedFilters, specialFilters, toolbarVisible
+    if (parsed.version === 2 && parsed.state) {
+      return { ...parsed.state, negatedFilters: [], specialFilters: defaultSpecialFilters, toolbarVisible: false };
+    }
+  } catch { /* ignore */ }
+  return null;
+}
+
+const persisted = loadPersistedState();
 
 export const useMRStore = create<MRState>()(
   persist(
     (set) => ({
-      // Initial state
+      // Initial state — use persisted values so the first query is correct
       selectedMrId: null,
       selectedMr: null,
       isDetailOpen: false,
-      filter: defaultFilter,
-      negatedFilters: [],
-      specialFilters: {
-        excludeApprovedByMe: false,
-        reviewerIsMe: false,
-      },
-      sort: defaultSort,
-      searchQuery: '',
-      groupBy: 'none',
+      filter: (persisted?.filter as MergeRequestFilter) ?? defaultFilter,
+      negatedFilters: (persisted?.negatedFilters as NegatedFilter[]) ?? [],
+      appliedFilters: (persisted?.appliedFilters as ParsedFilter[]) ?? [],
+      specialFilters: (persisted?.specialFilters as SpecialFilters) ?? defaultSpecialFilters,
+      sort: (persisted?.sort as MergeRequestSort) ?? defaultSort,
+      searchQuery: (persisted?.searchQuery as string) ?? '',
+      groupBy: (persisted?.groupBy as GroupByOption) ?? 'none',
+      toolbarVisible: (persisted?.toolbarVisible as boolean) ?? false,
+      searchVisible: false,
       expandedFiles: new Set(),
       selectedSuggestion: null,
       viewedFiles: {},
@@ -115,7 +157,25 @@ export const useMRStore = create<MRState>()(
           filter: { ...state.filter, ...newFilter },
         })),
 
+      replaceFilter: (newFilter) => set({ filter: newFilter as MergeRequestFilter }),
+
       setNegatedFilters: (negatedFilters) => set({ negatedFilters }),
+
+      addAppliedFilter: (filter) =>
+        set((state) => {
+          const isDuplicate = state.appliedFilters.some(
+            (f) => f.type === filter.type && f.value === filter.value && f.negated === filter.negated
+          );
+          if (isDuplicate) return state;
+          return { appliedFilters: [...state.appliedFilters, filter] };
+        }),
+
+      removeAppliedFilter: (filter) =>
+        set((state) => ({
+          appliedFilters: state.appliedFilters.filter(
+            (f) => !(f.type === filter.type && f.value === filter.value && f.negated === filter.negated)
+          ),
+        })),
 
       setSpecialFilters: (specialFilters) =>
         set((state) => ({
@@ -128,10 +188,15 @@ export const useMRStore = create<MRState>()(
 
       setGroupBy: (groupBy) => set({ groupBy }),
 
+      toggleToolbar: () => set((state) => ({ toolbarVisible: !state.toolbarVisible })),
+
+      setSearchVisible: (searchVisible) => set({ searchVisible }),
+
       clearFilters: () =>
         set({
           filter: defaultFilter,
           negatedFilters: [],
+          appliedFilters: [],
           specialFilters: {
             excludeApprovedByMe: false,
             reviewerIsMe: false,
@@ -188,14 +253,37 @@ export const useMRStore = create<MRState>()(
     }),
     {
       name: 'labrat-filters',
-      version: 2, // Bump version for new viewedFiles state
+      version: 6, // Bump version: add appliedFilters
       storage: createJSONStorage(() => localStorage),
+      migrate: (persisted: unknown, version: number) => {
+        let state = persisted as Record<string, unknown>;
+        if (version < 3) {
+          state = {
+            ...state,
+            negatedFilters: [],
+            specialFilters: { excludeApprovedByMe: false, reviewerIsMe: false },
+          };
+        }
+        if (version < 5) {
+          // v3/v4 → v5: rename groupingVisible → toolbarVisible
+          const { groupingVisible, ...rest } = state;
+          state = { ...rest, toolbarVisible: groupingVisible ?? false };
+        }
+        if (version < 6) {
+          state = { ...state, appliedFilters: [] };
+        }
+        return state;
+      },
       // Persist filter-related state and viewed files
       partialize: (state) => ({
         filter: state.filter,
+        negatedFilters: state.negatedFilters,
+        appliedFilters: state.appliedFilters,
+        specialFilters: state.specialFilters,
         sort: state.sort,
         searchQuery: state.searchQuery,
         groupBy: state.groupBy,
+        toolbarVisible: state.toolbarVisible,
         viewedFiles: state.viewedFiles,
       }),
     }
