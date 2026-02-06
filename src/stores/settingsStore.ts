@@ -34,8 +34,10 @@ interface SettingsState {
   setAiAutoAnalyze: (enabled: boolean) => void;
   setKeyboardShortcutsEnabled: (enabled: boolean) => void;
   setSidebarCollapsed: (collapsed: boolean) => void;
+  toggleSidebarCollapsed: () => void;
   setDiffViewMode: (mode: DiffViewMode) => void;
   setShowWhitespace: (show: boolean) => void;
+  toggleShowWhitespace: () => void;
   setFileViewMode: (mode: FileViewMode) => void;
   setDefaultAiProviderId: (id: string | null) => void;
   resetToDefaults: () => void;
@@ -73,8 +75,12 @@ export const useSettingsStore = create<SettingsState>()(
       setKeyboardShortcutsEnabled: (keyboardShortcutsEnabled) =>
         set({ keyboardShortcutsEnabled }),
       setSidebarCollapsed: (sidebarCollapsed) => set({ sidebarCollapsed }),
+      toggleSidebarCollapsed: () =>
+        set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
       setDiffViewMode: (diffViewMode) => set({ diffViewMode }),
       setShowWhitespace: (showWhitespace) => set({ showWhitespace }),
+      toggleShowWhitespace: () =>
+        set((state) => ({ showWhitespace: !state.showWhitespace })),
       setFileViewMode: (fileViewMode) => set({ fileViewMode }),
       setDefaultAiProviderId: (defaultAiProviderId) =>
         set({ defaultAiProviderId }),

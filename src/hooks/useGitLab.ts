@@ -17,6 +17,7 @@ import type {
   ResolveDiscussionRequest,
 } from '../types';
 import { useMRStore } from '../stores';
+import { useSettingsStore } from '../stores/settingsStore';
 
 // Query keys for React Query
 export const queryKeys = {
@@ -91,14 +92,12 @@ export function useRemoveAccount() {
   });
 }
 
-/** Default refetch interval for MR list (60 seconds) */
-const MR_LIST_REFETCH_INTERVAL = 60 * 1000;
-
 /**
  * Hook to list merge requests with optional filters
  */
 export function useMergeRequests(request?: ListMergeRequestsRequest) {
   const { filter, sort, searchQuery } = useMRStore();
+  const mrRefreshInterval = useSettingsStore((s) => s.mrRefreshInterval);
   const queryClient = useQueryClient();
 
   const mergedRequest: ListMergeRequestsRequest = {
@@ -130,7 +129,7 @@ export function useMergeRequests(request?: ListMergeRequestsRequest) {
       return data;
     },
     select: (data: ListMergeRequestsResponse) => data.merge_requests,
-    refetchInterval: MR_LIST_REFETCH_INTERVAL,
+    refetchInterval: mrRefreshInterval > 0 ? mrRefreshInterval * 1000 : false,
     refetchIntervalInBackground: false,
   });
 }

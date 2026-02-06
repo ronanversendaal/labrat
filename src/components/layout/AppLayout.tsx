@@ -1,16 +1,18 @@
-import { useState, useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { Sidebar, SidebarItem, SidebarSection } from './Sidebar';
 import { MainContent } from './MainContent';
 import { Avatar } from '../common';
 import { useAccounts, useSetActiveAccount } from '../../hooks/useGitLab';
 import { useUIStore, useMRStore } from '../../stores';
+import { useSettingsStore } from '../../stores/settingsStore';
 
 interface AppLayoutProps {
   children: ReactNode;
 }
 
 export function AppLayout({ children }: AppLayoutProps) {
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
+  const sidebarCollapsed = useSettingsStore((s) => s.sidebarCollapsed);
+  const toggleSidebarCollapsed = useSettingsStore((s) => s.toggleSidebarCollapsed);
   const { data: accounts } = useAccounts();
   const setActiveAccount = useSetActiveAccount();
   const { openModal } = useUIStore();
@@ -73,7 +75,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         {/* Sidebar */}
         <Sidebar
           collapsed={sidebarCollapsed}
-          onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+          onToggleCollapse={toggleSidebarCollapsed}
         >
           {/* Account selector */}
           {accounts && accounts.length > 0 && (

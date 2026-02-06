@@ -10,7 +10,7 @@ import { UI_FONT_OPTIONS, CODE_FONT_OPTIONS } from '../../types/settings';
 import type { DiffViewMode } from '../../types';
 
 export function GeneralSettings() {
-  const { data: settings, isLoading: isLoadingSettings } = useSettings();
+  const { isLoading: isLoadingSettings } = useSettings();
   const { data: cacheStats, isLoading: isLoadingCache } = useCacheStats();
   const updateSettings = useUpdateSettings();
   const clearCache = useClearCache();
@@ -23,15 +23,29 @@ export function GeneralSettings() {
   const setFontFamilyUI = useSettingsStore((s) => s.setFontFamilyUI);
   const setFontFamilyCode = useSettingsStore((s) => s.setFontFamilyCode);
 
+  const diffViewMode = useSettingsStore((s) => s.diffViewMode);
+  const setDiffViewMode = useSettingsStore((s) => s.setDiffViewMode);
+  const showWhitespace = useSettingsStore((s) => s.showWhitespace);
+  const setShowWhitespace = useSettingsStore((s) => s.setShowWhitespace);
+  const keyboardShortcutsEnabled = useSettingsStore((s) => s.keyboardShortcutsEnabled);
+  const setKeyboardShortcutsEnabled = useSettingsStore((s) => s.setKeyboardShortcutsEnabled);
+  const mrRefreshInterval = useSettingsStore((s) => s.mrRefreshInterval);
+  const setMrRefreshInterval = useSettingsStore((s) => s.setMrRefreshInterval);
+  const cacheSizeMb = useSettingsStore((s) => s.cacheSizeMb);
+  const setCacheSizeMb = useSettingsStore((s) => s.setCacheSizeMb);
+
   const handleDiffModeChange = (mode: DiffViewMode) => {
+    setDiffViewMode(mode);
     updateSettings.mutate({ diff_view_mode: mode });
   };
 
   const handleRefreshIntervalChange = (seconds: number) => {
+    setMrRefreshInterval(seconds);
     updateSettings.mutate({ mr_refresh_interval_seconds: seconds });
   };
 
   const handleCacheSizeChange = (mb: number) => {
+    setCacheSizeMb(mb);
     updateSettings.mutate({ cache_size_mb: mb });
   };
 
@@ -40,11 +54,23 @@ export function GeneralSettings() {
     updateSettings.mutate({ font_size: size });
   };
 
+  const handleFontFamilyUIChange = (font: string | null) => {
+    setFontFamilyUI(font);
+    updateSettings.mutate({ font_family_ui: font });
+  };
+
+  const handleFontFamilyCodeChange = (font: string | null) => {
+    setFontFamilyCode(font);
+    updateSettings.mutate({ font_family_code: font });
+  };
+
   const handleWhitespaceToggle = (show: boolean) => {
+    setShowWhitespace(show);
     updateSettings.mutate({ show_whitespace: show });
   };
 
   const handleKeyboardShortcutsToggle = (enabled: boolean) => {
+    setKeyboardShortcutsEnabled(enabled);
     updateSettings.mutate({ keyboard_shortcuts_enabled: enabled });
   };
 
@@ -107,7 +133,7 @@ export function GeneralSettings() {
             </div>
             <select
               value={fontFamilyUI ?? ''}
-              onChange={(e) => setFontFamilyUI(e.target.value || null)}
+              onChange={(e) => handleFontFamilyUIChange(e.target.value || null)}
               className="px-3 py-2 border border-edge-strong rounded-md bg-surface text-content"
             >
               {UI_FONT_OPTIONS.map((opt) => (
@@ -124,7 +150,7 @@ export function GeneralSettings() {
             </div>
             <select
               value={fontFamilyCode ?? ''}
-              onChange={(e) => setFontFamilyCode(e.target.value || null)}
+              onChange={(e) => handleFontFamilyCodeChange(e.target.value || null)}
               className="px-3 py-2 border border-edge-strong rounded-md bg-surface text-content"
             >
               {CODE_FONT_OPTIONS.map((opt) => (
@@ -146,7 +172,7 @@ export function GeneralSettings() {
               <p className="text-sm text-content-secondary">Choose how diffs are displayed</p>
             </div>
             <select
-              value={settings?.diff_view_mode ?? 'unified'}
+              value={diffViewMode}
               onChange={(e) => handleDiffModeChange(e.target.value as DiffViewMode)}
               className="px-3 py-2 border border-edge-strong rounded-md bg-surface text-content"
             >
@@ -164,7 +190,7 @@ export function GeneralSettings() {
             <label className="relative inline-flex items-center cursor-pointer">
               <input
                 type="checkbox"
-                checked={settings?.show_whitespace ?? false}
+                checked={showWhitespace}
                 onChange={(e) => handleWhitespaceToggle(e.target.checked)}
                 className="sr-only peer"
               />
@@ -185,7 +211,7 @@ export function GeneralSettings() {
               <p className="text-sm text-content-secondary">How often to check for MR updates</p>
             </div>
             <select
-              value={settings?.mr_refresh_interval_seconds ?? 300}
+              value={mrRefreshInterval}
               onChange={(e) => handleRefreshIntervalChange(parseInt(e.target.value, 10))}
               className="px-3 py-2 border border-edge-strong rounded-md bg-surface text-content"
             >
@@ -205,7 +231,7 @@ export function GeneralSettings() {
               <p className="text-sm text-content-secondary">Limit for cached MR data</p>
             </div>
             <select
-              value={settings?.cache_size_mb ?? 500}
+              value={cacheSizeMb}
               onChange={(e) => handleCacheSizeChange(parseInt(e.target.value, 10))}
               className="px-3 py-2 border border-edge-strong rounded-md bg-surface text-content"
             >
@@ -281,7 +307,7 @@ export function GeneralSettings() {
           <label className="relative inline-flex items-center cursor-pointer">
             <input
               type="checkbox"
-              checked={settings?.keyboard_shortcuts_enabled ?? true}
+              checked={keyboardShortcutsEnabled}
               onChange={(e) => handleKeyboardShortcutsToggle(e.target.checked)}
               className="sr-only peer"
             />

@@ -201,7 +201,11 @@ export const MonacoDiffView = forwardRef<MonacoDiffViewHandle, MonacoDiffViewPro
   { file, onNextFile, onPrevFile, targetLine, projectId, mrIid, discussions, baseSha, headSha, onDiscussionsChange, mrAuthor },
   ref
 ) {
-  const { diffViewMode, setDiffViewMode, showWhitespace, toggleWhitespace, wordWrap, toggleWordWrap, expandedResolvedThreads, toggleResolvedThread } = useUIStore();
+  const { wordWrap, toggleWordWrap, expandedResolvedThreads, toggleResolvedThread } = useUIStore();
+  const diffViewMode = useSettingsStore((s) => s.diffViewMode);
+  const setDiffViewMode = useSettingsStore((s) => s.setDiffViewMode);
+  const showWhitespace = useSettingsStore((s) => s.showWhitespace);
+  const toggleWhitespace = useSettingsStore((s) => s.toggleShowWhitespace);
   const codeFontSize = useSettingsStore((s) => s.fontSize);
   const resolvedTheme = useResolvedTheme();
   const monacoThemeName = getMonacoThemeName(resolvedTheme);

@@ -5,7 +5,7 @@
 
 import { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import type { DiffFile, LineType } from '../../types';
-import { useUIStore } from '../../stores';
+import { useSettingsStore } from '../../stores/settingsStore';
 import {
   VirtualizedUnifiedDiff,
   VirtualizedSplitDiff,
@@ -22,7 +22,10 @@ interface DiffViewProps {
 }
 
 export function DiffView({ file, onNextFile, onPrevFile, targetLine }: DiffViewProps) {
-  const { diffViewMode, setDiffViewMode, showWhitespace, toggleWhitespace } = useUIStore();
+  const diffViewMode = useSettingsStore((s) => s.diffViewMode);
+  const setDiffViewMode = useSettingsStore((s) => s.setDiffViewMode);
+  const showWhitespace = useSettingsStore((s) => s.showWhitespace);
+  const toggleWhitespace = useSettingsStore((s) => s.toggleShowWhitespace);
   const [collapsedHunks, setCollapsedHunks] = useState<Set<number>>(new Set());
   const [highlightedLine, setHighlightedLine] = useState<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);

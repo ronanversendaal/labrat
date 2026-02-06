@@ -3,6 +3,13 @@
  * Provides platform-aware keyboard handling for the application
  */
 
+import { useSettingsStore } from '../stores/settingsStore';
+
+/** Check if keyboard shortcuts are enabled (reads directly from Zustand store) */
+function getKeyboardShortcutsEnabled(): boolean {
+  return useSettingsStore.getState().keyboardShortcutsEnabled;
+}
+
 export interface KeyboardShortcut {
   /** Display name for the shortcut */
   label: string;
@@ -220,6 +227,9 @@ class KeyboardRegistry {
   }
 
   private handleKeyDown = (event: KeyboardEvent): void => {
+    // Check if keyboard shortcuts are globally disabled
+    if (!getKeyboardShortcutsEnabled()) return;
+
     // Skip if focus is in an input, textarea, or contenteditable
     const target = event.target as HTMLElement;
     if (
