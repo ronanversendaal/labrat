@@ -1,4 +1,4 @@
-import { useMemo, useCallback, useEffect } from 'react';
+import { useMemo, useCallback, useEffect, useRef } from 'react';
 import type { MergeRequest, MergeRequestSortField } from '../../types';
 import { MRCard } from './MRCard';
 import { Skeleton } from '../common';
@@ -23,7 +23,7 @@ export function MRList({
   onRetry,
   groupBy = 'none',
 }: MRListProps) {
-  const { selectedMrId, setSelectedMr, sort } = useMRStore();
+  const { selectedMrId, setSelectedMr, openDetail, sort } = useMRStore();
 
   // Sort merge requests
   const sortedMRs = useMemo(() => {
@@ -87,14 +87,33 @@ export function MRList({
     setSelectedMr(flatMRs[prevIndex]);
   }, [flatMRs, currentIndex, setSelectedMr]);
 
-  // Select first MR when list loads if none selected
-  useEffect(() => {
-    if (flatMRs.length > 0 && selectedMrId === null) {
-      // Don't auto-select, just make keyboard navigation available
+  // Open selected MR detail view
+  const openSelectedMR = useCallback(() => {
+    if (selectedMrId) {
+      // MR is already selected, open detail view
+      openDetail();
+    } else if (flatMRs.length > 0) {
+      // Select first MR and open detail
+      setSelectedMr(flatMRs[0]);
+      openDetail();
     }
-  }, [flatMRs, selectedMrId]);
+  }, [selectedMrId, flatMRs, setSelectedMr, openDetail]);
+
+  // Refs for MR cards to enable scroll into view
+  const cardRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+
+  // Scroll selected MR into view when selection changes via keyboard
+  useEffect(() => {
+    if (selectedMrId) {
+      const element = cardRefs.current.get(selectedMrId);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }
+  }, [selectedMrId]);
 
   // Register keyboard shortcuts for MR list navigation
+  // These are always active when the list is shown (detail view handles its own shortcuts)
   useKeyboardShortcuts([
     {
       id: 'next-mr',
@@ -112,6 +131,15 @@ export function MRList({
       keys: ['k', 'arrowup'],
       category: 'mr-list',
       handler: selectPrev,
+      preventDefault: true,
+    },
+    {
+      id: 'open-mr',
+      label: 'Open MR',
+      description: 'Open selected merge request',
+      keys: ['enter', 'o'],
+      category: 'mr-list',
+      handler: openSelectedMR,
       preventDefault: true,
     },
   ], { scope: 'mr-list' });
@@ -157,9 +185,19 @@ export function MRList({
             {mrs.map((mr) => (
               <MRCard
                 key={mr.id}
+                ref={(el) => {
+                  if (el) {
+                    cardRefs.current.set(mr.id, el);
+                  } else {
+                    cardRefs.current.delete(mr.id);
+                  }
+                }}
                 mr={mr}
                 selected={mr.id === selectedMrId}
-                onClick={() => setSelectedMr(mr)}
+                onClick={() => {
+                  setSelectedMr(mr);
+                  openDetail();
+                }}
               />
             ))}
           </div>

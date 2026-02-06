@@ -42,7 +42,7 @@ interface MRFiltersProps {
 }
 
 export function MRFilters({ projects = [], authors = [], labels = [] }: MRFiltersProps) {
-  const { filter, setFilter, setSearchQuery, clearFilters, groupBy, setGroupBy } = useMRStore();
+  const { filter, setFilter, setNegatedFilters, negatedFilters, specialFilters, setSpecialFilters, setSearchQuery, clearFilters, groupBy, setGroupBy } = useMRStore();
   const { filterPanelExpanded, toggleFilterPanel } = useUIStore();
 
   // Local state for the search input
@@ -51,6 +51,8 @@ export function MRFilters({ projects = [], authors = [], labels = [] }: MRFilter
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
   const inputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
+  // Track if user has interacted with search - prevents overwriting default filters on mount
+  const hasInteractedWithSearch = useRef(false);
 
   const debouncedQuery = useDebounce(localQuery, 300);
 
@@ -90,10 +92,15 @@ export function MRFilters({ projects = [], authors = [], labels = [] }: MRFilter
 
   // Apply parsed filters to store when debounced query changes
   useEffect(() => {
-    const { filter: newFilter, searchText } = filtersToMRFilter(parsedFilters, projectLookup);
+    const { filter: newFilter, searchText, negatedFilters: parsedNegatedFilters } = filtersToMRFilter(parsedFilters, projectLookup);
     setFilter(newFilter);
+    // Only update negated filters if user has interacted with search
+    // This prevents overwriting programmatic filters (like default "not author:me") on initial load
+    if (hasInteractedWithSearch.current) {
+      setNegatedFilters(parsedNegatedFilters);
+    }
     setSearchQuery(searchText);
-  }, [parsedFilters, projectLookup, setFilter, setSearchQuery]);
+  }, [parsedFilters, projectLookup, setFilter, setNegatedFilters, setSearchQuery]);
 
   // Handle suggestion selection
   const applySuggestion = useCallback((suggestion: { value: string }) => {
@@ -185,7 +192,18 @@ export function MRFilters({ projects = [], authors = [], labels = [] }: MRFilter
     setLocalQuery(newQuery);
   }, [localQuery]);
 
-  const hasActiveFilters = parsedFilters.length > 0;
+  const hasSpecialFilters = specialFilters.excludeApprovedByMe || specialFilters.reviewerIsMe;
+  const hasActiveFilters = parsedFilters.length > 0 || negatedFilters.length > 0 || hasSpecialFilters;
+
+  // Remove a negated filter from the store
+  const removeNegatedFilter = useCallback((index: number) => {
+    setNegatedFilters(negatedFilters.filter((_, i) => i !== index));
+  }, [negatedFilters, setNegatedFilters]);
+
+  // Remove a special filter
+  const removeSpecialFilter = useCallback((filterKey: keyof typeof specialFilters) => {
+    setSpecialFilters({ [filterKey]: false });
+  }, [setSpecialFilters]);
 
   return (
     <div className="mb-4">
@@ -200,6 +218,7 @@ export function MRFilters({ projects = [], authors = [], labels = [] }: MRFilter
             placeholder="Filter: author:name project:path status:draft or free text..."
             value={localQuery}
             onChange={(e) => {
+              hasInteractedWithSearch.current = true;
               setLocalQuery(e.target.value);
               setShowSuggestions(true);
               setSelectedSuggestionIndex(-1);
@@ -211,6 +230,7 @@ export function MRFilters({ projects = [], authors = [], labels = [] }: MRFilter
           {localQuery && (
             <button
               onClick={() => {
+                hasInteractedWithSearch.current = true;
                 setLocalQuery('');
                 clearFilters();
               }}
@@ -271,6 +291,28 @@ export function MRFilters({ projects = [], authors = [], labels = [] }: MRFilter
       {/* Active filter chips */}
       {hasActiveFilters && (
         <div className="flex flex-wrap items-center gap-2 mb-2">
+          {/* Special filters */}
+          {specialFilters.reviewerIsMe && (
+            <SpecialFilterChip
+              label="Reviewer: Me"
+              onRemove={() => removeSpecialFilter('reviewerIsMe')}
+            />
+          )}
+          {specialFilters.excludeApprovedByMe && (
+            <SpecialFilterChip
+              label="NOT Approved by me"
+              onRemove={() => removeSpecialFilter('excludeApprovedByMe')}
+            />
+          )}
+          {/* Store negated filters (applied programmatically, e.g., default "not authored by me") */}
+          {negatedFilters.map((nf, index) => (
+            <FilterChip
+              key={`store-negated-${nf.type}-${nf.value}-${index}`}
+              filter={{ type: nf.type, value: nf.value, raw: `${nf.type}:!=${nf.value}`, negated: true }}
+              onRemove={() => removeNegatedFilter(index)}
+            />
+          ))}
+          {/* Parsed filters from search input */}
           {parsedFilters.map((pf, index) => (
             <FilterChip
               key={`${pf.type}-${pf.value}-${index}`}
@@ -350,10 +392,11 @@ export function MRFilters({ projects = [], authors = [], labels = [] }: MRFilter
             <p className="text-xs text-gray-500 dark:text-gray-400">
               <span className="font-medium">Filter syntax:</span>{' '}
               <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">author:name</code>{' '}
+              <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">author:!=name</code>{' '}
               <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">project:path</code>{' '}
               <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">status:draft|conflicts|failed|ready</code>{' '}
               <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">label:name</code>{' '}
-              or free text
+              or free text. Use <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">:!=</code> to negate.
             </p>
           </div>
         </div>
@@ -365,15 +408,16 @@ export function MRFilters({ projects = [], authors = [], labels = [] }: MRFilter
 // Filter chip component
 function FilterChip({ filter, onRemove }: { filter: ParsedFilter; onRemove: () => void }) {
   const getLabel = () => {
+    const negatePrefix = filter.negated ? 'NOT ' : '';
     switch (filter.type) {
       case 'author':
-        return `Author: @${filter.value}`;
+        return `${negatePrefix}Author: @${filter.value}`;
       case 'project':
-        return `Project: ${filter.value}`;
+        return `${negatePrefix}Project: ${filter.value}`;
       case 'status':
-        return `Status: ${filter.value}`;
+        return `${negatePrefix}Status: ${filter.value}`;
       case 'label':
-        return `Label: ${filter.value}`;
+        return `${negatePrefix}Label: ${filter.value}`;
       case 'text':
         return `"${filter.value}"`;
       default:
@@ -382,6 +426,10 @@ function FilterChip({ filter, onRemove }: { filter: ParsedFilter; onRemove: () =
   };
 
   const getColor = () => {
+    // Negated filters get a red-ish tint
+    if (filter.negated) {
+      return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
+    }
     switch (filter.type) {
       case 'author':
         return 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400';
@@ -403,6 +451,22 @@ function FilterChip({ filter, onRemove }: { filter: ParsedFilter; onRemove: () =
         onClick={onRemove}
         className="hover:opacity-70"
         aria-label={`Remove filter: ${getLabel()}`}
+      >
+        <CloseIcon className="w-3 h-3" />
+      </button>
+    </span>
+  );
+}
+
+// Special filter chip (for programmatic filters like "reviewer is me")
+function SpecialFilterChip({ label, onRemove }: { label: string; onRemove: () => void }) {
+  return (
+    <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+      {label}
+      <button
+        onClick={onRemove}
+        className="hover:opacity-70"
+        aria-label={`Remove filter: ${label}`}
       >
         <CloseIcon className="w-3 h-3" />
       </button>

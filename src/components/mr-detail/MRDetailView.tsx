@@ -7,16 +7,19 @@ import { open } from '@tauri-apps/plugin-shell';
 import type { MergeRequest, Discussion, MRChangeSnapshot } from '../../types';
 import { useDiff, useDiscussions, useMergeRequest, useAccounts } from '../../hooks/useGitLab';
 import { useMRStore, isFileViewedSelector } from '../../stores/mrStore';
+import { useSettingsStore } from '../../stores/settingsStore';
 import { useAISuggestions } from '../../hooks/useAI';
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
+import { useFocusStore } from '../../hooks/useFocusManager';
 import { MRDescription } from './MRDescription';
-import { MonacoDiffView } from './MonacoDiffView';
+import { MonacoDiffView, type MonacoDiffViewHandle } from './MonacoDiffView';
 import { FileTree } from './FileTree';
 import { QuickFilePicker } from './QuickFilePicker';
 import { CollapsibleDescription } from './CollapsibleDescription';
 import { ImpedimentBadge } from '../mr-list/ImpedimentBadge';
 import { Skeleton, Button, useToast, ApprovalButton, ApprovalStatus } from '../common';
 import { AISuggestionsPanel } from '../ai';
+import { CommentThread, CommentComposer } from '../comments';
 
 interface MRDetailViewProps {
   mr: MergeRequest;
@@ -40,6 +43,33 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
   const unmarkFileViewed = useMRStore((state) => state.unmarkFileViewed);
   const viewedFiles = useMRStore((state) => state.viewedFiles);
   const clearViewedFiles = useMRStore((state) => state.clearViewedFiles);
+  const fileViewMode = useSettingsStore((state) => state.fileViewMode);
+
+  // Focus store for mode-aware keyboard shortcuts
+  const { currentZone, diffMode, setFocusZone, setDiffMode, setFocusedLine } = useFocusStore();
+
+  // Set initial zone on mount
+  useEffect(() => {
+    setFocusZone('file-list');
+    setDiffMode('file-nav');
+    return () => {
+      setFocusZone('mr-list');
+      setDiffMode('file-nav');
+      setFocusedLine(null);
+    };
+  }, [setFocusZone, setDiffMode, setFocusedLine]);
+
+  // Ref for diff view to access scroll functions
+  const diffViewRef = useRef<MonacoDiffViewHandle>(null);
+
+  // Scroll navigation handlers for in-file navigation
+  const scrollDown = useCallback(() => {
+    diffViewRef.current?.scrollDown();
+  }, []);
+
+  const scrollUp = useCallback(() => {
+    diffViewRef.current?.scrollUp();
+  }, []);
 
   // Create initial snapshot of meaningful MR fields to detect real updates
   // This avoids false notifications when only metadata like updated_at changes
@@ -104,12 +134,49 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
     }
   }, [hasRealUpdates, dismissedUpdate]);
 
+  // Sort files alphabetically for flat view (same order as FileTree displays)
+  const sortedFiles = useMemo(() => {
+    if (!diff?.files.length) return [];
+    if (fileViewMode === 'flat') {
+      return [...diff.files].sort((a, b) => a.new_path.localeCompare(b.new_path));
+    }
+    // For tree view, use original order (matches FileTree's tree traversal)
+    return diff.files;
+  }, [diff?.files, fileViewMode]);
+
   // Auto-select first file when diff loads
   const selectedFile = useMemo(() => {
-    if (!diff?.files.length) return null;
-    const path = selectedFilePath || diff.files[0].new_path;
-    return diff.files.find((f) => f.new_path === path) || null;
-  }, [diff, selectedFilePath]);
+    if (!sortedFiles.length) return null;
+    const path = selectedFilePath || sortedFiles[0].new_path;
+    return sortedFiles.find((f) => f.new_path === path) || null;
+  }, [sortedFiles, selectedFilePath]);
+
+  // Enter diff line-nav mode from file-list
+  const enterDiffMode = useCallback(() => {
+    if (diffMode === 'file-nav' && selectedFile) {
+      setFocusZone('diff');
+      setDiffMode('line-nav');
+      diffViewRef.current?.enterLineNavMode();
+    }
+  }, [diffMode, selectedFile, setFocusZone, setDiffMode]);
+
+  // Handle closing - layered Escape behavior
+  const handleClose = useCallback(() => {
+    if (currentZone === 'diff' && (diffMode === 'comment' || diffMode === 'suggest')) {
+      // Let the comment/suggestion overlay handle Escape
+      return;
+    }
+    if (currentZone === 'diff' && diffMode === 'line-nav') {
+      // Exit line-nav back to file-nav
+      setFocusZone('file-list');
+      setDiffMode('file-nav');
+      setFocusedLine(null);
+      diffViewRef.current?.exitLineNavMode();
+      return;
+    }
+    // Default: close detail view
+    onClose?.();
+  }, [currentZone, diffMode, onClose, setFocusZone, setDiffMode, setFocusedLine]);
 
   const handleToggleFolder = (folder: string) => {
     setExpandedFolders((prev) => {
@@ -123,21 +190,23 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
     });
   };
 
-  const handleNextFile = () => {
-    if (!diff?.files.length || !selectedFile) return;
-    const currentIndex = diff.files.findIndex((f) => f.new_path === selectedFile.new_path);
-    if (currentIndex < diff.files.length - 1) {
-      setSelectedFilePath(diff.files[currentIndex + 1].new_path);
+  // Navigate to next file in the sorted order (matches visual order in FileTree)
+  const handleNextFile = useCallback(() => {
+    if (!sortedFiles.length || !selectedFile) return;
+    const currentIndex = sortedFiles.findIndex((f) => f.new_path === selectedFile.new_path);
+    if (currentIndex < sortedFiles.length - 1) {
+      setSelectedFilePath(sortedFiles[currentIndex + 1].new_path);
     }
-  };
+  }, [sortedFiles, selectedFile]);
 
-  const handlePrevFile = () => {
-    if (!diff?.files.length || !selectedFile) return;
-    const currentIndex = diff.files.findIndex((f) => f.new_path === selectedFile.new_path);
+  // Navigate to previous file in the sorted order (matches visual order in FileTree)
+  const handlePrevFile = useCallback(() => {
+    if (!sortedFiles.length || !selectedFile) return;
+    const currentIndex = sortedFiles.findIndex((f) => f.new_path === selectedFile.new_path);
     if (currentIndex > 0) {
-      setSelectedFilePath(diff.files[currentIndex - 1].new_path);
+      setSelectedFilePath(sortedFiles[currentIndex - 1].new_path);
     }
-  };
+  }, [sortedFiles, selectedFile]);
 
   const unresolvedThreads = discussions?.filter(
     (d) => d.notes.some((n) => n.resolvable && !n.resolved)
@@ -193,8 +262,61 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
     }
   }, [currentMR?.head_pipeline?.id, mr.iid, clearViewedFiles]);
 
-  // Register keyboard shortcuts for this view
+  // Reset diff mode when file changes (back to file-nav)
+  useEffect(() => {
+    if (currentZone === 'diff') {
+      setFocusZone('file-list');
+      setDiffMode('file-nav');
+      setFocusedLine(null);
+    }
+  }, [selectedFilePath]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // File-nav shortcuts: j/k navigate files (only in file-nav mode)
   useKeyboardShortcuts([
+    {
+      id: 'next-file',
+      label: 'Next File',
+      description: 'Select next file in the diff',
+      keys: ['j', 'arrowdown'],
+      category: 'diff',
+      handler: handleNextFile,
+      preventDefault: true,
+    },
+    {
+      id: 'prev-file',
+      label: 'Previous File',
+      description: 'Select previous file in the diff',
+      keys: ['k', 'arrowup'],
+      category: 'diff',
+      handler: handlePrevFile,
+      preventDefault: true,
+    },
+  ], { enabled: diffMode === 'file-nav', scope: 'mr-detail-file-nav' });
+
+  // Enter diff from file-list
+  useKeyboardShortcuts([
+    {
+      id: 'enter-diff',
+      label: 'Enter Diff',
+      description: 'Enter diff line navigation',
+      keys: ['enter'],
+      category: 'diff',
+      handler: enterDiffMode,
+      preventDefault: true,
+    },
+  ], { enabled: diffMode === 'file-nav' && !!selectedFile, scope: 'mr-detail-enter' });
+
+  // General shortcuts (always active in detail view)
+  useKeyboardShortcuts([
+    {
+      id: 'close-mr-detail',
+      label: 'Close',
+      description: 'Close MR detail / exit diff mode',
+      keys: ['escape'],
+      category: 'navigation',
+      handler: handleClose,
+      preventDefault: true,
+    },
     {
       id: 'quick-file-picker',
       label: 'Quick File',
@@ -211,6 +333,24 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
       keys: ['v'],
       category: 'diff',
       handler: toggleFileViewed,
+      preventDefault: true,
+    },
+    {
+      id: 'scroll-down',
+      label: 'Scroll Down',
+      description: 'Scroll down in the diff view',
+      keys: ['n'],
+      category: 'diff',
+      handler: scrollDown,
+      preventDefault: true,
+    },
+    {
+      id: 'scroll-up',
+      label: 'Scroll Up',
+      description: 'Scroll up in the diff view',
+      keys: ['p'],
+      category: 'diff',
+      handler: scrollUp,
       preventDefault: true,
     },
   ], { scope: 'mr-detail' });
@@ -306,9 +446,9 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
             </button>
             {onClose && (
               <button
-                onClick={onClose}
+                onClick={handleClose}
                 className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
-                aria-label="Close merge request detail view"
+                aria-label="Close merge request detail view (ESC)"
               >
                 <CloseIcon />
               </button>
@@ -394,10 +534,18 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
                 </div>
               ) : selectedFile ? (
                 <MonacoDiffView
+                  ref={diffViewRef}
                   file={selectedFile}
                   onNextFile={handleNextFile}
                   onPrevFile={handlePrevFile}
                   targetLine={targetLine}
+                  projectId={mr.project_id}
+                  mrIid={mr.iid}
+                  discussions={discussions}
+                  baseSha={diff?.base_commit_sha}
+                  headSha={diff?.head_commit_sha}
+                  onDiscussionsChange={() => refetchDiscussions()}
+                  mrAuthor={mr.author}
                 />
               ) : (
                 <div className="flex items-center justify-center h-full text-gray-500">
@@ -410,18 +558,12 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
         )}
 
         {activeTab === 'activity' && (
-          <div className="p-6 overflow-auto h-full">
-            {isLoadingDiscussions ? (
-              <div className="space-y-4">
-                <Skeleton variant="rectangular" height={100} />
-                <Skeleton variant="rectangular" height={100} />
-              </div>
-            ) : discussions?.length ? (
-              <DiscussionList discussions={discussions} />
-            ) : (
-              <div className="text-center text-gray-500 py-8">No discussions yet</div>
-            )}
-          </div>
+          <ActivityTab
+            discussions={discussions || []}
+            isLoading={isLoadingDiscussions}
+            projectId={mr.project_id}
+            mrIid={mr.iid}
+          />
         )}
 
         {activeTab === 'ai' && (
@@ -480,54 +622,114 @@ function TabButton({
   );
 }
 
-function DiscussionList({ discussions }: { discussions: Discussion[] }) {
+/**
+ * Activity tab content with discussion threads and comment composer
+ */
+function ActivityTab({
+  discussions,
+  isLoading,
+  projectId,
+  mrIid,
+}: {
+  discussions: Discussion[];
+  isLoading: boolean;
+  projectId: number;
+  mrIid: number;
+}) {
+  const [showComposer, setShowComposer] = useState(false);
+
+  // Separate unresolved and resolved discussions
+  const unresolvedDiscussions = discussions.filter(
+    (d) => d.notes.some((n) => n.resolvable && !n.resolved)
+  );
+  const resolvedDiscussions = discussions.filter(
+    (d) => !d.notes.some((n) => n.resolvable && !n.resolved)
+  );
+
+  if (isLoading) {
+    return (
+      <div className="p-6 space-y-4">
+        <Skeleton variant="rectangular" height={100} />
+        <Skeleton variant="rectangular" height={100} />
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6">
-      {discussions.map((discussion) => (
-        <div
-          key={discussion.id}
-          className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden"
-        >
-          {discussion.notes.map((note, i) => (
-            <div
-              key={note.id}
-              className={`p-4 ${i > 0 ? 'border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50' : ''}`}
-            >
-              <div className="flex items-center gap-2 mb-2">
-                {note.author.avatar_url ? (
-                  <img
-                    src={note.author.avatar_url}
-                    alt={note.author.name}
-                    className="w-6 h-6 rounded-full"
-                  />
-                ) : (
-                  <div className="w-6 h-6 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-xs font-medium">
-                    {note.author.name.charAt(0).toUpperCase()}
-                  </div>
-                )}
-                <span className="font-medium text-sm text-gray-900 dark:text-gray-100">
-                  {note.author.name}
-                </span>
-                <span className="text-xs text-gray-500 dark:text-gray-400">
-                  {new Date(note.created_at).toLocaleString()}
-                </span>
-                {note.resolvable && (
-                  <span className={`ml-auto text-xs ${note.resolved ? 'text-green-600' : 'text-yellow-600'}`}>
-                    {note.resolved ? 'Resolved' : 'Unresolved'}
-                  </span>
-                )}
-              </div>
-              <div className="prose prose-sm dark:prose-invert max-w-none">
-                {note.body_html ? (
-                  <div dangerouslySetInnerHTML={{ __html: note.body_html }} />
-                ) : (
-                  <p className="whitespace-pre-wrap">{note.body}</p>
-                )}
-              </div>
-            </div>
-          ))}
+    <div className="p-6 overflow-auto h-full">
+      {/* New comment button */}
+      <div className="mb-6">
+        {showComposer ? (
+          <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+            <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">
+              New Comment
+            </h3>
+            <CommentComposer
+              projectId={projectId}
+              mrIid={mrIid}
+              onSuccess={() => setShowComposer(false)}
+              onCancel={() => setShowComposer(false)}
+              placeholder="Write a general comment on this merge request..."
+            />
+          </div>
+        ) : (
+          <Button
+            variant="secondary"
+            onClick={() => setShowComposer(true)}
+            className="w-full"
+          >
+            + Add Comment
+          </Button>
+        )}
+      </div>
+
+      {/* Unresolved discussions */}
+      {unresolvedDiscussions.length > 0 && (
+        <div className="mb-8">
+          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-yellow-500" />
+            Unresolved ({unresolvedDiscussions.length})
+          </h3>
+          <div className="space-y-4">
+            {unresolvedDiscussions.map((discussion) => (
+              <CommentThread
+                key={discussion.id}
+                discussion={discussion}
+                projectId={projectId}
+                mrIid={mrIid}
+              />
+            ))}
+          </div>
         </div>
-      ))}
+      )}
+
+      {/* Resolved discussions */}
+      {resolvedDiscussions.length > 0 && (
+        <div>
+          <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-4 flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-green-500" />
+            Resolved ({resolvedDiscussions.length})
+          </h3>
+          <div className="space-y-4">
+            {resolvedDiscussions.map((discussion) => (
+              <CommentThread
+                key={discussion.id}
+                discussion={discussion}
+                projectId={projectId}
+                mrIid={mrIid}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Empty state */}
+      {discussions.length === 0 && (
+        <div className="text-center text-gray-500 py-8">
+          <p>No discussions yet</p>
+          <p className="text-sm mt-1">Start a conversation by adding a comment above</p>
+        </div>
+      )}
     </div>
   );
 }

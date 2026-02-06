@@ -277,6 +277,7 @@ class KeyboardRegistry {
 export const keyboardRegistry = new KeyboardRegistry();
 
 // Default shortcut definitions for help display
+// Only includes shortcuts that are actually implemented
 export const DEFAULT_SHORTCUTS: Array<{
   id: string;
   shortcut: Omit<KeyboardShortcut, 'handler'>;
@@ -285,68 +286,41 @@ export const DEFAULT_SHORTCUTS: Array<{
   {
     id: 'help',
     shortcut: {
-      label: '?',
+      label: 'Help',
       description: 'Show keyboard shortcuts',
-      keys: ['?', 'shift+/'],
+      keys: ['?'],
       category: 'global',
     },
   },
   {
-    id: 'search',
+    id: 'settings',
     shortcut: {
-      label: 'Search',
-      description: 'Focus search input',
-      keys: ['/', 's'],
+      label: 'Settings',
+      description: 'Open settings',
+      keys: ['meta+,'],
       category: 'global',
     },
   },
   {
-    id: 'filter',
+    id: 'refresh',
     shortcut: {
-      label: 'Filter',
-      description: 'Toggle filter panel',
-      keys: ['f'],
+      label: 'Refresh',
+      description: 'Reload merge request list',
+      keys: ['meta+r'],
       category: 'global',
     },
   },
   {
-    id: 'close',
+    id: 'my-reviews',
     shortcut: {
-      label: 'Close',
-      description: 'Close dialog or panel',
-      keys: ['escape'],
-      category: 'global',
-    },
-  },
-  {
-    id: 'toggle-sidebar',
-    shortcut: {
-      label: 'Toggle Sidebar',
-      description: 'Show/hide sidebar',
-      keys: ['meta+\\'],
+      label: 'My Reviews',
+      description: 'Go to your review requests',
+      keys: ['shift+r'],
       category: 'global',
     },
   },
 
-  // MR List
-  {
-    id: 'my-mrs',
-    shortcut: {
-      label: 'My MRs',
-      description: 'Show my merge requests',
-      keys: ['shift+m'],
-      category: 'mr-list',
-    },
-  },
-  {
-    id: 'review-requests',
-    shortcut: {
-      label: 'Review Requests',
-      description: 'Show review requests',
-      keys: ['shift+r'],
-      category: 'mr-list',
-    },
-  },
+  // MR List Navigation
   {
     id: 'next-mr',
     shortcut: {
@@ -375,13 +349,22 @@ export const DEFAULT_SHORTCUTS: Array<{
     },
   },
 
-  // Diff Navigation
+  // MR Detail / Diff Navigation
+  {
+    id: 'close-detail',
+    shortcut: {
+      label: 'Close',
+      description: 'Close MR and return to list',
+      keys: ['escape'],
+      category: 'navigation',
+    },
+  },
   {
     id: 'next-file',
     shortcut: {
       label: 'Next File',
       description: 'Go to next file',
-      keys: [']', 'j'],
+      keys: ['j', 'arrowdown'],
       category: 'diff',
     },
   },
@@ -390,24 +373,24 @@ export const DEFAULT_SHORTCUTS: Array<{
     shortcut: {
       label: 'Previous File',
       description: 'Go to previous file',
-      keys: ['[', 'k'],
+      keys: ['k', 'arrowup'],
       category: 'diff',
     },
   },
   {
-    id: 'next-thread',
+    id: 'scroll-down',
     shortcut: {
-      label: 'Next Thread',
-      description: 'Jump to next discussion thread',
+      label: 'Scroll Down',
+      description: 'Scroll down in diff view',
       keys: ['n'],
       category: 'diff',
     },
   },
   {
-    id: 'prev-thread',
+    id: 'scroll-up',
     shortcut: {
-      label: 'Previous Thread',
-      description: 'Jump to previous discussion thread',
+      label: 'Scroll Up',
+      description: 'Scroll up in diff view',
       keys: ['p'],
       category: 'diff',
     },
@@ -422,134 +405,67 @@ export const DEFAULT_SHORTCUTS: Array<{
     },
   },
   {
-    id: 'toggle-file-tree',
-    shortcut: {
-      label: 'Toggle File Tree',
-      description: 'Show/hide file tree',
-      keys: ['shift+f'],
-      category: 'diff',
-    },
-  },
-  {
     id: 'mark-viewed',
     shortcut: {
-      label: 'Mark Viewed',
-      description: 'Mark file as viewed',
+      label: 'Toggle Viewed',
+      description: 'Mark/unmark file as viewed',
       keys: ['v'],
       category: 'diff',
     },
   },
-  {
-    id: 'copy-branch',
-    shortcut: {
-      label: 'Copy Branch',
-      description: 'Copy branch name to clipboard',
-      keys: ['b'],
-      category: 'diff',
-    },
-  },
-  {
-    id: 'permalink',
-    shortcut: {
-      label: 'Permalink',
-      description: 'Copy permalink to current line',
-      keys: ['y'],
-      category: 'diff',
-    },
-  },
 
-  // Commit Navigation
+  // Review
   {
-    id: 'next-commit',
+    id: 'enter-diff',
     shortcut: {
-      label: 'Next Commit',
-      description: 'Go to next commit',
+      label: 'Enter Diff',
+      description: 'Enter diff line navigation',
+      keys: ['enter'],
+      category: 'review',
+    },
+  },
+  {
+    id: 'exit-diff',
+    shortcut: {
+      label: 'Exit Diff',
+      description: 'Exit diff / close',
+      keys: ['escape'],
+      category: 'review',
+    },
+  },
+  {
+    id: 'navigate-lines',
+    shortcut: {
+      label: 'Navigate Lines',
+      description: 'Move cursor between lines',
+      keys: ['j', 'k'],
+      category: 'review',
+    },
+  },
+  {
+    id: 'scroll-diff',
+    shortcut: {
+      label: 'Scroll',
+      description: 'Scroll diff view up/down',
+      keys: ['n', 'p'],
+      category: 'review',
+    },
+  },
+  {
+    id: 'add-comment',
+    shortcut: {
+      label: 'Comment',
+      description: 'Add comment on current line',
       keys: ['c'],
-      category: 'diff',
-    },
-  },
-  {
-    id: 'prev-commit',
-    shortcut: {
-      label: 'Previous Commit',
-      description: 'Go to previous commit',
-      keys: ['x'],
-      category: 'diff',
-    },
-  },
-
-  // Editing
-  {
-    id: 'bold',
-    shortcut: {
-      label: 'Bold',
-      description: 'Make text bold',
-      keys: ['meta+b'],
-      category: 'editing',
-    },
-  },
-  {
-    id: 'italic',
-    shortcut: {
-      label: 'Italic',
-      description: 'Make text italic',
-      keys: ['meta+i'],
-      category: 'editing',
-    },
-  },
-  {
-    id: 'link',
-    shortcut: {
-      label: 'Link',
-      description: 'Insert link',
-      keys: ['meta+k'],
-      category: 'editing',
-    },
-  },
-  {
-    id: 'strikethrough',
-    shortcut: {
-      label: 'Strikethrough',
-      description: 'Strikethrough text',
-      keys: ['meta+shift+x'],
-      category: 'editing',
-    },
-  },
-  {
-    id: 'preview',
-    shortcut: {
-      label: 'Preview',
-      description: 'Toggle preview mode',
-      keys: ['meta+shift+p'],
-      category: 'editing',
-    },
-  },
-
-  // Review Actions
-  {
-    id: 'reply-quote',
-    shortcut: {
-      label: 'Reply with Quote',
-      description: 'Reply with quoted text',
-      keys: ['r'],
       category: 'review',
     },
   },
   {
-    id: 'add-to-review',
+    id: 'suggest-change',
     shortcut: {
-      label: 'Add to Review',
-      description: 'Add comment to pending review',
-      keys: ['meta+enter'],
-      category: 'review',
-    },
-  },
-  {
-    id: 'publish-review',
-    shortcut: {
-      label: 'Publish Review',
-      description: 'Publish pending review',
-      keys: ['meta+shift+enter'],
+      label: 'Suggest',
+      description: 'Suggest a change on current line',
+      keys: ['s'],
       category: 'review',
     },
   },

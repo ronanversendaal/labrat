@@ -3,6 +3,7 @@
  *
  * Supports syntax like:
  *   - author:johndoe
+ *   - author:!=johndoe (negated - NOT author johndoe)
  *   - project:my-app
  *   - status:draft
  *   - label:bug
@@ -18,6 +19,9 @@ const FILTER_PREFIXES: Record<string, FilterType> = {
   'status:': 'status',
   'label:': 'label',
 };
+
+/** Negation prefix that can follow the colon */
+const NEGATION_PREFIX = '!=';
 
 /** Status value mappings for user-friendly input */
 const STATUS_MAPPINGS: Record<string, Partial<MergeRequestFilter>> = {
@@ -51,6 +55,14 @@ export function parseFilterQuery(query: string): ParsedFilter[] {
     for (const [prefix, type] of Object.entries(FILTER_PREFIXES)) {
       if (token.toLowerCase().startsWith(prefix)) {
         let value = token.slice(prefix.length);
+        let negated = false;
+
+        // Check for negation prefix (!=)
+        if (value.startsWith(NEGATION_PREFIX)) {
+          negated = true;
+          value = value.slice(NEGATION_PREFIX.length);
+        }
+
         // Remove quotes if present
         if ((value.startsWith('"') && value.endsWith('"')) ||
             (value.startsWith("'") && value.endsWith("'"))) {
@@ -58,7 +70,7 @@ export function parseFilterQuery(query: string): ParsedFilter[] {
         }
 
         if (value) {
-          filters.push({ type, value, raw: token });
+          filters.push({ type, value, raw: token, negated });
         }
         parsed = true;
         break;
@@ -83,18 +95,35 @@ export function parseFilterQuery(query: string): ParsedFilter[] {
   return filters;
 }
 
+/** Negated filter for client-side filtering */
+export interface NegatedFilter {
+  type: FilterType;
+  value: string;
+}
+
 /**
  * Convert parsed filters to MergeRequestFilter and search query
+ * Returns negated filters separately for client-side filtering
  */
 export function filtersToMRFilter(
   parsedFilters: ParsedFilter[],
   projectLookup?: Map<string, number>
-): { filter: Partial<MergeRequestFilter>; searchText: string } {
+): { filter: Partial<MergeRequestFilter>; searchText: string; negatedFilters: NegatedFilter[] } {
   const filter: Partial<MergeRequestFilter> = {};
   const textParts: string[] = [];
   const labels: string[] = [];
+  const negatedFilters: NegatedFilter[] = [];
 
   for (const pf of parsedFilters) {
+    // Handle negated filters separately
+    if (pf.negated) {
+      negatedFilters.push({
+        type: pf.type,
+        value: pf.type === 'author' ? pf.value.replace(/^@/, '') : pf.value,
+      });
+      continue;
+    }
+
     switch (pf.type) {
       case 'author':
         // Remove @ prefix if present
@@ -136,6 +165,7 @@ export function filtersToMRFilter(
   return {
     filter,
     searchText: textParts.join(' '),
+    negatedFilters,
   };
 }
 
@@ -157,6 +187,7 @@ export function getFilterSuggestions(
   if (!input.trim()) {
     return [
       { label: 'author:', value: 'author:', description: 'Filter by author username' },
+      { label: 'author:!=', value: 'author:!=', description: 'Exclude author username' },
       { label: 'project:', value: 'project:', description: 'Filter by project' },
       { label: 'status:', value: 'status:', description: 'Filter by status (draft, conflicts, failed, ready)' },
       { label: 'label:', value: 'label:', description: 'Filter by label' },
@@ -175,16 +206,20 @@ export function getFilterSuggestions(
     }
   }
 
-  // If typing after author:, suggest authors
+  // If typing after author:, suggest authors (including negated)
   if (lower.startsWith('author:') && context.authors) {
-    const partial = input.slice(7).toLowerCase().replace(/^@/, '');
+    const afterColon = input.slice(7);
+    const isNegated = afterColon.startsWith('!=');
+    const partial = (isNegated ? afterColon.slice(2) : afterColon).toLowerCase().replace(/^@/, '');
+    const prefix = isNegated ? 'author:!=' : 'author:';
+
     for (const author of context.authors) {
       if (author.username.toLowerCase().includes(partial) ||
           author.name.toLowerCase().includes(partial)) {
         suggestions.push({
-          label: `author:${author.username}`,
-          value: `author:${author.username}`,
-          description: author.name,
+          label: `${prefix}${author.username}`,
+          value: `${prefix}${author.username}`,
+          description: isNegated ? `Exclude ${author.name}` : author.name,
         });
       }
     }

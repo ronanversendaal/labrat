@@ -1,4 +1,6 @@
+import { forwardRef } from 'react';
 import type { MergeRequest } from '../../types';
+import { Avatar } from '../common';
 import { ImpedimentBadge } from './ImpedimentBadge';
 
 interface MRCardProps {
@@ -7,7 +9,7 @@ interface MRCardProps {
   onClick?: () => void;
 }
 
-export function MRCard({ mr, selected = false, onClick }: MRCardProps) {
+export const MRCard = forwardRef<HTMLDivElement, MRCardProps>(function MRCard({ mr, selected = false, onClick }, ref) {
   const timeAgo = getTimeAgo(new Date(mr.updated_at));
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -19,6 +21,7 @@ export function MRCard({ mr, selected = false, onClick }: MRCardProps) {
 
   return (
     <div
+      ref={ref}
       role="button"
       tabIndex={onClick ? 0 : undefined}
       onClick={onClick}
@@ -37,8 +40,11 @@ export function MRCard({ mr, selected = false, onClick }: MRCardProps) {
     >
       {/* Header: Project and time */}
       <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400 mb-2">
-        <span className="font-medium truncate max-w-[200px]">
-          {mr.project_path || `Project #${mr.project_id}`}
+        <span
+          className="font-medium truncate max-w-[200px]"
+          title={mr.project_path || undefined}
+        >
+          {mr.project_name || mr.project_path?.split('/').pop() || `Project #${mr.project_id}`}
         </span>
         <span className="text-xs">{timeAgo}</span>
       </div>
@@ -55,17 +61,7 @@ export function MRCard({ mr, selected = false, onClick }: MRCardProps) {
       <div className="flex items-center gap-3 mb-3">
         {/* Author avatar and name */}
         <div className="flex items-center gap-2">
-          {mr.author.avatar_url ? (
-            <img
-              src={mr.author.avatar_url}
-              alt={mr.author.name}
-              className="w-6 h-6 rounded-full"
-            />
-          ) : (
-            <div className="w-6 h-6 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-xs font-medium text-gray-600 dark:text-gray-300">
-              {mr.author.name.charAt(0).toUpperCase()}
-            </div>
-          )}
+          <Avatar src={mr.author.avatar_url} name={mr.author.name} size="sm" />
           <span className="text-sm text-gray-600 dark:text-gray-400">
             {mr.author.name}
           </span>
@@ -105,23 +101,13 @@ export function MRCard({ mr, selected = false, onClick }: MRCardProps) {
           <span className="text-xs text-gray-500 dark:text-gray-400">Reviewers:</span>
           <div className="flex -space-x-2">
             {mr.reviewers.slice(0, 3).map((reviewer) => (
-              reviewer.avatar_url ? (
-                <img
-                  key={reviewer.id}
-                  src={reviewer.avatar_url}
-                  alt={reviewer.name}
-                  title={reviewer.name}
-                  className="w-5 h-5 rounded-full border border-white dark:border-gray-800"
-                />
-              ) : (
-                <div
-                  key={reviewer.id}
-                  title={reviewer.name}
-                  className="w-5 h-5 rounded-full bg-gray-300 dark:bg-gray-600 border border-white dark:border-gray-800 flex items-center justify-center text-[10px] font-medium text-gray-600 dark:text-gray-300"
-                >
-                  {reviewer.name.charAt(0).toUpperCase()}
-                </div>
-              )
+              <Avatar
+                key={reviewer.id}
+                src={reviewer.avatar_url}
+                name={reviewer.name}
+                size="xs"
+                className="border border-white dark:border-gray-800"
+              />
             ))}
             {mr.reviewers.length > 3 && (
               <span className="text-xs text-gray-400 ml-2">
@@ -133,7 +119,7 @@ export function MRCard({ mr, selected = false, onClick }: MRCardProps) {
       )}
     </div>
   );
-}
+});
 
 function getTimeAgo(date: Date): string {
   const now = new Date();

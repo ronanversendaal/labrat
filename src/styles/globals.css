@@ -75,3 +75,363 @@ body {
   height: 100%;
   width: 100%;
 }
+
+/* Monaco Editor glyph margin - ensure cursor shows as pointer */
+.monaco-editor .glyph-margin {
+  cursor: pointer;
+}
+
+/* Line highlight when commenting */
+.monaco-editor .comment-active-line {
+  background-color: rgba(59, 130, 246, 0.15) !important;
+}
+
+.monaco-editor .comment-active-glyph {
+  background-color: #3b82f6 !important;
+  border-radius: 2px;
+}
+
+/* TipTap Editor styles */
+.ProseMirror {
+  outline: none;
+  padding: 0.75rem;
+  min-height: 80px;
+  color: #e5e5e5;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.ProseMirror p {
+  margin: 0;
+}
+
+.ProseMirror p + p {
+  margin-top: 0.5rem;
+}
+
+.ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: #6b7280;
+  pointer-events: none;
+  height: 0;
+}
+
+.ProseMirror code {
+  background-color: #3d3d5c;
+  padding: 0.125rem 0.25rem;
+  border-radius: 0.25rem;
+  font-size: 0.8125rem;
+}
+
+.ProseMirror pre {
+  background-color: #262639;
+  padding: 0.75rem;
+  border-radius: 0.25rem;
+  overflow-x: auto;
+}
+
+.ProseMirror pre code {
+  background: none;
+  padding: 0;
+}
+
+/* ==============================================
+   Suggestion Block Styling - GitLab Diff Style
+   ============================================== */
+
+/* Suggestion block wrapper */
+.suggestion-block-wrapper {
+  margin: 0.75rem 0;
+  border: 1px solid #238636;
+  border-radius: 0.375rem;
+  background-color: #0d1117;
+  overflow: hidden;
+  font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', monospace;
+}
+
+/* Suggestion header */
+.suggestion-header {
+  padding: 0.375rem 0.75rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+  color: #3fb950;
+  background-color: rgba(35, 134, 54, 0.15);
+  border-bottom: 1px solid #238636;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Suggestion content area */
+.suggestion-content {
+  padding: 0;
+}
+
+/* Individual suggestion line (addition style) */
+.suggestion-line {
+  display: flex;
+  align-items: flex-start;
+  background-color: rgba(35, 134, 54, 0.15);
+  border-left: 3px solid #238636;
+  padding: 0;
+  min-height: 1.5rem;
+}
+
+/* Plus sign for additions */
+.suggestion-plus {
+  flex-shrink: 0;
+  width: 2rem;
+  padding: 0.125rem 0;
+  text-align: center;
+  color: #3fb950;
+  font-weight: 500;
+  background-color: rgba(35, 134, 54, 0.25);
+  user-select: none;
+}
+
+/* Code content */
+.suggestion-code {
+  flex: 1;
+  padding: 0.125rem 0.75rem 0.125rem 0.5rem;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  white-space: pre;
+  color: #c9d1d9;
+  overflow-x: auto;
+}
+
+/* Legacy suggestion block styling for CSS-only targeting */
+.prose pre[lang^="suggestion"],
+.prose-invert pre[lang^="suggestion"],
+pre[lang^="suggestion"],
+pre.suggestion {
+  position: relative;
+  margin: 0.75rem 0 !important;
+  border: 1px solid #238636 !important;
+  border-radius: 0.375rem !important;
+  background-color: #0d1117 !important;
+  overflow: hidden;
+  padding: 0 !important;
+}
+
+.prose pre[lang^="suggestion"]::before,
+.prose-invert pre[lang^="suggestion"]::before,
+pre[lang^="suggestion"]::before,
+pre.suggestion::before {
+  content: 'Suggested change';
+  display: block;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+  color: #3fb950;
+  background-color: rgba(35, 134, 54, 0.15);
+  border-bottom: 1px solid #238636;
+}
+
+.prose pre[lang^="suggestion"] code,
+.prose-invert pre[lang^="suggestion"] code,
+pre[lang^="suggestion"] code,
+pre.suggestion code {
+  display: block;
+  padding: 0.5rem 0.75rem 0.5rem 2.5rem !important;
+  font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', monospace;
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  white-space: pre;
+  background: linear-gradient(
+    to right,
+    rgba(35, 134, 54, 0.25) 0,
+    rgba(35, 134, 54, 0.25) 2rem,
+    rgba(35, 134, 54, 0.15) 2rem,
+    rgba(35, 134, 54, 0.15) 100%
+  ) !important;
+  border-left: 3px solid #238636;
+  color: #c9d1d9;
+}
+
+.prose pre[lang^="suggestion"] code::before,
+.prose-invert pre[lang^="suggestion"] code::before,
+pre[lang^="suggestion"] code::before,
+pre.suggestion code::before {
+  content: '+';
+  position: absolute;
+  left: 0.75rem;
+  color: #3fb950;
+  font-weight: 500;
+}
+
+/* TipTap code block styling */
+.ProseMirror pre {
+  background-color: #f3f4f6;
+  border-radius: 0.375rem;
+  padding: 0.75rem;
+  font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', monospace;
+  font-size: 0.875rem;
+  overflow-x: auto;
+}
+
+.dark .ProseMirror pre {
+  background-color: #1f2937;
+}
+
+.ProseMirror pre code {
+  background: none;
+  padding: 0;
+  font-size: inherit;
+}
+
+/* ==============================================
+   Inline Comment Thread Styles
+   ============================================== */
+
+/* Main inline thread container - GitLab dark style */
+.inline-comment-thread {
+  position: relative;
+  background: #1e1e2e;
+  border: 1px solid #3d3d5c;
+  border-radius: 6px;
+  margin: 8px 0;
+  overflow: hidden;
+}
+
+.inline-comment-thread--resolved {
+  border-color: #238636;
+  background: #1e1e2e;
+}
+
+.inline-comment-thread--compact {
+  margin: 4px 0;
+}
+
+/* Thread notes container */
+.inline-comment-thread__notes {
+  padding: 0;
+}
+
+/* Replies section */
+.inline-comment-thread__replies {
+  border-top: 1px solid #3d3d5c;
+  background: rgba(0, 0, 0, 0.1);
+}
+
+/* Reply trigger */
+.inline-comment-thread__reply-trigger {
+  padding: 8px 12px;
+  border-top: 1px solid #3d3d5c;
+}
+
+/* Reply form container */
+.inline-comment-thread__reply-form {
+  padding: 12px;
+  border-top: 1px solid #3d3d5c;
+  background: rgba(0, 0, 0, 0.1);
+}
+
+/* New thread form container */
+.inline-comment-thread__new-thread-form {
+  padding: 0 12px 12px;
+}
+
+/* Footer with action buttons */
+.inline-comment-thread__footer {
+  padding: 8px 12px;
+  border-top: 1px solid #3d3d5c;
+  background: #262639;
+}
+
+/* Individual note styling */
+.inline-note {
+  padding: 12px;
+}
+
+.inline-note--reply {
+  border-top: 1px solid #3d3d5c;
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.inline-note--compact {
+  padding: 8px 12px;
+}
+
+/* Owner badge - GitLab style */
+.inline-note__owner-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: #818cf8;
+  background: rgba(129, 140, 248, 0.15);
+  border: 1px solid rgba(129, 140, 248, 0.3);
+  border-radius: 3px;
+  letter-spacing: 0.5px;
+}
+
+/* ==============================================
+   Monaco Gutter Comment Indicators
+   ============================================== */
+
+/* Open thread indicator - small colored dot in gutter */
+.monaco-editor .comment-indicator-open {
+  background-color: #fbbf24 !important;
+  border-radius: 50%;
+  width: 8px !important;
+  height: 8px !important;
+  margin-left: 4px;
+  margin-top: 6px;
+  cursor: pointer;
+}
+
+/* Resolved thread indicator - small avatar-like circle */
+.monaco-editor .comment-indicator-resolved {
+  background-color: #22c55e !important;
+  border-radius: 50%;
+  width: 8px !important;
+  height: 8px !important;
+  margin-left: 4px;
+  margin-top: 6px;
+  cursor: pointer;
+  opacity: 0.7;
+}
+
+.monaco-editor .comment-indicator-resolved:hover {
+  opacity: 1;
+}
+
+/* View zone container for inline threads */
+.monaco-view-zone-thread {
+  background: var(--color-bg, #1a1a2e);
+  min-height: 50px;
+  position: relative;
+  z-index: 1;
+  box-sizing: border-box;
+}
+
+/* View zone container for comment/suggestion forms */
+.monaco-view-zone-comment {
+  background: var(--color-bg, #1a1a2e);
+  min-height: 50px;
+  position: relative;
+  z-index: 10;
+  box-sizing: border-box;
+}
+
+/* Highlight line with existing comments */
+.monaco-editor .has-comment-line {
+  background-color: rgba(251, 191, 36, 0.08) !important;
+}
+
+/* Line hover state when can add comment */
+.monaco-editor .comment-hover-line {
+  background-color: rgba(59, 130, 246, 0.08) !important;
+}
+
+/* Focused line cursor for keyboard navigation */
+.monaco-editor .focused-line-cursor {
+  background-color: rgba(59, 130, 246, 0.12) !important;
+  border-left: 3px solid #3b82f6 !important;
+}

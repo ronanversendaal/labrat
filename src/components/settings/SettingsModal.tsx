@@ -14,7 +14,7 @@ export function SettingsModal() {
     <Modal
       isOpen={isOpen}
       onClose={closeModal}
-      size="xl"
+      size="4xl"
       closeOnOverlayClick={false}
     >
       <div className="h-[70vh] -m-6">

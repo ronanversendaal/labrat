@@ -144,6 +144,46 @@ pub struct MergeRequest {
     pub diff_cached: bool,
 }
 
+impl MergeRequest {
+    /// Extract project path from web_url if project_path is not set
+    /// web_url format: https://gitlab.example.com/namespace/project/-/merge_requests/1
+    pub fn with_extracted_project_path(mut self) -> Self {
+        if self.project_path.is_none() {
+            if let Some(path) = extract_project_path_from_url(&self.web_url) {
+                self.project_path = Some(path.clone());
+                // Extract just the project name (last segment)
+                if self.project_name.is_none() {
+                    self.project_name = path.rsplit('/').next().map(String::from);
+                }
+            }
+        }
+        self
+    }
+}
+
+/// Extract project path from GitLab MR web_url
+/// web_url format: https://gitlab.example.com/namespace/project/-/merge_requests/1
+fn extract_project_path_from_url(url: &str) -> Option<String> {
+    // Find the /-/merge_requests pattern
+    let mr_marker = "/-/merge_requests/";
+    if let Some(mr_idx) = url.find(mr_marker) {
+        // Get the part before /-/merge_requests/
+        let path_part = &url[..mr_idx];
+        // Find the domain end (after https://domain/)
+        if let Some(scheme_end) = path_part.find("://") {
+            let after_scheme = &path_part[scheme_end + 3..];
+            // Find the first slash after the domain
+            if let Some(domain_end) = after_scheme.find('/') {
+                let project_path = &after_scheme[domain_end + 1..];
+                if !project_path.is_empty() {
+                    return Some(project_path.to_string());
+                }
+            }
+        }
+    }
+    None
+}
+
 /// Pipeline information (simplified)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Pipeline {
@@ -423,7 +463,8 @@ pub struct ConnectionStatusEvent {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Approver {
     pub user: ApproverUser,
-    pub approved_at: String,
+    #[serde(default)]
+    pub approved_at: Option<String>,
 }
 
 /// User info within an Approver
@@ -468,4 +509,22 @@ pub struct ApproveResponse {
     pub approved: bool,
     pub approvals_required: i32,
     pub approvals_left: i32,
+}
+
+/// Request to reply to an existing discussion
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ReplyToDiscussionRequest {
+    pub project_id: i64,
+    pub mr_iid: i64,
+    pub discussion_id: String,
+    pub body: String,
+}
+
+/// Request to resolve or unresolve a discussion
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ResolveDiscussionRequest {
+    pub project_id: i64,
+    pub mr_iid: i64,
+    pub discussion_id: String,
+    pub resolved: bool,
 }

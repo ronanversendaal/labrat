@@ -3,6 +3,7 @@
  */
 
 import { useApprovalState, useApproveMR, useUnapproveMR } from '../../hooks/useGitLab';
+import { Avatar } from './Avatar';
 import { Button, useToast } from './index';
 
 interface ApprovalButtonProps {
@@ -157,12 +158,13 @@ export function ApprovalStatus({ projectId, mrIid }: ApprovalStatusProps) {
       {approved_by.length > 0 && (
         <div className="flex -space-x-2">
           {approved_by.slice(0, 5).map((approver) => (
-            <img
+            <Avatar
               key={approver.user.id}
-              src={approver.user.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(approver.user.name)}&size=24`}
-              alt={approver.user.name}
+              src={approver.user.avatar_url}
+              name={approver.user.name}
+              size="sm"
               title={`Approved by ${approver.user.name}`}
-              className="w-6 h-6 rounded-full border-2 border-white dark:border-gray-800"
+              className="border-2 border-white dark:border-gray-800"
             />
           ))}
           {approved_by.length > 5 && (

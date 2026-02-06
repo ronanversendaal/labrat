@@ -13,6 +13,7 @@ interface UIState {
   // View settings
   diffViewMode: 'unified' | 'split';
   showWhitespace: boolean;
+  wordWrap: boolean;
   fontSize: number;
 
   // Loading states
@@ -22,6 +23,9 @@ interface UIState {
   // Filter panel
   filterPanelExpanded: boolean;
 
+  // Inline comments - track which resolved threads are expanded
+  expandedResolvedThreads: Set<string>;
+
   // Actions
   toggleSidebar: () => void;
   setSidebarCollapsed: (collapsed: boolean) => void;
@@ -29,24 +33,29 @@ interface UIState {
   closeModal: () => void;
   setDiffViewMode: (mode: 'unified' | 'split') => void;
   toggleWhitespace: () => void;
+  toggleWordWrap: () => void;
   setFontSize: (size: number) => void;
   setRefreshing: (isRefreshing: boolean) => void;
   setAnalyzing: (isAnalyzing: boolean) => void;
   toggleFilterPanel: () => void;
   setFilterPanelExpanded: (expanded: boolean) => void;
+  toggleResolvedThread: (discussionId: string) => void;
+  clearExpandedThreads: () => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
   // Initial state
-  sidebarCollapsed: false,
+  sidebarCollapsed: true,
   activeModal: null,
   modalData: {},
   diffViewMode: 'unified',
   showWhitespace: false,
+  wordWrap: false,
   fontSize: 14,
   isRefreshing: false,
   isAnalyzing: false,
   filterPanelExpanded: true,
+  expandedResolvedThreads: new Set(),
 
   // Actions
   toggleSidebar: () =>
@@ -65,6 +74,9 @@ export const useUIStore = create<UIState>((set) => ({
   toggleWhitespace: () =>
     set((state) => ({ showWhitespace: !state.showWhitespace })),
 
+  toggleWordWrap: () =>
+    set((state) => ({ wordWrap: !state.wordWrap })),
+
   setFontSize: (fontSize) => set({ fontSize }),
 
   setRefreshing: (isRefreshing) => set({ isRefreshing }),
@@ -75,4 +87,17 @@ export const useUIStore = create<UIState>((set) => ({
     set((state) => ({ filterPanelExpanded: !state.filterPanelExpanded })),
 
   setFilterPanelExpanded: (filterPanelExpanded) => set({ filterPanelExpanded }),
+
+  toggleResolvedThread: (discussionId) =>
+    set((state) => {
+      const newSet = new Set(state.expandedResolvedThreads);
+      if (newSet.has(discussionId)) {
+        newSet.delete(discussionId);
+      } else {
+        newSet.add(discussionId);
+      }
+      return { expandedResolvedThreads: newSet };
+    }),
+
+  clearExpandedThreads: () => set({ expandedResolvedThreads: new Set() }),
 }));

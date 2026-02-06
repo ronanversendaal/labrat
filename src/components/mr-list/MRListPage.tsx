@@ -3,18 +3,88 @@
  * Wires MRList to Tauri backend via useGitLab hooks
  */
 
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useMergeRequests, useRefresh, useAccounts } from '../../hooks/useGitLab';
 import { MRList } from './MRList';
 import { MRFilters } from './MRFilters';
 import { useMRStore, useUIStore } from '../../stores';
 import { MRDetailView } from '../mr-detail';
+import type { MergeRequest, ApprovalState } from '../../types';
+import type { NegatedFilter, SpecialFilters } from '../../stores/mrStore';
+import { getApprovalState } from '../../services/tauri';
+
+/** Apply negated filters to a list of MRs (client-side) */
+function applyNegatedFilters(mrs: MergeRequest[], negatedFilters: NegatedFilter[]): MergeRequest[] {
+  if (negatedFilters.length === 0) return mrs;
+
+  return mrs.filter((mr) => {
+    for (const nf of negatedFilters) {
+      switch (nf.type) {
+        case 'author':
+          if (mr.author.username.toLowerCase() === nf.value.toLowerCase()) {
+            return false; // Exclude this MR
+          }
+          break;
+        case 'project':
+          if (mr.project_path?.toLowerCase().includes(nf.value.toLowerCase())) {
+            return false;
+          }
+          break;
+        case 'label':
+          if (mr.labels.some(l => l.toLowerCase() === nf.value.toLowerCase())) {
+            return false;
+          }
+          break;
+        case 'status':
+          // Handle negated status filters
+          if (nf.value === 'draft' && mr.draft) return false;
+          if (nf.value === 'conflicts' && mr.has_conflicts) return false;
+          if (nf.value === 'failed' && mr.head_pipeline?.status === 'failed') return false;
+          break;
+      }
+    }
+    return true; // Keep this MR
+  });
+}
+
+/** Apply special filters that require additional data */
+function applySpecialFilters(
+  mrs: MergeRequest[],
+  specialFilters: SpecialFilters,
+  approvalStates: Map<number, ApprovalState>,
+  currentUsername?: string
+): MergeRequest[] {
+  return mrs.filter((mr) => {
+    // Filter: exclude MRs already approved by me
+    if (specialFilters.excludeApprovedByMe) {
+      const approvalState = approvalStates.get(mr.id);
+      if (approvalState?.user_has_approved) {
+        return false;
+      }
+    }
+
+    // Filter: only show MRs where I'm explicitly a reviewer
+    if (specialFilters.reviewerIsMe && currentUsername) {
+      const isReviewer = mr.reviewers.some(
+        r => r.username.toLowerCase() === currentUsername.toLowerCase()
+      );
+      if (!isReviewer) {
+        return false;
+      }
+    }
+
+    return true;
+  });
+}
 
 export function MRListPage() {
-  const { selectedMr, groupBy } = useMRStore();
+  const { selectedMr, isDetailOpen, closeDetail, groupBy, negatedFilters, specialFilters } = useMRStore();
   const { data: accounts } = useAccounts();
   const { data: mergeRequests, isLoading, isError, error, refetch } = useMergeRequests();
   const refreshMutation = useRefresh();
+  const [approvalStates, setApprovalStates] = useState<Map<number, ApprovalState>>(new Map());
+
+  const activeAccount = accounts?.find((a) => a.is_active);
 
   const handleRefresh = async () => {
     await refreshMutation.mutateAsync();
@@ -22,6 +92,64 @@ export function MRListPage() {
   };
 
   const hasActiveAccount = accounts?.some((a) => a.is_active);
+
+  // Fetch approval states when needed for excludeApprovedByMe filter
+  useEffect(() => {
+    if (!specialFilters.excludeApprovedByMe || !mergeRequests?.length) {
+      return;
+    }
+
+    const fetchApprovalStates = async () => {
+      const newStates = new Map<number, ApprovalState>();
+
+      // Fetch approval states in parallel (with concurrency limit)
+      const batchSize = 5;
+      for (let i = 0; i < mergeRequests.length; i += batchSize) {
+        const batch = mergeRequests.slice(i, i + batchSize);
+        const results = await Promise.allSettled(
+          batch.map(mr => getApprovalState(mr.project_id, mr.iid))
+        );
+
+        results.forEach((result, index) => {
+          if (result.status === 'fulfilled') {
+            newStates.set(batch[index].id, result.value);
+          }
+        });
+      }
+
+      setApprovalStates(newStates);
+    };
+
+    fetchApprovalStates();
+  }, [mergeRequests, specialFilters.excludeApprovedByMe]);
+
+  // Apply negated filters client-side
+  const negatedFilteredMRs = useMemo(() => {
+    if (!mergeRequests?.length) return [];
+    return applyNegatedFilters(mergeRequests, negatedFilters);
+  }, [mergeRequests, negatedFilters]);
+
+  // Apply special filters (requires approval states)
+  const filteredMergeRequests = useMemo(() => {
+    // If we need approval data but don't have it yet, show all (will filter when loaded)
+    const needsApprovalData = specialFilters.excludeApprovedByMe;
+    if (needsApprovalData && approvalStates.size === 0 && negatedFilteredMRs.length > 0) {
+      // Still loading approval states, apply other filters only
+      if (specialFilters.reviewerIsMe && activeAccount?.username) {
+        return negatedFilteredMRs.filter(mr =>
+          mr.reviewers.some(r => r.username.toLowerCase() === activeAccount.username.toLowerCase())
+        );
+      }
+      return negatedFilteredMRs;
+    }
+
+    return applySpecialFilters(
+      negatedFilteredMRs,
+      specialFilters,
+      approvalStates,
+      activeAccount?.username
+    );
+  }, [negatedFilteredMRs, specialFilters, approvalStates, activeAccount?.username]);
 
   // Extract unique projects and authors from MRs for filter dropdowns
   const { projects, authors } = useMemo(() => {
@@ -63,49 +191,44 @@ export function MRListPage() {
     );
   }
 
-  return (
-    <div className="flex h-full">
-      {/* MR List Panel */}
-      <div
-        className={`
-          flex-shrink-0 overflow-y-auto border-r border-gray-200 dark:border-gray-700
-          ${selectedMr ? 'w-1/3 min-w-[320px] max-w-[480px]' : 'w-full'}
-        `}
-      >
-        <div className="p-4">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-              Merge Requests
-            </h2>
-            <button
-              onClick={handleRefresh}
-              disabled={refreshMutation.isPending}
-              className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-50"
-              title="Refresh"
-            >
-              <RefreshIcon spinning={refreshMutation.isPending} />
-            </button>
-          </div>
-
-          <MRFilters projects={projects} authors={authors} />
-
-          <MRList
-            mergeRequests={mergeRequests ?? []}
-            isLoading={isLoading}
-            isError={isError}
-            error={error as Error | null}
-            onRetry={() => refetch()}
-            groupBy={groupBy}
-          />
-        </div>
+  // Show detail view when open and MR is selected
+  if (isDetailOpen && selectedMr) {
+    return (
+      <div className="h-full overflow-hidden">
+        <MRDetailView mr={selectedMr} onClose={closeDetail} />
       </div>
+    );
+  }
 
-      {/* MR Detail Panel */}
-      {selectedMr && (
-        <div className="flex-1 overflow-hidden">
-          <MRDetailView mr={selectedMr} onClose={() => useMRStore.getState().setSelectedMr(null)} />
+  // Show MR list
+  return (
+    <div className="h-full overflow-y-auto">
+      <div className="p-4">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+            Review Requests
+          </h2>
+          <button
+            onClick={handleRefresh}
+            disabled={refreshMutation.isPending}
+            className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-50"
+            title="Refresh"
+          >
+            <RefreshIcon spinning={refreshMutation.isPending} />
+          </button>
         </div>
-      )}
+
+        <MRFilters projects={projects} authors={authors} />
+
+        <MRList
+          mergeRequests={filteredMergeRequests}
+          isLoading={isLoading}
+          isError={isError}
+          error={error as Error | null}
+          onRetry={() => refetch()}
+          groupBy={groupBy}
+        />
+      </div>
     </div>
   );
 }

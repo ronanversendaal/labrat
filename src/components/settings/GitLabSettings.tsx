@@ -11,7 +11,7 @@ import {
   useCheckConnection,
   useConnectionStatus,
 } from '../../hooks/useGitLab';
-import { Button, Input, Modal, Skeleton } from '../common';
+import { Avatar, Button, Input, Modal, Skeleton } from '../common';
 import type { AddAccountRequest, ConnectionStatus } from '../../types';
 
 export function GitLabSettings() {
@@ -121,19 +121,7 @@ export function GitLabSettings() {
               `}
             >
               <div className="flex items-center gap-3">
-                {account.avatar_url ? (
-                  <img
-                    src={account.avatar_url}
-                    alt={account.name}
-                    className="w-10 h-10 rounded-full"
-                  />
-                ) : (
-                  <div className="w-10 h-10 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
-                    <span className="text-lg font-medium text-gray-600 dark:text-gray-300">
-                      {account.name.charAt(0).toUpperCase()}
-                    </span>
-                  </div>
-                )}
+                <Avatar src={account.avatar_url} name={account.name} size="lg" />
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-gray-900 dark:text-gray-100">

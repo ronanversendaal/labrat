@@ -4,6 +4,7 @@
  */
 
 import type { MergeRequest } from '../../types';
+import { Avatar } from '../common';
 import { ImpedimentBadge } from './ImpedimentBadge';
 
 interface MRDetailProps {
@@ -33,17 +34,7 @@ export function MRDetail({ mr }: MRDetailProps) {
         {/* Meta info */}
         <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
           <div className="flex items-center gap-2">
-            {mr.author.avatar_url ? (
-              <img
-                src={mr.author.avatar_url}
-                alt={mr.author.name}
-                className="w-6 h-6 rounded-full"
-              />
-            ) : (
-              <div className="w-6 h-6 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-xs font-medium">
-                {mr.author.name.charAt(0).toUpperCase()}
-              </div>
-            )}
+            <Avatar src={mr.author.avatar_url} name={mr.author.name} size="sm" />
             <span>{mr.author.name}</span>
           </div>
           <span>•</span>
@@ -89,17 +80,7 @@ export function MRDetail({ mr }: MRDetailProps) {
           <div className="flex flex-wrap gap-3">
             {mr.reviewers.map((reviewer) => (
               <div key={reviewer.id} className="flex items-center gap-2">
-                {reviewer.avatar_url ? (
-                  <img
-                    src={reviewer.avatar_url}
-                    alt={reviewer.name}
-                    className="w-8 h-8 rounded-full"
-                  />
-                ) : (
-                  <div className="w-8 h-8 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-sm font-medium">
-                    {reviewer.name.charAt(0).toUpperCase()}
-                  </div>
-                )}
+                <Avatar src={reviewer.avatar_url} name={reviewer.name} size="md" />
                 <span className="text-sm text-gray-700 dark:text-gray-300">{reviewer.name}</span>
               </div>
             ))}
@@ -114,17 +95,7 @@ export function MRDetail({ mr }: MRDetailProps) {
           <div className="flex flex-wrap gap-3">
             {mr.assignees.map((assignee) => (
               <div key={assignee.id} className="flex items-center gap-2">
-                {assignee.avatar_url ? (
-                  <img
-                    src={assignee.avatar_url}
-                    alt={assignee.name}
-                    className="w-8 h-8 rounded-full"
-                  />
-                ) : (
-                  <div className="w-8 h-8 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-sm font-medium">
-                    {assignee.name.charAt(0).toUpperCase()}
-                  </div>
-                )}
+                <Avatar src={assignee.avatar_url} name={assignee.name} size="md" />
                 <span className="text-sm text-gray-700 dark:text-gray-300">{assignee.name}</span>
               </div>
             ))}

@@ -29,12 +29,15 @@ impl GitLabClient {
         let for_review: Vec<MergeRequest> = self.get_all_pages(&review_path, DEFAULT_PER_PAGE).await?;
 
         // Merge and deduplicate by ID
-        let mut all_mrs = assigned;
+        let mut all_mrs: Vec<MergeRequest> = assigned
+            .into_iter()
+            .map(|mr| mr.with_extracted_project_path())
+            .collect();
         let existing_ids: std::collections::HashSet<_> = all_mrs.iter().map(|mr| mr.id).collect();
 
         for mr in for_review {
             if !existing_ids.contains(&mr.id) {
-                all_mrs.push(mr);
+                all_mrs.push(mr.with_extracted_project_path());
             }
         }
 
@@ -247,17 +250,17 @@ impl GitLabClient {
 
     /// Get the approval state for a merge request
     ///
-    /// GET /projects/{id}/merge_requests/{mr_iid}/approval_state
+    /// GET /projects/{id}/merge_requests/{mr_iid}/approvals
     pub async fn get_approval_state(
         &self,
         project_id: i64,
         mr_iid: i64,
     ) -> Result<ApprovalState, GitLabClientError> {
         let path = format!(
-            "/projects/{}/merge_requests/{}/approval_state",
+            "/projects/{}/merge_requests/{}/approvals",
             project_id, mr_iid
         );
-        debug!("Fetching approval state: {}", path);
+        debug!("Fetching approvals: {}", path);
 
         self.get(&path).await
     }

@@ -18,12 +18,15 @@ import type {
   GetDiffRequest,
   Diff,
   Discussion,
+  Note,
   PostCommentRequest,
   PostCommentResponse,
   RefreshRequest,
   ConnectionStatusEvent,
   ApprovalState,
   ApproveResponse,
+  ReplyToDiscussionRequest,
+  ResolveDiscussionRequest,
 } from '../types/gitlab';
 import type {
   AIProvider,
@@ -152,6 +155,17 @@ export async function postComment(request: PostCommentRequest): Promise<PostComm
 }
 
 /**
+ * Fetch raw file content at a specific commit SHA
+ */
+export async function getFileContent(
+  projectId: number,
+  filePath: string,
+  refSha: string
+): Promise<string> {
+  return invokeCommand<string>('gitlab_get_file_content', { projectId, filePath, refSha });
+}
+
+/**
  * Force refresh data from GitLab (bypass cache)
  */
 export async function refresh(request: RefreshRequest = {}): Promise<void> {
@@ -181,6 +195,20 @@ export async function approveMR(
  */
 export async function unapproveMR(projectId: number, mrIid: number): Promise<ApproveResponse> {
   return invokeCommand<ApproveResponse>('gitlab_unapprove_mr', { projectId, mrIid });
+}
+
+/**
+ * Reply to an existing discussion on a merge request
+ */
+export async function replyToDiscussion(request: ReplyToDiscussionRequest): Promise<Note> {
+  return invokeCommand<Note>('gitlab_reply_to_discussion', { request });
+}
+
+/**
+ * Resolve or unresolve a discussion on a merge request
+ */
+export async function resolveDiscussion(request: ResolveDiscussionRequest): Promise<void> {
+  return invokeCommand<void>('gitlab_resolve_discussion', { request });
 }
 
 // ============================================================================
@@ -323,12 +351,15 @@ export const gitlab = {
   listMergeRequests,
   getMergeRequest,
   getDiff,
+  getFileContent,
   getDiscussions,
   postComment,
   refresh,
   getApprovalState,
   approveMR,
   unapproveMR,
+  replyToDiscussion,
+  resolveDiscussion,
 };
 
 /**

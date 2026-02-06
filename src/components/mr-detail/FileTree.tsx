@@ -3,7 +3,7 @@
  * Supports both tree view (folder hierarchy) and flat list view
  */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import type { DiffFile } from '../../types';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { useMRStore, isFileViewedSelector } from '../../stores/mrStore';
@@ -54,6 +54,26 @@ export function FileTree({
     [files]
   );
 
+  // Ref for the file list container to scroll selected file into view
+  const listRef = useRef<HTMLDivElement>(null);
+
+  // Scroll selected file into view when selection changes
+  useEffect(() => {
+    if (!selectedFile || !listRef.current) return;
+
+    // Find the selected file element by data attribute
+    const selectedElement = listRef.current.querySelector(
+      `[data-file-path="${CSS.escape(selectedFile)}"]`
+    );
+
+    if (selectedElement) {
+      selectedElement.scrollIntoView({
+        block: 'nearest',
+        behavior: 'smooth',
+      });
+    }
+  }, [selectedFile]);
+
   return (
     <div className="text-sm">
       <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-gray-700">
@@ -75,7 +95,7 @@ export function FileTree({
         </div>
       </div>
 
-      <div className="divide-y divide-gray-100 dark:divide-gray-800">
+      <div ref={listRef} className="divide-y divide-gray-100 dark:divide-gray-800">
         {fileViewMode === 'tree' ? (
           // Tree view - folder hierarchy
           tree.children.map((node) => (
@@ -192,6 +212,7 @@ function FileTreeNode({
   return (
     <button
       onClick={() => onSelectFile(file.new_path)}
+      data-file-path={file.new_path}
       className={`
         w-full flex items-center gap-2 px-3 py-1.5 text-left
         ${isSelected
@@ -337,6 +358,7 @@ function FlatFileItem({
   return (
     <button
       onClick={onSelect}
+      data-file-path={file.new_path}
       className={`
         w-full flex items-center gap-2 px-3 py-1.5 text-left
         ${isSelected

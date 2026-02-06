@@ -1,31 +1,52 @@
-import { useState, useMemo, type ReactNode } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import { Sidebar, SidebarItem, SidebarSection } from './Sidebar';
-import { Header } from './Header';
 import { MainContent } from './MainContent';
+import { Avatar } from '../common';
 import { useAccounts, useSetActiveAccount } from '../../hooks/useGitLab';
 import { useUIStore, useMRStore } from '../../stores';
-
-type ActiveView = 'all' | 'conflicts' | 'pipeline-failed';
 
 interface AppLayoutProps {
   children: ReactNode;
 }
 
 export function AppLayout({ children }: AppLayoutProps) {
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const { data: accounts } = useAccounts();
   const setActiveAccount = useSetActiveAccount();
   const { openModal } = useUIStore();
-  const { filter, setFilter, clearFilters } = useMRStore();
+  const { setNegatedFilters, setSpecialFilters, clearFilters } = useMRStore();
 
   const activeAccount = accounts?.find((a) => a.is_active);
 
-  // Determine which sidebar item should be active based on current filter
-  const activeView = useMemo((): ActiveView => {
-    if (filter.has_conflicts === true) return 'conflicts';
-    if (filter.pipeline_failed === true) return 'pipeline-failed';
-    return 'all';
-  }, [filter.has_conflicts, filter.pipeline_failed]);
+  // Apply default "My Reviews" filters:
+  // - NOT authored by current user
+  // - NOT already approved by me
+  // - Reviewer is me
+  const applyMyReviewsDefaults = () => {
+    clearFilters();
+    if (activeAccount?.username) {
+      setNegatedFilters([
+        { type: 'author', value: activeAccount.username },
+      ]);
+      setSpecialFilters({
+        excludeApprovedByMe: true,
+        reviewerIsMe: true,
+      });
+    }
+  };
+
+  // Auto-apply default filters when active account is available
+  useEffect(() => {
+    if (activeAccount?.username) {
+      setNegatedFilters([
+        { type: 'author', value: activeAccount.username },
+      ]);
+      setSpecialFilters({
+        excludeApprovedByMe: true,
+        reviewerIsMe: true,
+      });
+    }
+  }, [activeAccount?.username, setNegatedFilters, setSpecialFilters]);
 
   const handleSelectAccount = (accountId: string) => {
     setActiveAccount.mutate(accountId);
@@ -51,19 +72,7 @@ export function AppLayout({ children }: AppLayoutProps) {
             {accounts.map((account) => (
               <SidebarItem
                 key={account.id}
-                icon={
-                  account.avatar_url ? (
-                    <img
-                      src={account.avatar_url}
-                      alt={account.name}
-                      className="w-5 h-5 rounded-full"
-                    />
-                  ) : (
-                    <div className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs font-medium">
-                      {account.name.charAt(0).toUpperCase()}
-                    </div>
-                  )
-                }
+                icon={<Avatar src={account.avatar_url} name={account.name} size="xs" />}
                 label={account.name}
                 active={account.is_active}
                 collapsed={sidebarCollapsed}
@@ -96,50 +105,9 @@ export function AppLayout({ children }: AppLayoutProps) {
               </svg>
             }
             label="My Reviews"
-            active={activeView === 'all'}
+            active={true}
             collapsed={sidebarCollapsed}
-            onClick={() => clearFilters()}
-          />
-        </SidebarSection>
-
-        <SidebarSection title="Quick Filters" collapsed={sidebarCollapsed}>
-          <SidebarItem
-            icon={
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-            }
-            label="Has Conflicts"
-            active={activeView === 'conflicts'}
-            collapsed={sidebarCollapsed}
-            onClick={() => {
-              clearFilters();
-              setFilter({ has_conflicts: true });
-            }}
-          />
-          <SidebarItem
-            icon={
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-            }
-            label="Pipeline Failed"
-            active={activeView === 'pipeline-failed'}
-            collapsed={sidebarCollapsed}
-            onClick={() => {
-              clearFilters();
-              setFilter({ pipeline_failed: true });
-            }}
+            onClick={applyMyReviewsDefaults}
           />
         </SidebarSection>
 
@@ -170,7 +138,6 @@ export function AppLayout({ children }: AppLayoutProps) {
 
       {/* Main content area */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        <Header title={activeAccount ? `${activeAccount.name} - My Reviews` : 'My Pending Reviews'} />
         <MainContent>{children}</MainContent>
       </div>
     </div>

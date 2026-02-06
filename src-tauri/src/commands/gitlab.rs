@@ -8,8 +8,9 @@ use crate::gitlab::comments::PositionData;
 use crate::gitlab::types::{
     AddAccountRequest, ApprovalState, ApproveResponse, ConnectionStatus, ConnectionStatusEvent,
     Diff, Discussion, GetDiffRequest, GitLabAccount, ListMergeRequestsRequest,
-    ListMergeRequestsResponse, MergeRequest, PostCommentRequest, PostCommentResponse,
-    RefreshRequest, ValidateTokenRequest, ValidateTokenResponse,
+    ListMergeRequestsResponse, MergeRequest, Note, PostCommentRequest, PostCommentResponse,
+    RefreshRequest, ReplyToDiscussionRequest, ResolveDiscussionRequest, ValidateTokenRequest,
+    ValidateTokenResponse,
 };
 use crate::settings::credentials::CredentialManager;
 use crate::{SharedAppState, TauriError, TauriResult};
@@ -455,6 +456,24 @@ pub async fn gitlab_post_comment(
     })
 }
 
+/// Fetch raw file content at a specific commit SHA
+#[tauri::command]
+pub async fn gitlab_get_file_content(
+    state: State<'_, SharedAppState>,
+    project_id: i64,
+    file_path: String,
+    ref_sha: String,
+) -> TauriResult<String> {
+    let (_account, client) = get_active_client(&state).await?;
+
+    let content = client
+        .get_file_content(project_id, &file_path, &ref_sha)
+        .await
+        .map_err(|e| TauriError::api_error(e.to_string()))?;
+
+    Ok(content)
+}
+
 /// Force refresh data from GitLab (bypass cache)
 #[tauri::command]
 pub async fn gitlab_refresh(
@@ -642,4 +661,131 @@ pub async fn gitlab_unapprove_mr(
 
     info!("Unapproved MR {} in project {}", mr_iid, project_id);
     Ok(response)
+}
+
+/// Fetch an avatar image through the authenticated GitLab client
+/// Returns base64-encoded image data
+#[tauri::command]
+pub async fn gitlab_fetch_avatar(
+    state: State<'_, SharedAppState>,
+    avatar_url: String,
+) -> TauriResult<Option<String>> {
+    // Skip if URL is empty
+    if avatar_url.is_empty() {
+        return Ok(None);
+    }
+
+    let (_account, client) = get_active_client(&state).await?;
+
+    // Only proxy if the URL is from the same GitLab instance
+    let instance_url = client.instance_url();
+    info!("Avatar fetch requested: {} (instance: {})", avatar_url, instance_url);
+
+    if !avatar_url.starts_with(instance_url) {
+        info!("Skipping proxy - URL doesn't start with instance URL");
+        return Ok(None);
+    }
+
+    // Extract user ID from avatar URL and use API endpoint instead
+    // URL format: https://gitlab.example.com/uploads/-/system/user/avatar/{user_id}/avatar.png
+    let api_url = if let Some(caps) = extract_user_id_from_avatar_url(&avatar_url) {
+        format!("{}/api/v4/users/{}/avatar", instance_url, caps)
+    } else {
+        // Fall back to original URL if we can't extract user ID
+        avatar_url.clone()
+    };
+
+    info!("Proxying avatar fetch via: {}", api_url);
+
+    match client.fetch_bytes(&api_url).await {
+        Ok(bytes) => {
+            use base64::Engine;
+            let encoded = base64::engine::general_purpose::STANDARD.encode(&bytes);
+
+            // Detect image type from URL or magic bytes
+            let mime_type = if avatar_url.ends_with(".png") || bytes.starts_with(&[0x89, 0x50, 0x4E, 0x47]) {
+                "image/png"
+            } else if avatar_url.ends_with(".gif") || bytes.starts_with(&[0x47, 0x49, 0x46]) {
+                "image/gif"
+            } else if avatar_url.ends_with(".webp") || bytes.starts_with(&[0x52, 0x49, 0x46, 0x46]) {
+                "image/webp"
+            } else {
+                "image/jpeg"
+            };
+
+            Ok(Some(format!("data:{};base64,{}", mime_type, encoded)))
+        }
+        Err(e) => {
+            warn!("Failed to fetch avatar {}: {}", avatar_url, e);
+            Ok(None)
+        }
+    }
+}
+
+/// Reply to an existing discussion on a merge request
+#[tauri::command]
+pub async fn gitlab_reply_to_discussion(
+    state: State<'_, SharedAppState>,
+    request: ReplyToDiscussionRequest,
+) -> TauriResult<Note> {
+    let (_account, client) = get_active_client(&state).await?;
+
+    let note = client
+        .reply_to_discussion(
+            request.project_id,
+            request.mr_iid,
+            &request.discussion_id,
+            &request.body,
+        )
+        .await
+        .map_err(|e| TauriError::api_error(e.to_string()))?;
+
+    info!(
+        "Replied to discussion {} on MR {}",
+        request.discussion_id, request.mr_iid
+    );
+    Ok(note)
+}
+
+/// Resolve or unresolve a discussion on a merge request
+#[tauri::command]
+pub async fn gitlab_resolve_discussion(
+    state: State<'_, SharedAppState>,
+    request: ResolveDiscussionRequest,
+) -> TauriResult<()> {
+    let (_account, client) = get_active_client(&state).await?;
+
+    client
+        .resolve_discussion(
+            request.project_id,
+            request.mr_iid,
+            &request.discussion_id,
+            request.resolved,
+        )
+        .await
+        .map_err(|e| TauriError::api_error(e.to_string()))?;
+
+    info!(
+        "Set discussion {} resolved={} on MR {}",
+        request.discussion_id, request.resolved, request.mr_iid
+    );
+    Ok(())
+}
+
+/// Extract user ID from GitLab avatar URL
+/// URL format: https://gitlab.example.com/uploads/-/system/user/avatar/{user_id}/avatar.png
+fn extract_user_id_from_avatar_url(url: &str) -> Option<String> {
+    // Look for pattern: /user/avatar/{id}/
+    let parts: Vec<&str> = url.split('/').collect();
+    for (i, part) in parts.iter().enumerate() {
+        if *part == "avatar" && i > 0 && parts.get(i - 1) == Some(&"user") {
+            if let Some(id) = parts.get(i + 1) {
+                // Verify it looks like a numeric ID
+                if id.chars().all(|c| c.is_ascii_digit()) {
+                    return Some(id.to_string());
+                }
+            }
+        }
+    }
+    None
 }

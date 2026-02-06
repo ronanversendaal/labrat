@@ -3,6 +3,7 @@
  */
 
 import type { MergeRequest } from '../../types';
+import { Avatar } from '../common';
 
 interface MRDescriptionProps {
   mr: MergeRequest;
@@ -121,13 +122,7 @@ export function MRDescription({ mr }: MRDescriptionProps) {
 function UserBadge({ user }: { user: { id: number; name: string; avatar_url: string | null } }) {
   return (
     <div className="flex items-center gap-2">
-      {user.avatar_url ? (
-        <img src={user.avatar_url} alt={user.name} className="w-6 h-6 rounded-full" />
-      ) : (
-        <div className="w-6 h-6 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-xs font-medium">
-          {user.name.charAt(0).toUpperCase()}
-        </div>
-      )}
+      <Avatar src={user.avatar_url} name={user.name} size="sm" />
       <span className="text-sm text-gray-700 dark:text-gray-300">{user.name}</span>
     </div>
   );

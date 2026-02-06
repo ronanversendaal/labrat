@@ -118,6 +118,25 @@ impl GitLabClient {
             })
             .collect())
     }
+
+    /// Get the raw content of a file at a specific commit ref
+    ///
+    /// GET /projects/{id}/repository/files/{file_path}/raw?ref={ref}
+    pub async fn get_file_content(
+        &self,
+        project_id: i64,
+        file_path: &str,
+        ref_sha: &str,
+    ) -> Result<String, GitLabClientError> {
+        let encoded_path = urlencoding::encode(file_path);
+        let path = format!(
+            "/projects/{}/repository/files/{}/raw?ref={}",
+            project_id, encoded_path, ref_sha
+        );
+        debug!("Fetching file content: {}", path);
+
+        self.get_text(&path).await
+    }
 }
 
 /// Count additions and deletions from a unified diff string

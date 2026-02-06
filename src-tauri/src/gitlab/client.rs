@@ -411,6 +411,110 @@ impl GitLabClient {
 
         Ok(all_items)
     }
+
+    /// Make a GET request that returns raw text instead of JSON
+    pub async fn get_text(&self, path: &str) -> Result<String, GitLabClientError> {
+        let url = format!("{}{}", self.base_url, path);
+        debug!("GET (text) {}", url);
+
+        let response = self
+            .execute_with_retry_and_cancel(
+                || async {
+                    self.client
+                        .get(&url)
+                        .header(header::AUTHORIZATION, format!("Bearer {}", self.access_token))
+                        .send()
+                        .await
+                },
+                None,
+            )
+            .await?;
+
+        let status = response.status();
+        match status {
+            StatusCode::OK => response.text().await.map_err(GitLabClientError::RequestFailed),
+            StatusCode::UNAUTHORIZED => Err(GitLabClientError::Unauthorized),
+            StatusCode::FORBIDDEN => Err(GitLabClientError::Forbidden),
+            StatusCode::NOT_FOUND => Err(GitLabClientError::NotFound),
+            _ => {
+                let body = response.text().await.unwrap_or_default();
+                Err(GitLabClientError::ApiError {
+                    status: status.as_u16(),
+                    message: body,
+                })
+            }
+        }
+    }
+
+    /// Fetch raw bytes from a URL with authentication
+    /// Used for fetching avatars and other binary content
+    /// Handles redirects by following them without auth (for signed URLs)
+    pub async fn fetch_bytes(&self, url: &str) -> Result<Vec<u8>, GitLabClientError> {
+        debug!("Fetching bytes from {}", url);
+
+        // Create a client that doesn't auto-follow redirects so we can handle them manually
+        let client = Client::builder()
+            .redirect(reqwest::redirect::Policy::none())
+            .timeout(Duration::from_secs(30))
+            .build()
+            .map_err(GitLabClientError::RequestFailed)?;
+
+        // First request with auth
+        let response = client
+            .get(url)
+            .header(header::AUTHORIZATION, format!("Bearer {}", self.access_token))
+            .send()
+            .await
+            .map_err(GitLabClientError::RequestFailed)?;
+
+        let status = response.status();
+
+        // Handle redirect (302/307) - follow without auth (signed URL)
+        if status.is_redirection() {
+            if let Some(location) = response.headers().get(header::LOCATION) {
+                let redirect_url = location.to_str().unwrap_or("");
+                debug!("Following redirect to: {}", redirect_url);
+
+                // Follow redirect without authentication (signed URL should work)
+                let redirect_response = self
+                    .client
+                    .get(redirect_url)
+                    .send()
+                    .await
+                    .map_err(GitLabClientError::RequestFailed)?;
+
+                if redirect_response.status().is_success() {
+                    let bytes = redirect_response
+                        .bytes()
+                        .await
+                        .map_err(GitLabClientError::RequestFailed)?;
+                    return Ok(bytes.to_vec());
+                }
+            }
+        }
+
+        match status {
+            StatusCode::OK => {
+                let bytes = response.bytes().await.map_err(GitLabClientError::RequestFailed)?;
+                Ok(bytes.to_vec())
+            }
+            StatusCode::UNAUTHORIZED => Err(GitLabClientError::Unauthorized),
+            StatusCode::FORBIDDEN => Err(GitLabClientError::Forbidden),
+            StatusCode::NOT_FOUND => Err(GitLabClientError::NotFound),
+            _ => {
+                let body = response.text().await.unwrap_or_default();
+                Err(GitLabClientError::ApiError {
+                    status: status.as_u16(),
+                    message: body,
+                })
+            }
+        }
+    }
+
+    /// Get the instance URL (without /api/v4)
+    pub fn instance_url(&self) -> &str {
+        self.base_url.trim_end_matches("/api/v4")
+    }
 }
 
 /// Request manager for tracking and cancelling in-flight requests

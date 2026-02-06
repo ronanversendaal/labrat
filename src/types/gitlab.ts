@@ -342,7 +342,7 @@ export interface Approver {
     name: string;
     avatar_url: string | null;
   };
-  approved_at: string;
+  approved_at?: string;
 }
 
 /** Approval state for a merge request */
@@ -379,4 +379,22 @@ export interface ParsedFilter {
   value: string;
   /** Original raw text that was parsed */
   raw: string;
+  /** Whether this filter is negated (e.g., author:!=john means NOT author john) */
+  negated?: boolean;
+}
+
+/** Request to reply to an existing discussion */
+export interface ReplyToDiscussionRequest {
+  project_id: number;
+  mr_iid: number;
+  discussion_id: string;
+  body: string;
+}
+
+/** Request to resolve or unresolve a discussion */
+export interface ResolveDiscussionRequest {
+  project_id: number;
+  mr_iid: number;
+  discussion_id: string;
+  resolved: boolean;
 }

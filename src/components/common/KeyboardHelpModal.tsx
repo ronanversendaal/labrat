@@ -19,8 +19,8 @@ interface KeyboardHelpModalProps {
 const CATEGORY_ORDER: ShortcutCategory[] = [
   'global',
   'mr-list',
+  'navigation',
   'diff',
-  'editing',
   'review',
 ];
 
@@ -47,7 +47,7 @@ export function KeyboardHelpModal({ isOpen, onClose }: KeyboardHelpModalProps) {
   );
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Keyboard Shortcuts" size="lg">
+    <Modal isOpen={isOpen} onClose={onClose} title="Keyboard Shortcuts" size="3xl">
       <div className="max-h-[70vh] overflow-y-auto">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4">
           {CATEGORY_ORDER.map((category) => {

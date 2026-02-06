@@ -13,6 +13,8 @@ import type {
   ValidateTokenRequest,
   GetDiffRequest,
   ConnectionStatusEvent,
+  ReplyToDiscussionRequest,
+  ResolveDiscussionRequest,
 } from '../types';
 import { useMRStore } from '../stores';
 
@@ -24,6 +26,7 @@ export const queryKeys = {
   diff: (projectId: number, mrIid: number) => ['diff', projectId, mrIid] as const,
   discussions: (projectId: number, mrIid: number) => ['discussions', projectId, mrIid] as const,
   approvalState: (projectId: number, mrIid: number) => ['approvalState', projectId, mrIid] as const,
+  fileContent: (projectId: number, filePath: string, refSha: string) => ['fileContent', projectId, filePath, refSha] as const,
 };
 
 /**
@@ -88,6 +91,9 @@ export function useRemoveAccount() {
   });
 }
 
+/** Default refetch interval for MR list (60 seconds) */
+const MR_LIST_REFETCH_INTERVAL = 60 * 1000;
+
 /**
  * Hook to list merge requests with optional filters
  */
@@ -105,6 +111,8 @@ export function useMergeRequests(request?: ListMergeRequestsRequest) {
     queryKey: queryKeys.mergeRequests(mergedRequest),
     queryFn: () => api.listMergeRequests(mergedRequest),
     select: (data: ListMergeRequestsResponse) => data.merge_requests,
+    refetchInterval: MR_LIST_REFETCH_INTERVAL,
+    refetchIntervalInBackground: false,
   });
 }
 
@@ -135,6 +143,18 @@ export function useDiff(projectId: number, mrIid: number, useCache = true) {
     queryKey: queryKeys.diff(projectId, mrIid),
     queryFn: () => api.getDiff(request),
     enabled: projectId > 0 && mrIid > 0,
+  });
+}
+
+/**
+ * Hook to get raw file content at a specific commit SHA
+ */
+export function useFileContent(projectId: number, filePath: string, refSha: string) {
+  return useQuery({
+    queryKey: queryKeys.fileContent(projectId, filePath, refSha),
+    queryFn: () => api.getFileContent(projectId, filePath, refSha),
+    enabled: projectId > 0 && !!filePath && !!refSha,
+    staleTime: Infinity, // File content at a specific SHA never changes
   });
 }
 
@@ -278,6 +298,40 @@ export function useUnapproveMR() {
       // Invalidate approval state for this MR
       queryClient.invalidateQueries({
         queryKey: queryKeys.approvalState(variables.projectId, variables.mrIid),
+      });
+    },
+  });
+}
+
+/**
+ * Hook to reply to an existing discussion
+ */
+export function useReplyToDiscussion() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (request: ReplyToDiscussionRequest) => api.replyToDiscussion(request),
+    onSuccess: (_, variables) => {
+      // Invalidate discussions for this MR
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.discussions(variables.project_id, variables.mr_iid),
+      });
+    },
+  });
+}
+
+/**
+ * Hook to resolve or unresolve a discussion
+ */
+export function useResolveDiscussion() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (request: ResolveDiscussionRequest) => api.resolveDiscussion(request),
+    onSuccess: (_, variables) => {
+      // Invalidate discussions for this MR
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.discussions(variables.project_id, variables.mr_iid),
       });
     },
   });
