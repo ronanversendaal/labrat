@@ -11,24 +11,20 @@ use crate::TauriResult;
 pub fn set_window_bg_color(window: tauri::WebviewWindow, r: u8, g: u8, b: u8) -> TauriResult<()> {
     #[cfg(target_os = "macos")]
     {
-        use cocoa::appkit::{NSColor, NSWindow};
-        use cocoa::base::{id, nil};
+        use objc2_app_kit::{NSColor, NSWindow};
 
-        let ns_win = window
+        let ns_win_ptr = window
             .ns_window()
-            .map_err(|_| crate::TauriError::new("window_error", "Failed to get NSWindow"))?
-            as id;
+            .map_err(|_| crate::TauriError::new("window_error", "Failed to get NSWindow"))?;
+        let ns_win = unsafe { &*(ns_win_ptr as *const NSWindow) };
 
-        unsafe {
-            let color = NSColor::colorWithRed_green_blue_alpha_(
-                nil,
-                r as f64 / 255.0,
-                g as f64 / 255.0,
-                b as f64 / 255.0,
-                1.0,
-            );
-            ns_win.setBackgroundColor_(color);
-        }
+        let color = NSColor::colorWithRed_green_blue_alpha(
+            r as f64 / 255.0,
+            g as f64 / 255.0,
+            b as f64 / 255.0,
+            1.0,
+        );
+        ns_win.setBackgroundColor(Some(&color));
     }
 
     #[cfg(not(target_os = "macos"))]

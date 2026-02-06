@@ -195,21 +195,17 @@ pub fn run() {
                 // This prevents white flash and makes the overlay titlebar match the theme.
                 #[cfg(target_os = "macos")]
                 {
-                    use cocoa::appkit::{NSColor, NSWindow};
-                    use cocoa::base::{id, nil};
+                    use objc2_app_kit::{NSColor, NSWindow};
 
-                    if let Ok(ns_win) = window.ns_window() {
-                        let ns_win = ns_win as id;
-                        unsafe {
-                            let color = NSColor::colorWithRed_green_blue_alpha_(
-                                nil,
-                                17.0 / 255.0,  // #11
-                                24.0 / 255.0,  // #18
-                                39.0 / 255.0,  // #27
-                                1.0,
-                            );
-                            ns_win.setBackgroundColor_(color);
-                        }
+                    if let Ok(ns_win_ptr) = window.ns_window() {
+                        let ns_win = unsafe { &*(ns_win_ptr as *const NSWindow) };
+                        let color = NSColor::colorWithRed_green_blue_alpha(
+                            17.0 / 255.0,  // #11
+                            24.0 / 255.0,  // #18
+                            39.0 / 255.0,  // #27
+                            1.0,
+                        );
+                        ns_win.setBackgroundColor(Some(&color));
                     }
                 }
             }

@@ -3,6 +3,7 @@
 //! This module contains all GitLab-related IPC commands.
 
 use crate::cache::diff_cache::DiffCache;
+use crate::cache::mr_cache::MrCache;
 use crate::gitlab::client::GitLabClient;
 use crate::gitlab::comments::PositionData;
 use crate::gitlab::types::{
@@ -242,7 +243,7 @@ pub async fn list_merge_requests_inner(
     state: &SharedAppState,
     request: ListMergeRequestsRequest,
 ) -> TauriResult<ListMergeRequestsResponse> {
-    let (_account, client) = get_active_client(state).await?;
+    let (account, client) = get_active_client(state).await?;
 
     // Fetch MRs from GitLab API
     let merge_requests = client
@@ -251,6 +252,41 @@ pub async fn list_merge_requests_inner(
         .map_err(|e| TauriError::api_error(e.to_string()))?;
 
     debug!("Fetched {} merge requests", merge_requests.len());
+
+    // Cache MRs to the database (ensure projects exist first for FK constraint)
+    {
+        let state_read = state.read().await;
+        let now = Utc::now().to_rfc3339();
+
+        // Upsert placeholder project rows so MR FK constraint is satisfied
+        let mut seen_projects = std::collections::HashSet::new();
+        for mr in &merge_requests {
+            if seen_projects.insert(mr.project_id) {
+                let path = mr.project_path.as_deref().unwrap_or("unknown");
+                let name = mr.project_name.as_deref().unwrap_or("Unknown");
+                let web_url = mr.web_url.split("/-/").next().unwrap_or("");
+                if let Err(e) = sqlx::query(
+                    "INSERT OR IGNORE INTO projects (id, account_id, path_with_namespace, name, web_url, last_activity_at, cached_at)
+                     VALUES (?, ?, ?, ?, ?, ?, ?)"
+                )
+                .bind(mr.project_id)
+                .bind(&account.id)
+                .bind(path)
+                .bind(name)
+                .bind(web_url)
+                .bind(&now)
+                .bind(&now)
+                .execute(&state_read.db_pool)
+                .await {
+                    warn!("Failed to cache project {}: {}", mr.project_id, e);
+                }
+            }
+        }
+
+        if let Err(e) = MrCache::upsert_many(&state_read.db_pool, &merge_requests).await {
+            warn!("Failed to cache merge requests: {}", e);
+        }
+    }
 
     // Apply filtering if specified
     let filtered = if let Some(filter) = &request.filter {
@@ -355,12 +391,38 @@ pub async fn get_merge_request_inner(
     project_id: i64,
     mr_iid: i64,
 ) -> TauriResult<MergeRequest> {
-    let (_account, client) = get_active_client(state).await?;
+    let (account, client) = get_active_client(state).await?;
 
     let mr = client
         .get_merge_request(project_id, mr_iid)
         .await
         .map_err(|e| TauriError::api_error(e.to_string()))?;
+
+    // Cache the MR (ensure project exists first for FK constraint)
+    {
+        let state_read = state.read().await;
+        let now = Utc::now().to_rfc3339();
+        let path = mr.project_path.as_deref().unwrap_or("unknown");
+        let name = mr.project_name.as_deref().unwrap_or("Unknown");
+        let web_url = mr.web_url.split("/-/").next().unwrap_or("");
+        let _ = sqlx::query(
+            "INSERT OR IGNORE INTO projects (id, account_id, path_with_namespace, name, web_url, last_activity_at, cached_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?)"
+        )
+        .bind(mr.project_id)
+        .bind(&account.id)
+        .bind(path)
+        .bind(name)
+        .bind(web_url)
+        .bind(&now)
+        .bind(&now)
+        .execute(&state_read.db_pool)
+        .await;
+
+        if let Err(e) = MrCache::upsert(&state_read.db_pool, &mr).await {
+            warn!("Failed to cache merge request: {}", e);
+        }
+    }
 
     Ok(mr)
 }

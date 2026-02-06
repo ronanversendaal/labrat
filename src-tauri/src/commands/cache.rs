@@ -53,7 +53,7 @@ pub async fn get_stats_inner(state: &SharedAppState) -> TauriResult<CacheStats> 
         .map_err(|e| TauriError::cache_error(e.to_string()))?;
 
     // Count diffs
-    let (diff_count,): (i64,) = sqlx::query_as("SELECT COUNT(*) FROM diff_cache")
+    let (diff_count,): (i64,) = sqlx::query_as("SELECT COUNT(*) FROM diffs")
         .fetch_one(&state.db_pool)
         .await
         .map_err(|e| TauriError::cache_error(e.to_string()))?;
@@ -65,17 +65,19 @@ pub async fn get_stats_inner(state: &SharedAppState) -> TauriResult<CacheStats> 
         .map_err(|e| TauriError::cache_error(e.to_string()))?;
 
     // Get oldest and newest entries from MRs
-    let oldest: Option<(String,)> = sqlx::query_as(
+    // Aggregate functions always return one row; the value is NULL when the table is empty,
+    // so we must decode as Option<String>.
+    let (oldest_entry,): (Option<String>,) = sqlx::query_as(
         "SELECT MIN(cached_at) FROM merge_requests WHERE cached_at IS NOT NULL",
     )
-    .fetch_optional(&state.db_pool)
+    .fetch_one(&state.db_pool)
     .await
     .map_err(|e| TauriError::cache_error(e.to_string()))?;
 
-    let newest: Option<(String,)> = sqlx::query_as(
+    let (newest_entry,): (Option<String>,) = sqlx::query_as(
         "SELECT MAX(cached_at) FROM merge_requests WHERE cached_at IS NOT NULL",
     )
-    .fetch_optional(&state.db_pool)
+    .fetch_one(&state.db_pool)
     .await
     .map_err(|e| TauriError::cache_error(e.to_string()))?;
 
@@ -87,8 +89,8 @@ pub async fn get_stats_inner(state: &SharedAppState) -> TauriResult<CacheStats> 
         mr_count: mr_count as u32,
         diff_count: diff_count as u32,
         suggestion_count: suggestion_count as u32,
-        oldest_entry: oldest.and_then(|o| if o.0.is_empty() { None } else { Some(o.0) }),
-        newest_entry: newest.and_then(|n| if n.0.is_empty() { None } else { Some(n.0) }),
+        oldest_entry,
+        newest_entry,
     })
 }
 
@@ -105,7 +107,7 @@ pub async fn clear_inner(
             .execute(&state.db_pool)
             .await
             .map_err(|e| TauriError::cache_error(e.to_string()))?;
-        sqlx::query("DELETE FROM diff_cache")
+        sqlx::query("DELETE FROM diffs")
             .execute(&state.db_pool)
             .await
             .map_err(|e| TauriError::cache_error(e.to_string()))?;
@@ -123,7 +125,7 @@ pub async fn clear_inner(
             info!("Cleared merge requests cache");
         }
         if request.diffs {
-            sqlx::query("DELETE FROM diff_cache")
+            sqlx::query("DELETE FROM diffs")
                 .execute(&state.db_pool)
                 .await
                 .map_err(|e| TauriError::cache_error(e.to_string()))?;
@@ -160,7 +162,7 @@ pub async fn evict_old_inner(state: &SharedAppState) -> TauriResult<EvictCacheRe
             .fetch_one(&state_guard.db_pool)
             .await
             .map_err(|e| TauriError::cache_error(e.to_string()))?;
-        let (diff_count,): (i64,) = sqlx::query_as("SELECT COUNT(*) FROM diff_cache")
+        let (diff_count,): (i64,) = sqlx::query_as("SELECT COUNT(*) FROM diffs")
             .fetch_one(&state_guard.db_pool)
             .await
             .map_err(|e| TauriError::cache_error(e.to_string()))?;
@@ -182,8 +184,8 @@ pub async fn evict_old_inner(state: &SharedAppState) -> TauriResult<EvictCacheRe
         let diffs_to_delete = (target_reduction / 50000).min(100) as i64;
         if diffs_to_delete > 0 {
             let result = sqlx::query(
-                "DELETE FROM diff_cache WHERE mr_iid IN (
-                    SELECT mr_iid FROM diff_cache ORDER BY cached_at ASC LIMIT ?
+                "DELETE FROM diffs WHERE mr_id IN (
+                    SELECT mr_id FROM diffs ORDER BY cached_at ASC LIMIT ?
                 )",
             )
             .bind(diffs_to_delete)
