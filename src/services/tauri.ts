@@ -6,7 +6,6 @@
  * the frontend and backend.
  */
 
-import { invoke } from '@tauri-apps/api/core';
 import type {
   GitLabAccount,
   AddAccountRequest,
@@ -48,6 +47,16 @@ import type {
 } from '../types/settings';
 
 /**
+ * Detect whether we're running inside Tauri's webview
+ */
+function isTauri(): boolean {
+  return '__TAURI_INTERNALS__' in window;
+}
+
+/** API base URL for browser mode (configurable via env var) */
+const API_URL = (import.meta as unknown as { env?: { VITE_API_URL?: string } }).env?.VITE_API_URL || 'http://localhost:3001';
+
+/**
  * Custom error class for Tauri command errors
  */
 export class TauriCommandError extends Error {
@@ -63,18 +72,39 @@ export class TauriCommandError extends Error {
 }
 
 /**
- * Invoke a Tauri command with error handling
+ * Invoke a Tauri command with error handling.
+ * In Tauri mode: uses IPC invoke().
+ * In browser mode: uses fetch() to the HTTP web server.
  */
 async function invokeCommand<T>(command: string, args?: Record<string, unknown>): Promise<T> {
-  try {
-    return await invoke<T>(command, args);
-  } catch (error) {
-    // Tauri errors come as objects with code/message
-    if (typeof error === 'object' && error !== null && 'code' in error && 'message' in error) {
-      throw new TauriCommandError(error as TauriError);
+  if (isTauri()) {
+    // Tauri mode — use IPC
+    const { invoke } = await import('@tauri-apps/api/core');
+    try {
+      return await invoke<T>(command, args);
+    } catch (error) {
+      if (typeof error === 'object' && error !== null && 'code' in error && 'message' in error) {
+        throw new TauriCommandError(error as TauriError);
+      }
+      throw error;
     }
-    // Re-throw unknown errors
-    throw error;
+  } else {
+    // Browser mode — use HTTP
+    const response = await fetch(`${API_URL}/api/invoke`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ command, args: args ?? {} }),
+    });
+
+    if (!response.ok) {
+      const errorBody = await response.json().catch(() => null);
+      if (errorBody && typeof errorBody === 'object' && 'code' in errorBody && 'message' in errorBody) {
+        throw new TauriCommandError(errorBody as TauriError);
+      }
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return await response.json() as T;
   }
 }
 

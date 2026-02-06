@@ -12,7 +12,6 @@ use crate::gitlab::types::{
     RefreshRequest, ReplyToDiscussionRequest, ResolveDiscussionRequest, ValidateTokenRequest,
     ValidateTokenResponse,
 };
-use crate::settings::credentials::CredentialManager;
 use crate::{SharedAppState, TauriError, TauriResult};
 use chrono::Utc;
 use std::time::Instant;
@@ -20,9 +19,50 @@ use tauri::{AppHandle, Emitter, State};
 use tracing::{debug, info, warn};
 use uuid::Uuid;
 
-/// List all configured GitLab accounts
-#[tauri::command]
-pub async fn gitlab_list_accounts(state: State<'_, SharedAppState>) -> TauriResult<Vec<GitLabAccount>> {
+// ============================================================================
+// Inner functions — shared by Tauri + HTTP
+// ============================================================================
+
+/// Get the active account and its GitLab client
+pub async fn get_active_client(state: &SharedAppState) -> TauriResult<(GitLabAccount, GitLabClient)> {
+    let state = state.read().await;
+
+    let row = sqlx::query_as::<_, (String, String, String, String, i64, Option<String>, i64, String, String)>(
+        "SELECT id, name, instance_url, username, user_id, avatar_url, is_active, created_at, last_used_at
+         FROM gitlab_accounts WHERE is_active = 1 LIMIT 1"
+    )
+    .fetch_optional(&state.db_pool)
+    .await
+    .map_err(|e| TauriError::cache_error(e.to_string()))?;
+
+    let (id, name, instance_url, username, user_id, avatar_url, is_active, created_at, last_used_at) =
+        row.ok_or_else(TauriError::not_authenticated)?;
+
+    let account = GitLabAccount {
+        id: id.clone(),
+        name,
+        instance_url: instance_url.clone(),
+        username,
+        user_id,
+        avatar_url,
+        is_active: is_active != 0,
+        created_at: created_at.parse().unwrap_or_default(),
+        last_used_at: last_used_at.parse().unwrap_or_default(),
+    };
+
+    // Get token from cache (falls back to keychain on first access)
+    let token = state.credential_cache.get_token(&id)
+        .map_err(|e| TauriError::cache_error(format!("Failed to retrieve token: {}", e)))?
+        .ok_or_else(|| TauriError::cache_error("Token not found in keyring"))?;
+
+    let client = GitLabClient::new(&instance_url, &token)
+        .map_err(|e| TauriError::network_error(e.to_string()))?;
+
+    Ok((account, client))
+}
+
+/// List all configured GitLab accounts (inner)
+pub async fn list_accounts_inner(state: &SharedAppState) -> TauriResult<Vec<GitLabAccount>> {
     let state = state.read().await;
 
     let rows = sqlx::query_as::<_, (String, String, String, String, i64, Option<String>, i64, String, String)>(
@@ -53,10 +93,9 @@ pub async fn gitlab_list_accounts(state: State<'_, SharedAppState>) -> TauriResu
     Ok(accounts)
 }
 
-/// Add a new GitLab account
-#[tauri::command]
-pub async fn gitlab_add_account(
-    state: State<'_, SharedAppState>,
+/// Add a new GitLab account (inner)
+pub async fn add_account_inner(
+    state: &SharedAppState,
     request: AddAccountRequest,
 ) -> TauriResult<GitLabAccount> {
     // First validate the token
@@ -69,14 +108,17 @@ pub async fn gitlab_add_account(
         .await
         .map_err(|e| TauriError::invalid_token(e.to_string()))?;
 
-    // Store token securely
+    // Store token securely (keychain + in-memory cache)
     let id = Uuid::new_v4().to_string();
     info!("Attempting to store token in keyring for account id: {}", id);
-    match CredentialManager::store_token(&id, &request.access_token) {
-        Ok(()) => info!("Token stored successfully in keyring"),
-        Err(e) => {
-            warn!("Failed to store token in keyring: {:?}", e);
-            return Err(TauriError::cache_error(format!("Failed to store token: {}", e)));
+    {
+        let state_read = state.read().await;
+        match state_read.credential_cache.store_token(&id, &request.access_token) {
+            Ok(()) => info!("Token stored successfully in keyring"),
+            Err(e) => {
+                warn!("Failed to store token in keyring: {:?}", e);
+                return Err(TauriError::cache_error(format!("Failed to store token: {}", e)));
+            }
         }
     }
 
@@ -84,7 +126,7 @@ pub async fn gitlab_add_account(
     let now_str = now.to_rfc3339();
 
     // Insert account into database
-    let state = state.read().await;
+    let state_read = state.read().await;
     sqlx::query(
         "INSERT INTO gitlab_accounts (id, name, instance_url, username, user_id, avatar_url, is_active, created_at, last_used_at)
          VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?)"
@@ -97,7 +139,7 @@ pub async fn gitlab_add_account(
     .bind(&user_info.avatar_url)
     .bind(&now_str)
     .bind(&now_str)
-    .execute(&state.db_pool)
+    .execute(&state_read.db_pool)
     .await
     .map_err(|e| TauriError::cache_error(e.to_string()))?;
 
@@ -116,19 +158,17 @@ pub async fn gitlab_add_account(
     })
 }
 
-/// Remove a GitLab account
-#[tauri::command]
-pub async fn gitlab_remove_account(
-    state: State<'_, SharedAppState>,
+/// Remove a GitLab account (inner)
+pub async fn remove_account_inner(
+    state: &SharedAppState,
     account_id: String,
 ) -> TauriResult<()> {
-    // Remove token from keyring
-    let _ = CredentialManager::delete_token(&account_id);
+    let state_read = state.read().await;
+    let _ = state_read.credential_cache.delete_token(&account_id);
 
-    let state = state.read().await;
     sqlx::query("DELETE FROM gitlab_accounts WHERE id = ?")
         .bind(&account_id)
-        .execute(&state.db_pool)
+        .execute(&state_read.db_pool)
         .await
         .map_err(|e| TauriError::cache_error(e.to_string()))?;
 
@@ -136,17 +176,16 @@ pub async fn gitlab_remove_account(
     Ok(())
 }
 
-/// Set the active GitLab account
-#[tauri::command]
-pub async fn gitlab_set_active_account(
-    state: State<'_, SharedAppState>,
+/// Set the active GitLab account (inner)
+pub async fn set_active_account_inner(
+    state: &SharedAppState,
     account_id: String,
 ) -> TauriResult<()> {
-    let state = state.read().await;
+    let state_read = state.read().await;
 
     // Deactivate all accounts first
     sqlx::query("UPDATE gitlab_accounts SET is_active = 0")
-        .execute(&state.db_pool)
+        .execute(&state_read.db_pool)
         .await
         .map_err(|e| TauriError::cache_error(e.to_string()))?;
 
@@ -155,7 +194,7 @@ pub async fn gitlab_set_active_account(
     sqlx::query("UPDATE gitlab_accounts SET is_active = 1, last_used_at = ? WHERE id = ?")
         .bind(&now)
         .bind(&account_id)
-        .execute(&state.db_pool)
+        .execute(&state_read.db_pool)
         .await
         .map_err(|e| TauriError::cache_error(e.to_string()))?;
 
@@ -163,9 +202,8 @@ pub async fn gitlab_set_active_account(
     Ok(())
 }
 
-/// Validate a GitLab personal access token
-#[tauri::command]
-pub async fn gitlab_validate_token(
+/// Validate a GitLab personal access token (inner)
+pub async fn validate_token_inner(
     request: ValidateTokenRequest,
 ) -> TauriResult<ValidateTokenResponse> {
     let client = match GitLabClient::new(&request.instance_url, &request.access_token) {
@@ -186,7 +224,7 @@ pub async fn gitlab_validate_token(
             valid: true,
             username: Some(user.username),
             user_id: Some(user.id),
-            scopes: vec!["api".to_string()], // GitLab doesn't expose scopes easily
+            scopes: vec!["api".to_string()],
             error: None,
         }),
         Err(e) => Ok(ValidateTokenResponse {
@@ -199,51 +237,12 @@ pub async fn gitlab_validate_token(
     }
 }
 
-/// Get the active account and its GitLab client
-async fn get_active_client(state: &SharedAppState) -> TauriResult<(GitLabAccount, GitLabClient)> {
-    let state = state.read().await;
-
-    let row = sqlx::query_as::<_, (String, String, String, String, i64, Option<String>, i64, String, String)>(
-        "SELECT id, name, instance_url, username, user_id, avatar_url, is_active, created_at, last_used_at
-         FROM gitlab_accounts WHERE is_active = 1 LIMIT 1"
-    )
-    .fetch_optional(&state.db_pool)
-    .await
-    .map_err(|e| TauriError::cache_error(e.to_string()))?;
-
-    let (id, name, instance_url, username, user_id, avatar_url, is_active, created_at, last_used_at) =
-        row.ok_or_else(TauriError::not_authenticated)?;
-
-    let account = GitLabAccount {
-        id: id.clone(),
-        name,
-        instance_url: instance_url.clone(),
-        username,
-        user_id,
-        avatar_url,
-        is_active: is_active != 0,
-        created_at: created_at.parse().unwrap_or_default(),
-        last_used_at: last_used_at.parse().unwrap_or_default(),
-    };
-
-    // Get token from keyring
-    let token = CredentialManager::get_token(&id)
-        .map_err(|e| TauriError::cache_error(format!("Failed to retrieve token: {}", e)))?
-        .ok_or_else(|| TauriError::cache_error("Token not found in keyring"))?;
-
-    let client = GitLabClient::new(&instance_url, &token)
-        .map_err(|e| TauriError::network_error(e.to_string()))?;
-
-    Ok((account, client))
-}
-
-/// List merge requests for the active account
-#[tauri::command]
-pub async fn gitlab_list_merge_requests(
-    state: State<'_, SharedAppState>,
+/// List merge requests for the active account (inner)
+pub async fn list_merge_requests_inner(
+    state: &SharedAppState,
     request: ListMergeRequestsRequest,
 ) -> TauriResult<ListMergeRequestsResponse> {
-    let (_account, client) = get_active_client(&state).await?;
+    let (_account, client) = get_active_client(state).await?;
 
     // Fetch MRs from GitLab API
     let merge_requests = client
@@ -258,31 +257,26 @@ pub async fn gitlab_list_merge_requests(
         merge_requests
             .into_iter()
             .filter(|mr| {
-                // Filter by project
                 if let Some(project_id) = filter.project_id {
                     if mr.project_id != project_id {
                         return false;
                     }
                 }
-                // Filter by author
                 if let Some(ref author) = filter.author_username {
                     if mr.author.username != *author {
                         return false;
                     }
                 }
-                // Filter by conflicts
                 if let Some(has_conflicts) = filter.has_conflicts {
                     if mr.has_conflicts != has_conflicts {
                         return false;
                     }
                 }
-                // Filter by draft status
                 if let Some(is_draft) = filter.is_draft {
                     if mr.draft != is_draft {
                         return false;
                     }
                 }
-                // Filter by pipeline failure
                 if let Some(pipeline_failed) = filter.pipeline_failed {
                     let failed = mr
                         .head_pipeline
@@ -321,14 +315,13 @@ pub async fn gitlab_list_merge_requests(
     })
 }
 
-/// Get full details for a single merge request
-#[tauri::command]
-pub async fn gitlab_get_merge_request(
-    state: State<'_, SharedAppState>,
+/// Get full details for a single merge request (inner)
+pub async fn get_merge_request_inner(
+    state: &SharedAppState,
     project_id: i64,
     mr_iid: i64,
 ) -> TauriResult<MergeRequest> {
-    let (_account, client) = get_active_client(&state).await?;
+    let (_account, client) = get_active_client(state).await?;
 
     let mr = client
         .get_merge_request(project_id, mr_iid)
@@ -338,10 +331,9 @@ pub async fn gitlab_get_merge_request(
     Ok(mr)
 }
 
-/// Fetch the diff for a merge request
-#[tauri::command]
-pub async fn gitlab_get_diff(
-    state: State<'_, SharedAppState>,
+/// Fetch the diff for a merge request (inner)
+pub async fn get_diff_inner(
+    state: &SharedAppState,
     request: GetDiffRequest,
 ) -> TauriResult<Diff> {
     // Try cache first if allowed
@@ -355,7 +347,7 @@ pub async fn gitlab_get_diff(
         }
     }
 
-    let (_account, client) = get_active_client(&state).await?;
+    let (_account, client) = get_active_client(state).await?;
 
     // Fetch from API
     let diff = client
@@ -373,14 +365,13 @@ pub async fn gitlab_get_diff(
     Ok(diff)
 }
 
-/// Fetch discussions/comments for a merge request
-#[tauri::command]
-pub async fn gitlab_get_discussions(
-    state: State<'_, SharedAppState>,
+/// Fetch discussions/comments for a merge request (inner)
+pub async fn get_discussions_inner(
+    state: &SharedAppState,
     project_id: i64,
     mr_iid: i64,
 ) -> TauriResult<Vec<Discussion>> {
-    let (_account, client) = get_active_client(&state).await?;
+    let (_account, client) = get_active_client(state).await?;
 
     let discussions = client
         .get_merge_request_discussions(project_id, mr_iid)
@@ -391,15 +382,14 @@ pub async fn gitlab_get_discussions(
     Ok(discussions)
 }
 
-/// Post a comment or suggestion to a merge request
-#[tauri::command]
-pub async fn gitlab_post_comment(
-    state: State<'_, SharedAppState>,
+/// Post a comment or suggestion to a merge request (inner)
+pub async fn post_comment_inner(
+    state: &SharedAppState,
     request: PostCommentRequest,
 ) -> TauriResult<PostCommentResponse> {
-    let (_account, client) = get_active_client(&state).await?;
+    let (_account, client) = get_active_client(state).await?;
 
-    // Check MR state - cannot post to merged or closed MRs
+    // Check MR state
     let mr = client
         .get_merge_request(request.project_id, request.mr_iid)
         .await
@@ -416,19 +406,17 @@ pub async fn gitlab_post_comment(
                 "Cannot post comment: Merge request is closed"
             ));
         }
-        _ => {} // "opened" is valid
+        _ => {}
     }
 
-    // If as_suggestion, format the body accordingly
     let body = if request.as_suggestion {
         crate::gitlab::comments::format_code_suggestion("", &request.body, None)
     } else {
         request.body.clone()
     };
 
-    // Build position data if provided
     let position = request.position.map(|p| {
-        let start_sha = p.base_sha.clone(); // GitLab often uses base_sha as start_sha
+        let start_sha = p.base_sha.clone();
         PositionData {
             base_sha: p.base_sha,
             head_sha: p.head_sha,
@@ -452,19 +440,18 @@ pub async fn gitlab_post_comment(
     Ok(PostCommentResponse {
         discussion_id: discussion.id,
         note_id: note.id,
-        web_url: format!("{}#note_{}", note.author.web_url, note.id), // Approximate
+        web_url: format!("{}#note_{}", note.author.web_url, note.id),
     })
 }
 
-/// Fetch raw file content at a specific commit SHA
-#[tauri::command]
-pub async fn gitlab_get_file_content(
-    state: State<'_, SharedAppState>,
+/// Fetch raw file content at a specific commit SHA (inner)
+pub async fn get_file_content_inner(
+    state: &SharedAppState,
     project_id: i64,
     file_path: String,
     ref_sha: String,
 ) -> TauriResult<String> {
-    let (_account, client) = get_active_client(&state).await?;
+    let (_account, client) = get_active_client(state).await?;
 
     let content = client
         .get_file_content(project_id, &file_path, &ref_sha)
@@ -474,14 +461,12 @@ pub async fn gitlab_get_file_content(
     Ok(content)
 }
 
-/// Force refresh data from GitLab (bypass cache)
-#[tauri::command]
-pub async fn gitlab_refresh(
-    state: State<'_, SharedAppState>,
+/// Force refresh data from GitLab (inner)
+pub async fn refresh_inner(
+    state: &SharedAppState,
     request: RefreshRequest,
 ) -> TauriResult<()> {
     if let Some(specific) = request.specific_mr {
-        // Clear cache for specific MR
         let state_read = state.read().await;
         let cache = DiffCache::new(state_read.db_pool.clone());
         let _ = cache.delete(specific.mr_iid).await;
@@ -489,7 +474,6 @@ pub async fn gitlab_refresh(
     }
 
     if request.merge_requests {
-        // Clear all MR-related cache
         let state_read = state.read().await;
         let cache = DiffCache::new(state_read.db_pool.clone());
         let _ = cache.clear().await;
@@ -499,12 +483,11 @@ pub async fn gitlab_refresh(
     Ok(())
 }
 
-/// Check connection status for a GitLab account
-/// Emits a connection:status event with the result
-#[tauri::command]
-pub async fn gitlab_check_connection(
-    app: AppHandle,
-    state: State<'_, SharedAppState>,
+/// Check connection status for a GitLab account (inner)
+/// When `app` is Some, emits progress events via Tauri; when None (HTTP mode), skips events.
+pub async fn check_connection_inner(
+    app: Option<&AppHandle>,
+    state: &SharedAppState,
     account_id: String,
 ) -> TauriResult<ConnectionStatusEvent> {
     // Emit checking status
@@ -514,39 +497,48 @@ pub async fn gitlab_check_connection(
         error: None,
         latency_ms: None,
     };
-    let _ = app.emit("connection:status", &checking_event);
+    if let Some(app) = app {
+        let _ = app.emit("connection:status", &checking_event);
+    }
 
     // Get the account token
-    let token = match CredentialManager::get_token(&account_id) {
-        Ok(Some(t)) => t,
-        Ok(None) => {
-            let event = ConnectionStatusEvent {
-                account_id: account_id.clone(),
-                status: ConnectionStatus::Error,
-                error: Some("No token found for account".to_string()),
-                latency_ms: None,
-            };
-            let _ = app.emit("connection:status", &event);
-            return Ok(event);
-        }
-        Err(e) => {
-            let event = ConnectionStatusEvent {
-                account_id: account_id.clone(),
-                status: ConnectionStatus::Error,
-                error: Some(format!("Failed to retrieve token: {}", e)),
-                latency_ms: None,
-            };
-            let _ = app.emit("connection:status", &event);
-            return Ok(event);
+    let token = {
+        let state_read = state.read().await;
+        match state_read.credential_cache.get_token(&account_id) {
+            Ok(Some(t)) => t,
+            Ok(None) => {
+                let event = ConnectionStatusEvent {
+                    account_id: account_id.clone(),
+                    status: ConnectionStatus::Error,
+                    error: Some("No token found for account".to_string()),
+                    latency_ms: None,
+                };
+                if let Some(app) = app {
+                    let _ = app.emit("connection:status", &event);
+                }
+                return Ok(event);
+            }
+            Err(e) => {
+                let event = ConnectionStatusEvent {
+                    account_id: account_id.clone(),
+                    status: ConnectionStatus::Error,
+                    error: Some(format!("Failed to retrieve token: {}", e)),
+                    latency_ms: None,
+                };
+                if let Some(app) = app {
+                    let _ = app.emit("connection:status", &event);
+                }
+                return Ok(event);
+            }
         }
     };
 
     // Get account instance URL from database
     let instance_url = {
-        let state = state.read().await;
+        let state_read = state.read().await;
         sqlx::query_as::<_, (String,)>("SELECT instance_url FROM gitlab_accounts WHERE id = ?")
             .bind(&account_id)
-            .fetch_optional(&state.db_pool)
+            .fetch_optional(&state_read.db_pool)
             .await
             .map_err(|e| TauriError::cache_error(e.to_string()))?
             .map(|(url,)| url)
@@ -561,7 +553,9 @@ pub async fn gitlab_check_connection(
                 error: Some("Account not found".to_string()),
                 latency_ms: None,
             };
-            let _ = app.emit("connection:status", &event);
+            if let Some(app) = app {
+                let _ = app.emit("connection:status", &event);
+            }
             return Ok(event);
         }
     };
@@ -577,7 +571,9 @@ pub async fn gitlab_check_connection(
                 error: Some(format!("Failed to create client: {}", e)),
                 latency_ms: None,
             };
-            let _ = app.emit("connection:status", &event);
+            if let Some(app) = app {
+                let _ = app.emit("connection:status", &event);
+            }
             return Ok(event);
         }
     };
@@ -591,7 +587,9 @@ pub async fn gitlab_check_connection(
                 error: None,
                 latency_ms: Some(latency),
             };
-            let _ = app.emit("connection:status", &event);
+            if let Some(app) = app {
+                let _ = app.emit("connection:status", &event);
+            }
             Ok(event)
         }
         Err(e) => {
@@ -602,20 +600,21 @@ pub async fn gitlab_check_connection(
                 error: Some(e.to_string()),
                 latency_ms: Some(latency),
             };
-            let _ = app.emit("connection:status", &event);
+            if let Some(app) = app {
+                let _ = app.emit("connection:status", &event);
+            }
             Ok(event)
         }
     }
 }
 
-/// Get the approval state for a merge request
-#[tauri::command]
-pub async fn gitlab_get_approval_state(
-    state: State<'_, SharedAppState>,
+/// Get the approval state for a merge request (inner)
+pub async fn get_approval_state_inner(
+    state: &SharedAppState,
     project_id: i64,
     mr_iid: i64,
 ) -> TauriResult<ApprovalState> {
-    let (_account, client) = get_active_client(&state).await?;
+    let (_account, client) = get_active_client(state).await?;
 
     let approval_state = client
         .get_approval_state(project_id, mr_iid)
@@ -626,15 +625,14 @@ pub async fn gitlab_get_approval_state(
     Ok(approval_state)
 }
 
-/// Approve a merge request
-#[tauri::command]
-pub async fn gitlab_approve_mr(
-    state: State<'_, SharedAppState>,
+/// Approve a merge request (inner)
+pub async fn approve_mr_inner(
+    state: &SharedAppState,
     project_id: i64,
     mr_iid: i64,
     sha: Option<String>,
 ) -> TauriResult<ApproveResponse> {
-    let (_account, client) = get_active_client(&state).await?;
+    let (_account, client) = get_active_client(state).await?;
 
     let response = client
         .approve_mr(project_id, mr_iid, sha)
@@ -645,14 +643,13 @@ pub async fn gitlab_approve_mr(
     Ok(response)
 }
 
-/// Remove approval from a merge request
-#[tauri::command]
-pub async fn gitlab_unapprove_mr(
-    state: State<'_, SharedAppState>,
+/// Remove approval from a merge request (inner)
+pub async fn unapprove_mr_inner(
+    state: &SharedAppState,
     project_id: i64,
     mr_iid: i64,
 ) -> TauriResult<ApproveResponse> {
-    let (_account, client) = get_active_client(&state).await?;
+    let (_account, client) = get_active_client(state).await?;
 
     let response = client
         .unapprove_mr(project_id, mr_iid)
@@ -663,21 +660,17 @@ pub async fn gitlab_unapprove_mr(
     Ok(response)
 }
 
-/// Fetch an avatar image through the authenticated GitLab client
-/// Returns base64-encoded image data
-#[tauri::command]
-pub async fn gitlab_fetch_avatar(
-    state: State<'_, SharedAppState>,
+/// Fetch an avatar image through the authenticated GitLab client (inner)
+pub async fn fetch_avatar_inner(
+    state: &SharedAppState,
     avatar_url: String,
 ) -> TauriResult<Option<String>> {
-    // Skip if URL is empty
     if avatar_url.is_empty() {
         return Ok(None);
     }
 
-    let (_account, client) = get_active_client(&state).await?;
+    let (_account, client) = get_active_client(state).await?;
 
-    // Only proxy if the URL is from the same GitLab instance
     let instance_url = client.instance_url();
     info!("Avatar fetch requested: {} (instance: {})", avatar_url, instance_url);
 
@@ -686,12 +679,9 @@ pub async fn gitlab_fetch_avatar(
         return Ok(None);
     }
 
-    // Extract user ID from avatar URL and use API endpoint instead
-    // URL format: https://gitlab.example.com/uploads/-/system/user/avatar/{user_id}/avatar.png
     let api_url = if let Some(caps) = extract_user_id_from_avatar_url(&avatar_url) {
         format!("{}/api/v4/users/{}/avatar", instance_url, caps)
     } else {
-        // Fall back to original URL if we can't extract user ID
         avatar_url.clone()
     };
 
@@ -702,7 +692,6 @@ pub async fn gitlab_fetch_avatar(
             use base64::Engine;
             let encoded = base64::engine::general_purpose::STANDARD.encode(&bytes);
 
-            // Detect image type from URL or magic bytes
             let mime_type = if avatar_url.ends_with(".png") || bytes.starts_with(&[0x89, 0x50, 0x4E, 0x47]) {
                 "image/png"
             } else if avatar_url.ends_with(".gif") || bytes.starts_with(&[0x47, 0x49, 0x46]) {
@@ -722,13 +711,12 @@ pub async fn gitlab_fetch_avatar(
     }
 }
 
-/// Reply to an existing discussion on a merge request
-#[tauri::command]
-pub async fn gitlab_reply_to_discussion(
-    state: State<'_, SharedAppState>,
+/// Reply to an existing discussion on a merge request (inner)
+pub async fn reply_to_discussion_inner(
+    state: &SharedAppState,
     request: ReplyToDiscussionRequest,
 ) -> TauriResult<Note> {
-    let (_account, client) = get_active_client(&state).await?;
+    let (_account, client) = get_active_client(state).await?;
 
     let note = client
         .reply_to_discussion(
@@ -747,13 +735,12 @@ pub async fn gitlab_reply_to_discussion(
     Ok(note)
 }
 
-/// Resolve or unresolve a discussion on a merge request
-#[tauri::command]
-pub async fn gitlab_resolve_discussion(
-    state: State<'_, SharedAppState>,
+/// Resolve or unresolve a discussion on a merge request (inner)
+pub async fn resolve_discussion_inner(
+    state: &SharedAppState,
     request: ResolveDiscussionRequest,
 ) -> TauriResult<()> {
-    let (_account, client) = get_active_client(&state).await?;
+    let (_account, client) = get_active_client(state).await?;
 
     client
         .resolve_discussion(
@@ -773,14 +760,11 @@ pub async fn gitlab_resolve_discussion(
 }
 
 /// Extract user ID from GitLab avatar URL
-/// URL format: https://gitlab.example.com/uploads/-/system/user/avatar/{user_id}/avatar.png
 fn extract_user_id_from_avatar_url(url: &str) -> Option<String> {
-    // Look for pattern: /user/avatar/{id}/
     let parts: Vec<&str> = url.split('/').collect();
     for (i, part) in parts.iter().enumerate() {
         if *part == "avatar" && i > 0 && parts.get(i - 1) == Some(&"user") {
             if let Some(id) = parts.get(i + 1) {
-                // Verify it looks like a numeric ID
                 if id.chars().all(|c| c.is_ascii_digit()) {
                     return Some(id.to_string());
                 }
@@ -788,4 +772,184 @@ fn extract_user_id_from_avatar_url(url: &str) -> Option<String> {
         }
     }
     None
+}
+
+// ============================================================================
+// Tauri command wrappers
+// ============================================================================
+
+/// List all configured GitLab accounts
+#[tauri::command]
+pub async fn gitlab_list_accounts(state: State<'_, SharedAppState>) -> TauriResult<Vec<GitLabAccount>> {
+    list_accounts_inner(&state).await
+}
+
+/// Add a new GitLab account
+#[tauri::command]
+pub async fn gitlab_add_account(
+    state: State<'_, SharedAppState>,
+    request: AddAccountRequest,
+) -> TauriResult<GitLabAccount> {
+    add_account_inner(&state, request).await
+}
+
+/// Remove a GitLab account
+#[tauri::command]
+pub async fn gitlab_remove_account(
+    state: State<'_, SharedAppState>,
+    account_id: String,
+) -> TauriResult<()> {
+    remove_account_inner(&state, account_id).await
+}
+
+/// Set the active GitLab account
+#[tauri::command]
+pub async fn gitlab_set_active_account(
+    state: State<'_, SharedAppState>,
+    account_id: String,
+) -> TauriResult<()> {
+    set_active_account_inner(&state, account_id).await
+}
+
+/// Validate a GitLab personal access token
+#[tauri::command]
+pub async fn gitlab_validate_token(
+    request: ValidateTokenRequest,
+) -> TauriResult<ValidateTokenResponse> {
+    validate_token_inner(request).await
+}
+
+/// List merge requests for the active account
+#[tauri::command]
+pub async fn gitlab_list_merge_requests(
+    state: State<'_, SharedAppState>,
+    request: ListMergeRequestsRequest,
+) -> TauriResult<ListMergeRequestsResponse> {
+    list_merge_requests_inner(&state, request).await
+}
+
+/// Get full details for a single merge request
+#[tauri::command]
+pub async fn gitlab_get_merge_request(
+    state: State<'_, SharedAppState>,
+    project_id: i64,
+    mr_iid: i64,
+) -> TauriResult<MergeRequest> {
+    get_merge_request_inner(&state, project_id, mr_iid).await
+}
+
+/// Fetch the diff for a merge request
+#[tauri::command]
+pub async fn gitlab_get_diff(
+    state: State<'_, SharedAppState>,
+    request: GetDiffRequest,
+) -> TauriResult<Diff> {
+    get_diff_inner(&state, request).await
+}
+
+/// Fetch discussions/comments for a merge request
+#[tauri::command]
+pub async fn gitlab_get_discussions(
+    state: State<'_, SharedAppState>,
+    project_id: i64,
+    mr_iid: i64,
+) -> TauriResult<Vec<Discussion>> {
+    get_discussions_inner(&state, project_id, mr_iid).await
+}
+
+/// Post a comment or suggestion to a merge request
+#[tauri::command]
+pub async fn gitlab_post_comment(
+    state: State<'_, SharedAppState>,
+    request: PostCommentRequest,
+) -> TauriResult<PostCommentResponse> {
+    post_comment_inner(&state, request).await
+}
+
+/// Fetch raw file content at a specific commit SHA
+#[tauri::command]
+pub async fn gitlab_get_file_content(
+    state: State<'_, SharedAppState>,
+    project_id: i64,
+    file_path: String,
+    ref_sha: String,
+) -> TauriResult<String> {
+    get_file_content_inner(&state, project_id, file_path, ref_sha).await
+}
+
+/// Force refresh data from GitLab (bypass cache)
+#[tauri::command]
+pub async fn gitlab_refresh(
+    state: State<'_, SharedAppState>,
+    request: RefreshRequest,
+) -> TauriResult<()> {
+    refresh_inner(&state, request).await
+}
+
+/// Check connection status for a GitLab account
+#[tauri::command]
+pub async fn gitlab_check_connection(
+    app: AppHandle,
+    state: State<'_, SharedAppState>,
+    account_id: String,
+) -> TauriResult<ConnectionStatusEvent> {
+    check_connection_inner(Some(&app), &state, account_id).await
+}
+
+/// Get the approval state for a merge request
+#[tauri::command]
+pub async fn gitlab_get_approval_state(
+    state: State<'_, SharedAppState>,
+    project_id: i64,
+    mr_iid: i64,
+) -> TauriResult<ApprovalState> {
+    get_approval_state_inner(&state, project_id, mr_iid).await
+}
+
+/// Approve a merge request
+#[tauri::command]
+pub async fn gitlab_approve_mr(
+    state: State<'_, SharedAppState>,
+    project_id: i64,
+    mr_iid: i64,
+    sha: Option<String>,
+) -> TauriResult<ApproveResponse> {
+    approve_mr_inner(&state, project_id, mr_iid, sha).await
+}
+
+/// Remove approval from a merge request
+#[tauri::command]
+pub async fn gitlab_unapprove_mr(
+    state: State<'_, SharedAppState>,
+    project_id: i64,
+    mr_iid: i64,
+) -> TauriResult<ApproveResponse> {
+    unapprove_mr_inner(&state, project_id, mr_iid).await
+}
+
+/// Fetch an avatar image through the authenticated GitLab client
+#[tauri::command]
+pub async fn gitlab_fetch_avatar(
+    state: State<'_, SharedAppState>,
+    avatar_url: String,
+) -> TauriResult<Option<String>> {
+    fetch_avatar_inner(&state, avatar_url).await
+}
+
+/// Reply to an existing discussion on a merge request
+#[tauri::command]
+pub async fn gitlab_reply_to_discussion(
+    state: State<'_, SharedAppState>,
+    request: ReplyToDiscussionRequest,
+) -> TauriResult<Note> {
+    reply_to_discussion_inner(&state, request).await
+}
+
+/// Resolve or unresolve a discussion on a merge request
+#[tauri::command]
+pub async fn gitlab_resolve_discussion(
+    state: State<'_, SharedAppState>,
+    request: ResolveDiscussionRequest,
+) -> TauriResult<()> {
+    resolve_discussion_inner(&state, request).await
 }

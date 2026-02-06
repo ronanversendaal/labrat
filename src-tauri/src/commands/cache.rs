@@ -38,9 +38,12 @@ pub struct EvictCacheResponse {
     pub freed_bytes: u64,
 }
 
-/// Get cache statistics
-#[tauri::command]
-pub async fn cache_get_stats(state: State<'_, SharedAppState>) -> TauriResult<CacheStats> {
+// ============================================================================
+// Inner functions — shared by Tauri + HTTP
+// ============================================================================
+
+/// Get cache statistics (inner)
+pub async fn get_stats_inner(state: &SharedAppState) -> TauriResult<CacheStats> {
     let state = state.read().await;
 
     // Count merge requests
@@ -89,10 +92,9 @@ pub async fn cache_get_stats(state: State<'_, SharedAppState>) -> TauriResult<Ca
     })
 }
 
-/// Clear the cache
-#[tauri::command]
-pub async fn cache_clear(
-    state: State<'_, SharedAppState>,
+/// Clear the cache (inner)
+pub async fn clear_inner(
+    state: &SharedAppState,
     request: ClearCacheRequest,
 ) -> TauriResult<()> {
     let state = state.read().await;
@@ -139,9 +141,8 @@ pub async fn cache_clear(
     Ok(())
 }
 
-/// Evict old cache entries to stay within size limit
-#[tauri::command]
-pub async fn cache_evict_old(state: State<'_, SharedAppState>) -> TauriResult<EvictCacheResponse> {
+/// Evict old cache entries (inner)
+pub async fn evict_old_inner(state: &SharedAppState) -> TauriResult<EvictCacheResponse> {
     let state_guard = state.read().await;
 
     // Get settings to determine cache limit
@@ -223,4 +224,29 @@ pub async fn cache_evict_old(state: State<'_, SharedAppState>) -> TauriResult<Ev
         evicted_count,
         freed_bytes,
     })
+}
+
+// ============================================================================
+// Tauri command wrappers
+// ============================================================================
+
+/// Get cache statistics
+#[tauri::command]
+pub async fn cache_get_stats(state: State<'_, SharedAppState>) -> TauriResult<CacheStats> {
+    get_stats_inner(&state).await
+}
+
+/// Clear the cache
+#[tauri::command]
+pub async fn cache_clear(
+    state: State<'_, SharedAppState>,
+    request: ClearCacheRequest,
+) -> TauriResult<()> {
+    clear_inner(&state, request).await
+}
+
+/// Evict old cache entries to stay within size limit
+#[tauri::command]
+pub async fn cache_evict_old(state: State<'_, SharedAppState>) -> TauriResult<EvictCacheResponse> {
+    evict_old_inner(&state).await
 }

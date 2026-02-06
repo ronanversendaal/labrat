@@ -232,6 +232,9 @@ export function useConnectionStatus(
   );
 
   useEffect(() => {
+    // Tauri event listeners only work inside the Tauri webview
+    if (!('__TAURI_INTERNALS__' in window)) return;
+
     let unlisten: UnlistenFn | null = null;
 
     const setupListener = async () => {

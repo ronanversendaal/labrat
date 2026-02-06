@@ -3,7 +3,7 @@
  */
 
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
-import { open } from '@tauri-apps/plugin-shell';
+// open() is dynamically imported only in Tauri mode
 import type { MergeRequest, Discussion, MRChangeSnapshot } from '../../types';
 import { useDiff, useDiscussions, useMergeRequest, useAccounts } from '../../hooks/useGitLab';
 import { useMRStore, isFileViewedSelector } from '../../stores/mrStore';
@@ -231,7 +231,12 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
   // Handle opening MR in GitLab using Tauri shell
   const handleOpenInGitLab = useCallback(async () => {
     try {
-      await open(mr.web_url);
+      if ('__TAURI_INTERNALS__' in window) {
+        const { open } = await import('@tauri-apps/plugin-shell');
+        await open(mr.web_url);
+      } else {
+        window.open(mr.web_url, '_blank');
+      }
     } catch (error) {
       console.error('Failed to open URL:', error);
       toast.error('Could not open the GitLab URL in your default browser.');

@@ -8,7 +8,6 @@ use crate::ai::{
     FileContext, SuggestionStatus, UpdateSuggestionRequest, AnalysisProgressEvent, AnalysisStatus,
 };
 use crate::ai::types::AIProvider as AIProviderConfig;
-use crate::settings::credentials::CredentialManager;
 use crate::{SharedAppState, TauriError, TauriResult};
 use chrono::Utc;
 use std::time::Instant;
@@ -16,9 +15,27 @@ use tauri::{AppHandle, Emitter, State};
 use tracing::{debug, info, warn};
 use uuid::Uuid;
 
-/// List configured AI providers
-#[tauri::command]
-pub async fn ai_list_providers(state: State<'_, SharedAppState>) -> TauriResult<Vec<AIProviderConfig>> {
+/// Helper function to emit analysis progress events (only when AppHandle is available)
+fn emit_progress(app: Option<&AppHandle>, mr_id: i64, status: AnalysisStatus, progress: u8, message: &str) {
+    if let Some(app) = app {
+        let event = AnalysisProgressEvent {
+            mr_id,
+            status,
+            progress,
+            message: message.to_string(),
+        };
+        if let Err(e) = app.emit("ai:analysis_progress", &event) {
+            warn!("Failed to emit analysis progress event: {}", e);
+        }
+    }
+}
+
+// ============================================================================
+// Inner functions — shared by Tauri + HTTP
+// ============================================================================
+
+/// List configured AI providers (inner)
+pub async fn list_providers_inner(state: &SharedAppState) -> TauriResult<Vec<AIProviderConfig>> {
     let state = state.read().await;
 
     let rows = sqlx::query_as::<_, (String, Option<String>, String, String, Option<String>, i64, i64, String)>(
@@ -38,7 +55,6 @@ pub async fn ai_list_providers(state: State<'_, SharedAppState>) -> TauriResult<
             _ => continue,
         };
 
-        // Check if provider is available
         let is_available = match provider_type {
             AIProviderType::ClaudeCli => {
                 ClaudeCliProvider::check_cli().await
@@ -46,8 +62,7 @@ pub async fn ai_list_providers(state: State<'_, SharedAppState>) -> TauriResult<
                     .unwrap_or(false)
             }
             AIProviderType::AnthropicApi | AIProviderType::OpenaiApi => {
-                // Check if we have an API key
-                CredentialManager::get_ai_key(&id)
+                state.credential_cache.get_ai_key(&id)
                     .map(|opt| opt.is_some())
                     .unwrap_or(false)
             }
@@ -69,10 +84,9 @@ pub async fn ai_list_providers(state: State<'_, SharedAppState>) -> TauriResult<
     Ok(providers)
 }
 
-/// Add or update an AI provider configuration
-#[tauri::command]
-pub async fn ai_add_provider(
-    state: State<'_, SharedAppState>,
+/// Add or update an AI provider configuration (inner)
+pub async fn add_provider_inner(
+    state: &SharedAppState,
     request: AddProviderRequest,
 ) -> TauriResult<AIProviderConfig> {
     let id = Uuid::new_v4().to_string();
@@ -80,16 +94,19 @@ pub async fn ai_add_provider(
     let now_str = now.to_rfc3339();
 
     // Store API key if provided
-    if let Some(api_key) = &request.api_key {
-        CredentialManager::store_ai_key(&id, api_key)
-            .map_err(|e| TauriError::cache_error(e.to_string()))?;
+    {
+        let state_read = state.read().await;
+        if let Some(api_key) = &request.api_key {
+            state_read.credential_cache.store_ai_key(&id, api_key)
+                .map_err(|e| TauriError::cache_error(e.to_string()))?;
+        }
     }
 
-    let state = state.read().await;
+    let state_read = state.read().await;
 
-    // Check if this is the first provider - if so, make it default
+    // Check if this is the first provider
     let count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM ai_providers")
-        .fetch_one(&state.db_pool)
+        .fetch_one(&state_read.db_pool)
         .await
         .map_err(|e| TauriError::cache_error(e.to_string()))?;
 
@@ -105,7 +122,7 @@ pub async fn ai_add_provider(
     .bind(&request.model)
     .bind(if is_default { 1 } else { 0 })
     .bind(&now_str)
-    .execute(&state.db_pool)
+    .execute(&state_read.db_pool)
     .await
     .map_err(|e| TauriError::cache_error(e.to_string()))?;
 
@@ -119,24 +136,21 @@ pub async fn ai_add_provider(
         model: request.model,
         is_default,
         enabled: true,
-        is_available: true, // Will be checked on next list
+        is_available: true,
         created_at: now,
     })
 }
 
-/// Remove an AI provider
-#[tauri::command]
-pub async fn ai_remove_provider(
-    state: State<'_, SharedAppState>,
+/// Remove an AI provider (inner)
+pub async fn remove_provider_inner(
+    state: &SharedAppState,
     provider_id: String,
 ) -> TauriResult<()> {
-    // Remove API key from keyring
-    let _ = CredentialManager::delete_ai_key(&provider_id);
-
-    let state = state.read().await;
+    let state_read = state.read().await;
+    let _ = state_read.credential_cache.delete_ai_key(&provider_id);
     sqlx::query("DELETE FROM ai_providers WHERE id = ?")
         .bind(&provider_id)
-        .execute(&state.db_pool)
+        .execute(&state_read.db_pool)
         .await
         .map_err(|e| TauriError::cache_error(e.to_string()))?;
 
@@ -144,24 +158,21 @@ pub async fn ai_remove_provider(
     Ok(())
 }
 
-/// Set the default AI provider
-#[tauri::command]
-pub async fn ai_set_default_provider(
-    state: State<'_, SharedAppState>,
+/// Set the default AI provider (inner)
+pub async fn set_default_provider_inner(
+    state: &SharedAppState,
     provider_id: String,
 ) -> TauriResult<()> {
-    let state = state.read().await;
+    let state_read = state.read().await;
 
-    // Clear default flag on all providers
     sqlx::query("UPDATE ai_providers SET is_default = 0")
-        .execute(&state.db_pool)
+        .execute(&state_read.db_pool)
         .await
         .map_err(|e| TauriError::cache_error(e.to_string()))?;
 
-    // Set the new default
     sqlx::query("UPDATE ai_providers SET is_default = 1 WHERE id = ?")
         .bind(&provider_id)
-        .execute(&state.db_pool)
+        .execute(&state_read.db_pool)
         .await
         .map_err(|e| TauriError::cache_error(e.to_string()))?;
 
@@ -169,36 +180,22 @@ pub async fn ai_set_default_provider(
     Ok(())
 }
 
-/// Helper function to emit analysis progress events
-fn emit_progress(app: &AppHandle, mr_id: i64, status: AnalysisStatus, progress: u8, message: &str) {
-    let event = AnalysisProgressEvent {
-        mr_id,
-        status,
-        progress,
-        message: message.to_string(),
-    };
-    if let Err(e) = app.emit("ai:analysis_progress", &event) {
-        warn!("Failed to emit analysis progress event: {}", e);
-    }
-}
-
-/// Analyze a merge request diff with AI
-#[tauri::command]
-pub async fn ai_analyze_diff(
-    app: AppHandle,
-    state: State<'_, SharedAppState>,
+/// Analyze a merge request diff with AI (inner)
+/// When `app` is Some, emits progress events via Tauri; when None (HTTP mode), skips events.
+pub async fn analyze_diff_inner(
+    app: Option<&AppHandle>,
+    state: &SharedAppState,
     request: AnalyzeDiffRequest,
 ) -> TauriResult<AnalyzeDiffResponse> {
     let start_time = Instant::now();
     let mr_id = request.mr_iid;
 
-    // Emit start event
-    emit_progress(&app, mr_id, AnalysisStatus::Started, 0, "Starting AI analysis...");
+    emit_progress(app, mr_id, AnalysisStatus::Started, 0, "Starting AI analysis...");
 
     // Get the provider to use
-    emit_progress(&app, mr_id, AnalysisStatus::Processing, 10, "Loading AI provider...");
+    emit_progress(app, mr_id, AnalysisStatus::Processing, 10, "Loading AI provider...");
     let (provider_id, provider_type, model) = {
-        let state = state.read().await;
+        let state_read = state.read().await;
 
         let query = if let Some(id) = &request.provider_id {
             sqlx::query_as::<_, (String, String, Option<String>)>(
@@ -211,39 +208,39 @@ pub async fn ai_analyze_diff(
             )
         };
 
-        query.fetch_optional(&state.db_pool)
+        query.fetch_optional(&state_read.db_pool)
             .await
             .map_err(|e| {
-                emit_progress(&app, mr_id, AnalysisStatus::Error, 0, &format!("Cache error: {}", e));
+                emit_progress(app, mr_id, AnalysisStatus::Error, 0, &format!("Cache error: {}", e));
                 TauriError::cache_error(e.to_string())
             })?
             .ok_or_else(|| {
-                emit_progress(&app, mr_id, AnalysisStatus::Error, 0, "No AI provider configured");
+                emit_progress(app, mr_id, AnalysisStatus::Error, 0, "No AI provider configured");
                 TauriError::ai_error("No AI provider configured")
             })?
     };
 
     // Get the diff for this MR
-    emit_progress(&app, mr_id, AnalysisStatus::Processing, 20, "Loading diff...");
+    emit_progress(app, mr_id, AnalysisStatus::Processing, 20, "Loading diff...");
     let diff = {
-        let state = state.read().await;
-        let cache = crate::cache::diff_cache::DiffCache::new(state.db_pool.clone());
+        let state_read = state.read().await;
+        let cache = crate::cache::diff_cache::DiffCache::new(state_read.db_pool.clone());
         cache.get(request.mr_iid).await
             .map_err(|e| {
-                emit_progress(&app, mr_id, AnalysisStatus::Error, 0, &format!("Cache error: {}", e));
+                emit_progress(app, mr_id, AnalysisStatus::Error, 0, &format!("Cache error: {}", e));
                 TauriError::cache_error(e.to_string())
             })?
             .ok_or_else(|| {
-                emit_progress(&app, mr_id, AnalysisStatus::Error, 0, "Diff not cached - please load the diff first");
+                emit_progress(app, mr_id, AnalysisStatus::Error, 0, "Diff not cached - please load the diff first");
                 TauriError::not_found("Diff not cached")
             })?
     };
 
     // Build analysis context
-    emit_progress(&app, mr_id, AnalysisStatus::Processing, 30, "Preparing analysis context...");
+    emit_progress(app, mr_id, AnalysisStatus::Processing, 30, "Preparing analysis context...");
     let context = AnalysisContext {
         mr_id: request.mr_iid,
-        mr_title: format!("MR #{}", request.mr_iid), // TODO: Get actual title
+        mr_title: format!("MR #{}", request.mr_iid),
         mr_description: None,
         files: diff.files.iter().map(|f| FileContext {
             path: f.new_path.clone(),
@@ -256,76 +253,81 @@ pub async fn ai_analyze_diff(
     };
 
     // Create provider instance and analyze
-    emit_progress(&app, mr_id, AnalysisStatus::Processing, 40, "Sending to AI for analysis...");
+    emit_progress(app, mr_id, AnalysisStatus::Processing, 40, "Sending to AI for analysis...");
     let provider_type_enum = match provider_type.as_str() {
         "claude_cli" => AIProviderType::ClaudeCli,
         "anthropic_api" => AIProviderType::AnthropicApi,
         "openai_api" => AIProviderType::OpenaiApi,
         _ => {
-            emit_progress(&app, mr_id, AnalysisStatus::Error, 0, "Unknown provider type");
+            emit_progress(app, mr_id, AnalysisStatus::Error, 0, "Unknown provider type");
             return Err(TauriError::ai_error("Unknown provider type"));
         }
     };
 
     let raw_suggestions = match provider_type_enum {
         AIProviderType::ClaudeCli => {
-            emit_progress(&app, mr_id, AnalysisStatus::Processing, 50, "Analyzing with Claude CLI...");
+            emit_progress(app, mr_id, AnalysisStatus::Processing, 50, "Analyzing with Claude CLI...");
             let provider = ClaudeCliProvider::new(provider_id.clone(), "Claude CLI".to_string(), None);
             provider.analyze(&context).await
                 .map_err(|e| {
-                    emit_progress(&app, mr_id, AnalysisStatus::Error, 0, &format!("AI analysis failed: {}", e));
+                    emit_progress(app, mr_id, AnalysisStatus::Error, 0, &format!("AI analysis failed: {}", e));
                     TauriError::ai_error(e.to_string())
                 })?
         }
         AIProviderType::AnthropicApi => {
-            emit_progress(&app, mr_id, AnalysisStatus::Processing, 50, "Analyzing with Anthropic API...");
-            let api_key = CredentialManager::get_ai_key(&provider_id)
-                .map_err(|e| {
-                    emit_progress(&app, mr_id, AnalysisStatus::Error, 0, "Failed to retrieve API key");
-                    TauriError::cache_error(e.to_string())
-                })?
-                .ok_or_else(|| {
-                    emit_progress(&app, mr_id, AnalysisStatus::Error, 0, "Anthropic API key not found");
-                    TauriError::ai_error("Anthropic API key not found")
-                })?;
+            emit_progress(app, mr_id, AnalysisStatus::Processing, 50, "Analyzing with Anthropic API...");
+            let api_key = {
+                let state_read = state.read().await;
+                state_read.credential_cache.get_ai_key(&provider_id)
+                    .map_err(|e| {
+                        emit_progress(app, mr_id, AnalysisStatus::Error, 0, "Failed to retrieve API key");
+                        TauriError::cache_error(e.to_string())
+                    })?
+                    .ok_or_else(|| {
+                        emit_progress(app, mr_id, AnalysisStatus::Error, 0, "Anthropic API key not found");
+                        TauriError::ai_error("Anthropic API key not found")
+                    })?
+            };
             let provider = crate::ai::AnthropicProvider::new(provider_id.clone(), "Anthropic".to_string(), api_key, model);
             provider.analyze(&context).await
                 .map_err(|e| {
-                    emit_progress(&app, mr_id, AnalysisStatus::Error, 0, &format!("AI analysis failed: {}", e));
+                    emit_progress(app, mr_id, AnalysisStatus::Error, 0, &format!("AI analysis failed: {}", e));
                     TauriError::ai_error(e.to_string())
                 })?
         }
         AIProviderType::OpenaiApi => {
-            emit_progress(&app, mr_id, AnalysisStatus::Processing, 50, "Analyzing with OpenAI API...");
-            let api_key = CredentialManager::get_ai_key(&provider_id)
-                .map_err(|e| {
-                    emit_progress(&app, mr_id, AnalysisStatus::Error, 0, "Failed to retrieve API key");
-                    TauriError::cache_error(e.to_string())
-                })?
-                .ok_or_else(|| {
-                    emit_progress(&app, mr_id, AnalysisStatus::Error, 0, "OpenAI API key not found");
-                    TauriError::ai_error("OpenAI API key not found")
-                })?;
+            emit_progress(app, mr_id, AnalysisStatus::Processing, 50, "Analyzing with OpenAI API...");
+            let api_key = {
+                let state_read = state.read().await;
+                state_read.credential_cache.get_ai_key(&provider_id)
+                    .map_err(|e| {
+                        emit_progress(app, mr_id, AnalysisStatus::Error, 0, "Failed to retrieve API key");
+                        TauriError::cache_error(e.to_string())
+                    })?
+                    .ok_or_else(|| {
+                        emit_progress(app, mr_id, AnalysisStatus::Error, 0, "OpenAI API key not found");
+                        TauriError::ai_error("OpenAI API key not found")
+                    })?
+            };
             let provider = crate::ai::OpenAIProvider::new(provider_id.clone(), "OpenAI".to_string(), api_key, model);
             provider.analyze(&context).await
                 .map_err(|e| {
-                    emit_progress(&app, mr_id, AnalysisStatus::Error, 0, &format!("AI analysis failed: {}", e));
+                    emit_progress(app, mr_id, AnalysisStatus::Error, 0, &format!("AI analysis failed: {}", e));
                     TauriError::ai_error(e.to_string())
                 })?
         }
     };
 
     // Convert raw suggestions to AISuggestion and store
-    emit_progress(&app, mr_id, AnalysisStatus::Processing, 80, "Saving suggestions...");
+    emit_progress(app, mr_id, AnalysisStatus::Processing, 80, "Saving suggestions...");
     let mut suggestions = Vec::new();
-    let state = state.read().await;
+    let state_read = state.read().await;
 
     let total_suggestions = raw_suggestions.len();
     for (i, raw) in raw_suggestions.into_iter().enumerate() {
         let suggestion_id = Uuid::new_v4().to_string();
         let suggestion = raw.to_suggestion(suggestion_id.clone(), request.mr_iid, provider_id.clone());
 
-        // Store in database
         let now = Utc::now().to_rfc3339();
         if let Err(e) = sqlx::query(
             "INSERT INTO ai_suggestions (id, mr_id, provider_id, file_path, start_line, end_line, category, severity, title, description, suggested_code, original_code, status, created_at)
@@ -344,25 +346,23 @@ pub async fn ai_analyze_diff(
         .bind(&suggestion.suggested_code)
         .bind(&suggestion.original_code)
         .bind(&now)
-        .execute(&state.db_pool)
+        .execute(&state_read.db_pool)
         .await {
             warn!("Failed to store suggestion: {}", e);
         }
 
         suggestions.push(suggestion);
 
-        // Update progress for each suggestion saved
         if total_suggestions > 0 {
             let progress = 80 + ((i + 1) * 15 / total_suggestions) as u8;
-            emit_progress(&app, mr_id, AnalysisStatus::Processing, progress, &format!("Saved {}/{} suggestions", i + 1, total_suggestions));
+            emit_progress(app, mr_id, AnalysisStatus::Processing, progress, &format!("Saved {}/{} suggestions", i + 1, total_suggestions));
         }
     }
 
     let analysis_time = start_time.elapsed().as_millis() as u64;
     info!("AI analysis complete: {} suggestions in {}ms", suggestions.len(), analysis_time);
 
-    // Emit completion event
-    emit_progress(&app, mr_id, AnalysisStatus::Completed, 100, &format!("Analysis complete: {} suggestions found", suggestions.len()));
+    emit_progress(app, mr_id, AnalysisStatus::Completed, 100, &format!("Analysis complete: {} suggestions found", suggestions.len()));
 
     Ok(AnalyzeDiffResponse {
         suggestions,
@@ -371,13 +371,12 @@ pub async fn ai_analyze_diff(
     })
 }
 
-/// Update the status of an AI suggestion
-#[tauri::command]
-pub async fn ai_update_suggestion_status(
-    state: State<'_, SharedAppState>,
+/// Update the status of an AI suggestion (inner)
+pub async fn update_suggestion_status_inner(
+    state: &SharedAppState,
     request: UpdateSuggestionRequest,
 ) -> TauriResult<()> {
-    let state = state.read().await;
+    let state_read = state.read().await;
 
     let status_str = match request.status {
         SuggestionStatus::Pending => "pending",
@@ -389,7 +388,7 @@ pub async fn ai_update_suggestion_status(
     sqlx::query("UPDATE ai_suggestions SET status = ? WHERE id = ?")
         .bind(status_str)
         .bind(&request.suggestion_id)
-        .execute(&state.db_pool)
+        .execute(&state_read.db_pool)
         .await
         .map_err(|e| TauriError::cache_error(e.to_string()))?;
 
@@ -397,9 +396,8 @@ pub async fn ai_update_suggestion_status(
     Ok(())
 }
 
-/// Check if Claude CLI is available
-#[tauri::command]
-pub async fn ai_check_cli_available() -> TauriResult<CliAvailableResponse> {
+/// Check if Claude CLI is available (inner)
+pub async fn check_cli_available_inner() -> TauriResult<CliAvailableResponse> {
     let (available, version, path) = ClaudeCliProvider::check_cli().await
         .map_err(|e| TauriError::ai_error(e.to_string()))?;
 
@@ -411,20 +409,19 @@ pub async fn ai_check_cli_available() -> TauriResult<CliAvailableResponse> {
     })
 }
 
-/// Get suggestions for a specific MR
-#[tauri::command]
-pub async fn ai_get_suggestions(
-    state: State<'_, SharedAppState>,
+/// Get suggestions for a specific MR (inner)
+pub async fn get_suggestions_inner(
+    state: &SharedAppState,
     mr_id: i64,
 ) -> TauriResult<Vec<AISuggestion>> {
-    let state = state.read().await;
+    let state_read = state.read().await;
 
     let rows = sqlx::query_as::<_, (String, i64, String, String, i32, i32, String, String, String, String, Option<String>, String, String, String)>(
         "SELECT id, mr_id, provider_id, file_path, start_line, end_line, category, severity, title, description, suggested_code, original_code, status, created_at
          FROM ai_suggestions WHERE mr_id = ? ORDER BY file_path, start_line"
     )
     .bind(mr_id)
-    .fetch_all(&state.db_pool)
+    .fetch_all(&state_read.db_pool)
     .await
     .map_err(|e| TauriError::cache_error(e.to_string()))?;
 
@@ -468,4 +465,75 @@ pub async fn ai_get_suggestions(
     }).collect();
 
     Ok(suggestions)
+}
+
+// ============================================================================
+// Tauri command wrappers
+// ============================================================================
+
+/// List configured AI providers
+#[tauri::command]
+pub async fn ai_list_providers(state: State<'_, SharedAppState>) -> TauriResult<Vec<AIProviderConfig>> {
+    list_providers_inner(&state).await
+}
+
+/// Add or update an AI provider configuration
+#[tauri::command]
+pub async fn ai_add_provider(
+    state: State<'_, SharedAppState>,
+    request: AddProviderRequest,
+) -> TauriResult<AIProviderConfig> {
+    add_provider_inner(&state, request).await
+}
+
+/// Remove an AI provider
+#[tauri::command]
+pub async fn ai_remove_provider(
+    state: State<'_, SharedAppState>,
+    provider_id: String,
+) -> TauriResult<()> {
+    remove_provider_inner(&state, provider_id).await
+}
+
+/// Set the default AI provider
+#[tauri::command]
+pub async fn ai_set_default_provider(
+    state: State<'_, SharedAppState>,
+    provider_id: String,
+) -> TauriResult<()> {
+    set_default_provider_inner(&state, provider_id).await
+}
+
+/// Analyze a merge request diff with AI
+#[tauri::command]
+pub async fn ai_analyze_diff(
+    app: AppHandle,
+    state: State<'_, SharedAppState>,
+    request: AnalyzeDiffRequest,
+) -> TauriResult<AnalyzeDiffResponse> {
+    analyze_diff_inner(Some(&app), &state, request).await
+}
+
+/// Update the status of an AI suggestion
+#[tauri::command]
+pub async fn ai_update_suggestion_status(
+    state: State<'_, SharedAppState>,
+    request: UpdateSuggestionRequest,
+) -> TauriResult<()> {
+    update_suggestion_status_inner(&state, request).await
+}
+
+/// Check if Claude CLI is available
+#[tauri::command]
+pub async fn ai_check_cli_available() -> TauriResult<CliAvailableResponse> {
+    check_cli_available_inner().await
+}
+
+/// Get suggestions for a specific MR
+#[tauri::command]
+pub async fn ai_get_suggestions(
+    state: State<'_, SharedAppState>,
+    mr_id: i64,
+) -> TauriResult<Vec<AISuggestion>> {
+    get_suggestions_inner(&state, mr_id).await
 }

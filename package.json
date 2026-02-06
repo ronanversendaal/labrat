@@ -10,6 +10,8 @@
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build",
+    "dev:web": "VITE_API_URL=http://localhost:3001 vite",
+    "dev:server": "cargo run --manifest-path src-tauri/Cargo.toml --bin labrat-web --features web-server",
     "lint": "eslint src --ext .ts,.tsx",
     "lint:fix": "eslint src --ext .ts,.tsx --fix",
     "format": "prettier --write src/**/*.{ts,tsx,css}",

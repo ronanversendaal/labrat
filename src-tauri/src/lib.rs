@@ -9,19 +9,23 @@ pub mod commands;
 pub mod gitlab;
 pub mod settings;
 pub mod utils;
+#[cfg(feature = "web-server")]
+pub mod web;
 
 use cache::db::Database;
 use serde::{Deserialize, Serialize};
+use settings::credentials::CredentialCache;
 use sqlx::SqlitePool;
 use std::sync::Arc;
 use tauri::Manager;
 use tokio::sync::RwLock;
-use tracing_subscriber::prelude::*;
 
 /// Application state shared across all commands
 pub struct AppState {
     /// Database connection pool
     pub db_pool: SqlitePool,
+    /// In-memory credential cache to avoid repeated OS keychain prompts
+    pub credential_cache: CredentialCache,
 }
 
 impl AppState {
@@ -32,6 +36,7 @@ impl AppState {
 
         Ok(Self {
             db_pool: db.pool().clone(),
+            credential_cache: CredentialCache::new(),
         })
     }
 }

@@ -3,8 +3,14 @@
 //! This module provides secure storage for sensitive data like
 //! GitLab access tokens and AI provider API keys using the
 //! platform's native keychain/credential manager.
+//!
+//! An in-memory cache avoids repeated keychain access prompts
+//! on macOS. Tokens are read from the keychain once per session
+//! and cached in memory for subsequent accesses.
 
 use keyring::Entry;
+use std::collections::HashMap;
+use std::sync::RwLock;
 use thiserror::Error;
 use tracing::{debug, warn};
 
@@ -238,6 +244,121 @@ impl CredentialManager {
     /// Delete an AI API key for a provider
     pub fn delete_ai_key(provider_id: &str) -> Result<(), CredentialError> {
         CredentialStore::new().delete(CredentialType::AiApiKey, provider_id)
+    }
+}
+
+/// In-memory credential cache to avoid repeated OS keychain prompts.
+///
+/// On macOS, each keychain access can trigger a password dialog, especially
+/// for unsigned development builds. This cache reads from the keychain once
+/// and serves subsequent requests from memory.
+///
+/// The cache is cleared when the app exits (nothing persisted to disk).
+pub struct CredentialCache {
+    cache: RwLock<HashMap<String, String>>,
+}
+
+impl CredentialCache {
+    /// Create a new empty credential cache
+    pub fn new() -> Self {
+        Self {
+            cache: RwLock::new(HashMap::new()),
+        }
+    }
+
+    /// Build the cache key for a credential type + account
+    fn cache_key(credential_type: CredentialType, account_id: &str) -> String {
+        format!("{}-{}", credential_type.prefix(), account_id)
+    }
+
+    /// Get a GitLab token, checking cache first then falling back to keychain.
+    /// On a keychain hit, the value is cached for future calls.
+    pub fn get_token(&self, account_id: &str) -> Result<Option<String>, CredentialError> {
+        self.get_cached(CredentialType::GitLabToken, account_id)
+    }
+
+    /// Get an AI API key, checking cache first then falling back to keychain.
+    pub fn get_ai_key(&self, provider_id: &str) -> Result<Option<String>, CredentialError> {
+        self.get_cached(CredentialType::AiApiKey, provider_id)
+    }
+
+    /// Store a GitLab token in both keychain and cache.
+    pub fn store_token(&self, account_id: &str, token: &str) -> Result<(), CredentialError> {
+        CredentialManager::store_token(account_id, token)?;
+        self.insert(CredentialType::GitLabToken, account_id, token);
+        Ok(())
+    }
+
+    /// Store an AI API key in both keychain and cache.
+    pub fn store_ai_key(&self, provider_id: &str, api_key: &str) -> Result<(), CredentialError> {
+        CredentialManager::store_ai_key(provider_id, api_key)?;
+        self.insert(CredentialType::AiApiKey, provider_id, api_key);
+        Ok(())
+    }
+
+    /// Delete a GitLab token from both keychain and cache.
+    pub fn delete_token(&self, account_id: &str) -> Result<(), CredentialError> {
+        self.remove(CredentialType::GitLabToken, account_id);
+        CredentialManager::delete_token(account_id)
+    }
+
+    /// Delete an AI API key from both keychain and cache.
+    pub fn delete_ai_key(&self, provider_id: &str) -> Result<(), CredentialError> {
+        self.remove(CredentialType::AiApiKey, provider_id);
+        CredentialManager::delete_ai_key(provider_id)
+    }
+
+    /// Get a credential, checking cache first then keychain.
+    fn get_cached(
+        &self,
+        credential_type: CredentialType,
+        account_id: &str,
+    ) -> Result<Option<String>, CredentialError> {
+        let key = Self::cache_key(credential_type, account_id);
+
+        // Check cache first (read lock — fast, non-blocking)
+        {
+            let cache = self.cache.read().unwrap();
+            if let Some(value) = cache.get(&key) {
+                debug!("Credential cache hit: {}", key);
+                return Ok(Some(value.clone()));
+            }
+        }
+
+        // Cache miss — read from keychain
+        debug!("Credential cache miss: {}, reading from keychain", key);
+        let result = match credential_type {
+            CredentialType::GitLabToken => CredentialManager::get_token(account_id),
+            CredentialType::AiApiKey => CredentialManager::get_ai_key(account_id),
+        }?;
+
+        // Populate cache on successful keychain read
+        if let Some(ref value) = result {
+            let mut cache = self.cache.write().unwrap();
+            cache.insert(key, value.clone());
+        }
+
+        Ok(result)
+    }
+
+    /// Insert a value directly into the cache.
+    fn insert(&self, credential_type: CredentialType, account_id: &str, value: &str) {
+        let key = Self::cache_key(credential_type, account_id);
+        let mut cache = self.cache.write().unwrap();
+        cache.insert(key, value.to_string());
+    }
+
+    /// Remove a value from the cache.
+    fn remove(&self, credential_type: CredentialType, account_id: &str) {
+        let key = Self::cache_key(credential_type, account_id);
+        let mut cache = self.cache.write().unwrap();
+        cache.remove(&key);
+    }
+}
+
+impl Default for CredentialCache {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

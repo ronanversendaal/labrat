@@ -53,6 +53,19 @@ async-trait = "0.1"
 which = "7"
 base64 = "0.22"
 
+# Web server (optional, for browser/Playwright support)
+axum = { version = "0.8", optional = true }
+tower-http = { version = "0.6", features = ["cors"], optional = true }
+
+[features]
+default = []
+web-server = ["axum", "tower-http"]
+
+[[bin]]
+name = "labrat-web"
+path = "src/bin/web_server.rs"
+required-features = ["web-server"]
+
 [dev-dependencies]
 tempfile = "3"
 
