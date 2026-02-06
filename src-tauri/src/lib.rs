@@ -169,6 +169,24 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .setup(|app| {
+            // Position window: full height, aligned to the right of the screen
+            if let Some(window) = app.get_webview_window("main") {
+                if let Some(monitor) = window.current_monitor().ok().flatten() {
+                    let screen_size = monitor.size();
+                    let screen_pos = monitor.position();
+                    let scale = monitor.scale_factor();
+
+                    let screen_w = screen_size.width as f64 / scale;
+                    let screen_h = screen_size.height as f64 / scale;
+
+                    let win_width = 1200.0_f64.min(screen_w);
+                    let x = screen_pos.x as f64 / scale + (screen_w - win_width);
+
+                    let _ = window.set_size(tauri::LogicalSize::new(win_width, screen_h));
+                    let _ = window.set_position(tauri::LogicalPosition::new(x, 0.0));
+                }
+            }
+
             // Initialize app state asynchronously
             let handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
