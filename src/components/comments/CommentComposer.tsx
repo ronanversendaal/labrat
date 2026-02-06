@@ -90,7 +90,7 @@ export function CommentComposer({
       </div>
 
       {/* Action buttons footer */}
-      <div className="px-3 py-2 bg-gray-800 border-t border-gray-600 flex items-center justify-end gap-2">
+      <div className="px-3 py-2 bg-surface border-t border-edge-strong flex items-center justify-end gap-2">
         {onCancel && (
           <Button
             variant="secondary"

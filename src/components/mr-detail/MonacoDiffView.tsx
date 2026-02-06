@@ -12,6 +12,8 @@ import { useUIStore } from '../../stores';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { useFileContent } from '../../hooks/useGitLab';
 import { useFocusStore } from '../../hooks/useFocusManager';
+import { useResolvedTheme } from '../../hooks/useTheme';
+import { registerMonacoThemes, getMonacoThemeName } from '../../styles/themes/monaco';
 import { InlineCommentOverlay, InlineCommentThread, SuggestionEditor } from '../comments';
 import { Avatar } from '../common';
 import type * as Monaco from 'monaco-editor';
@@ -200,11 +202,12 @@ export const MonacoDiffView = forwardRef<MonacoDiffViewHandle, MonacoDiffViewPro
   ref
 ) {
   const { diffViewMode, setDiffViewMode, showWhitespace, toggleWhitespace, wordWrap, toggleWordWrap, expandedResolvedThreads, toggleResolvedThread } = useUIStore();
-  const appTheme = useSettingsStore((state) => state.theme);
+  const codeFontSize = useSettingsStore((s) => s.fontSize);
+  const resolvedTheme = useResolvedTheme();
+  const monacoThemeName = getMonacoThemeName(resolvedTheme);
   const monaco = useMonaco();
   const editorRef = useRef<Monaco.editor.IStandaloneDiffEditor | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [theme, setTheme] = useState<'vs' | 'vs-dark'>('vs-dark');
   const [editorReady, setEditorReady] = useState(false);
 
   // Resolved thread indicators (avatar positions in gutter)
@@ -588,25 +591,12 @@ export const MonacoDiffView = forwardRef<MonacoDiffViewHandle, MonacoDiffViewPro
     exitLineNavMode,
   }), [scrollDown, scrollUp, enterLineNavMode, exitLineNavMode]);
 
-  // Sync Monaco theme with app theme setting
+  // Register all Monaco themes once Monaco is available
   useEffect(() => {
-    const updateTheme = (isDark: boolean) => {
-      setTheme(isDark ? 'vs-dark' : 'vs');
-    };
-
-    if (appTheme === 'system') {
-      // Use system preference when theme is set to 'system'
-      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-      updateTheme(mediaQuery.matches);
-
-      const handler = (e: MediaQueryListEvent) => updateTheme(e.matches);
-      mediaQuery.addEventListener('change', handler);
-      return () => mediaQuery.removeEventListener('change', handler);
-    } else {
-      // Use explicit theme setting
-      updateTheme(appTheme === 'dark');
+    if (monaco) {
+      registerMonacoThemes(monaco);
     }
-  }, [appTheme]);
+  }, [monaco]);
 
   // Fetch full file content for proper syntax highlighting
   const oldFilePath = file.old_path || file.new_path;
@@ -645,34 +635,7 @@ export const MonacoDiffView = forwardRef<MonacoDiffViewHandle, MonacoDiffViewPro
     [fileDiscussions]
   );
 
-  // Configure Monaco when available
-  useEffect(() => {
-    if (monaco) {
-      // Configure diff editor defaults
-      monaco.editor.defineTheme('gitlab-dark', {
-        base: 'vs-dark',
-        inherit: true,
-        rules: [],
-        colors: {
-          'diffEditor.insertedTextBackground': '#23863633',
-          'diffEditor.removedTextBackground': '#da363333',
-          'diffEditor.insertedLineBackground': '#23863622',
-          'diffEditor.removedLineBackground': '#da363322',
-        },
-      });
-      monaco.editor.defineTheme('gitlab-light', {
-        base: 'vs',
-        inherit: true,
-        rules: [],
-        colors: {
-          'diffEditor.insertedTextBackground': '#23863633',
-          'diffEditor.removedTextBackground': '#da363333',
-          'diffEditor.insertedLineBackground': '#dafbe1',
-          'diffEditor.removedLineBackground': '#ffebe9',
-        },
-      });
-    }
-  }, [monaco]);
+  // (Monaco themes are registered in the effect above)
 
   // Scroll to target line when it changes
   useEffect(() => {
@@ -1051,8 +1014,8 @@ export const MonacoDiffView = forwardRef<MonacoDiffViewHandle, MonacoDiffViewPro
     folding: true,
     wordWrap: wordWrap ? 'on' : 'off',
     automaticLayout: true,
-    fontSize: 13,
-    fontFamily: "'JetBrains Mono', 'Fira Code', 'SF Mono', Menlo, Monaco, monospace",
+    fontSize: codeFontSize,
+    fontFamily: getComputedStyle(document.documentElement).getPropertyValue('--th-font-code').trim() || "'JetBrains Mono', 'Fira Code', 'SF Mono', Menlo, Monaco, monospace",
     renderIndicators: true,
     originalEditable: false,
     ignoreTrimWhitespace: !showWhitespace,
@@ -1072,18 +1035,18 @@ export const MonacoDiffView = forwardRef<MonacoDiffViewHandle, MonacoDiffViewPro
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+      <div className="flex items-center justify-between px-4 py-2 border-b border-edge bg-surface">
         <div className="flex items-center gap-3">
           <FileStatusBadge file={file} />
-          <span className="font-mono text-sm text-gray-700 dark:text-gray-300 truncate">
+          <span className="font-mono text-sm text-content-muted truncate">
             {file.renamed_file ? `${file.old_path} → ${file.new_path}` : file.new_path}
           </span>
-          <span className="text-xs text-gray-500 dark:text-gray-400 px-2 py-0.5 bg-gray-200 dark:bg-gray-700 rounded">
+          <span className="text-xs text-content-secondary px-2 py-0.5 bg-surface-alt rounded">
             {language}
           </span>
           {/* Comment count indicator */}
           {fileDiscussions.length > 0 && (
-            <span className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400 px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 rounded">
+            <span className="flex items-center gap-1 text-xs text-amber-600 text-amber-400 px-2 py-0.5 bg-amber-100 bg-amber-900/30 rounded">
               <CommentIcon />
               {fileDiscussions.length}
             </span>
@@ -1092,17 +1055,17 @@ export const MonacoDiffView = forwardRef<MonacoDiffViewHandle, MonacoDiffViewPro
 
         <div className="flex items-center gap-2">
           {/* Stats */}
-          <span className="text-xs text-green-600 dark:text-green-400">+{file.additions}</span>
-          <span className="text-xs text-red-600 dark:text-red-400">-{file.deletions}</span>
+          <span className="text-xs text-diff-add-text">+{file.additions}</span>
+          <span className="text-xs text-diff-del-text">-{file.deletions}</span>
 
           {/* View mode toggle */}
-          <div className="flex items-center ml-4 border border-gray-200 dark:border-gray-600 rounded overflow-hidden">
+          <div className="flex items-center ml-4 border border-edge-strong rounded overflow-hidden">
             <button
               onClick={() => setDiffViewMode('unified')}
               className={`px-2 py-1 text-xs ${
                 diffViewMode === 'unified'
-                  ? 'bg-gray-200 dark:bg-gray-600 text-gray-900 dark:text-white'
-                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                  ? 'bg-surface-alt text-content'
+                  : 'text-content-secondary hover:bg-surface-hover'
               }`}
             >
               Inline
@@ -1111,8 +1074,8 @@ export const MonacoDiffView = forwardRef<MonacoDiffViewHandle, MonacoDiffViewPro
               onClick={() => setDiffViewMode('split')}
               className={`px-2 py-1 text-xs ${
                 diffViewMode === 'split'
-                  ? 'bg-gray-200 dark:bg-gray-600 text-gray-900 dark:text-white'
-                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                  ? 'bg-surface-alt text-content'
+                  : 'text-content-secondary hover:bg-surface-hover'
               }`}
             >
               Side-by-Side
@@ -1122,10 +1085,10 @@ export const MonacoDiffView = forwardRef<MonacoDiffViewHandle, MonacoDiffViewPro
           {/* Word wrap toggle */}
           <button
             onClick={toggleWordWrap}
-            className={`px-2 py-1 text-xs border border-gray-200 dark:border-gray-600 rounded ${
+            className={`px-2 py-1 text-xs border border-edge-strong rounded ${
               wordWrap
-                ? 'bg-gray-200 dark:bg-gray-600'
-                : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+                ? 'bg-surface-alt'
+                : 'hover:bg-surface-hover'
             }`}
             title={wordWrap ? 'Disable word wrap' : 'Enable word wrap'}
           >
@@ -1137,10 +1100,10 @@ export const MonacoDiffView = forwardRef<MonacoDiffViewHandle, MonacoDiffViewPro
           {/* Whitespace toggle */}
           <button
             onClick={toggleWhitespace}
-            className={`px-2 py-1 text-xs border border-gray-200 dark:border-gray-600 rounded ${
+            className={`px-2 py-1 text-xs border border-edge-strong rounded ${
               showWhitespace
-                ? 'bg-gray-200 dark:bg-gray-600'
-                : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+                ? 'bg-surface-alt'
+                : 'hover:bg-surface-hover'
             }`}
             title={showWhitespace ? 'Hide whitespace' : 'Show whitespace'}
           >
@@ -1153,7 +1116,7 @@ export const MonacoDiffView = forwardRef<MonacoDiffViewHandle, MonacoDiffViewPro
               <button
                 onClick={onPrevFile}
                 disabled={!onPrevFile}
-                className="p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 disabled:opacity-30"
+                className="p-1 text-content-secondary hover:text-content-muted disabled:opacity-30"
                 title="Previous file (k)"
               >
                 <ChevronUpIcon />
@@ -1161,7 +1124,7 @@ export const MonacoDiffView = forwardRef<MonacoDiffViewHandle, MonacoDiffViewPro
               <button
                 onClick={onNextFile}
                 disabled={!onNextFile}
-                className="p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 disabled:opacity-30"
+                className="p-1 text-content-secondary hover:text-content-muted disabled:opacity-30"
                 title="Next file (j)"
               >
                 <ChevronDownIcon />
@@ -1180,7 +1143,7 @@ export const MonacoDiffView = forwardRef<MonacoDiffViewHandle, MonacoDiffViewPro
             original={original}
             modified={modified}
             language={language}
-            theme={theme === 'vs-dark' ? 'gitlab-dark' : 'gitlab-light'}
+            theme={monacoThemeName}
             options={editorOptions}
             onMount={handleEditorMount}
             loading={<DiffLoading />}
@@ -1323,10 +1286,10 @@ export const MonacoDiffView = forwardRef<MonacoDiffViewHandle, MonacoDiffViewPro
 
 function DiffLoading() {
   return (
-    <div className="flex items-center justify-center h-full bg-gray-50 dark:bg-gray-900">
+    <div className="flex items-center justify-center h-full bg-canvas">
       <div className="flex flex-col items-center gap-3">
         <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-        <span className="text-sm text-gray-500 dark:text-gray-400">Loading diff editor...</span>
+        <span className="text-sm text-content-secondary">Loading diff editor...</span>
       </div>
     </div>
   );
@@ -1334,15 +1297,15 @@ function DiffLoading() {
 
 function FileStatusBadge({ file }: { file: DiffFile }) {
   if (file.new_file) {
-    return <span className="px-1.5 py-0.5 text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 rounded">Added</span>;
+    return <span className="px-1.5 py-0.5 text-xs font-medium bg-diff-add-bg text-diff-add-text rounded">Added</span>;
   }
   if (file.deleted_file) {
-    return <span className="px-1.5 py-0.5 text-xs font-medium bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 rounded">Deleted</span>;
+    return <span className="px-1.5 py-0.5 text-xs font-medium bg-diff-del-bg text-diff-del-text rounded">Deleted</span>;
   }
   if (file.renamed_file) {
-    return <span className="px-1.5 py-0.5 text-xs font-medium bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 rounded">Renamed</span>;
+    return <span className="px-1.5 py-0.5 text-xs font-medium bg-purple-100 text-purple-700 bg-purple-900/30 text-purple-400 rounded">Renamed</span>;
   }
-  return <span className="px-1.5 py-0.5 text-xs font-medium bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400 rounded">Modified</span>;
+  return <span className="px-1.5 py-0.5 text-xs font-medium bg-caution-muted text-caution-text rounded">Modified</span>;
 }
 
 function ChevronUpIcon() {

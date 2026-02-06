@@ -106,14 +106,14 @@ export function AddAccountModal() {
           helperText={
             <span>
               Generate a token at GitLab → Settings → Access Tokens with{' '}
-              <code className="text-xs bg-gray-100 dark:bg-gray-700 px-1 rounded">read_api</code> and{' '}
-              <code className="text-xs bg-gray-100 dark:bg-gray-700 px-1 rounded">api</code> scopes.
+              <code className="text-xs bg-surface-alt px-1 rounded">read_api</code> and{' '}
+              <code className="text-xs bg-surface-alt px-1 rounded">api</code> scopes.
             </span>
           }
         />
 
         {error && (
-          <div className="p-3 text-sm text-red-600 bg-red-50 dark:bg-red-900/20 dark:text-red-400 rounded-md">
+          <div className="p-3 text-sm text-negative-text bg-negative-muted rounded-md">
             {error}
           </div>
         )}

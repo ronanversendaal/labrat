@@ -3,9 +3,10 @@
  */
 
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 // open() is dynamically imported only in Tauri mode
 import type { MergeRequest, Discussion, MRChangeSnapshot } from '../../types';
-import { useDiff, useDiscussions, useMergeRequest, useAccounts } from '../../hooks/useGitLab';
+import { useDiff, useDiscussions, useMergeRequest, useAccounts, useApproveMR, useApprovalState } from '../../hooks/useGitLab';
 import { useMRStore, isFileViewedSelector } from '../../stores/mrStore';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { useAISuggestions } from '../../hooks/useAI';
@@ -36,6 +37,7 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
   const [dismissedUpdate, setDismissedUpdate] = useState(false);
   const [isQuickPickerOpen, setIsQuickPickerOpen] = useState(false);
   const toast = useToast();
+  const queryClient = useQueryClient();
   const { data: accounts } = useAccounts();
   const activeAccount = accounts?.find((a) => a.is_active);
   const currentUserId = activeAccount?.user_id ?? 0;
@@ -243,6 +245,39 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
     }
   }, [mr.web_url, toast]);
 
+  // Approve MR via keyboard shortcut
+  const approveMutation = useApproveMR();
+  const { data: approvalState } = useApprovalState(mr.project_id, mr.iid);
+  const userHasApproved = approvalState?.approved_by?.some(
+    (approver) => approver.user.id === currentUserId
+  ) ?? false;
+  const isAuthor = mr.author.id === currentUserId;
+
+  const handleApproveMR = useCallback(async () => {
+    if (isAuthor) {
+      toast.error('You cannot approve your own merge request');
+      return;
+    }
+    if (userHasApproved) {
+      toast.info('You have already approved this MR');
+      return;
+    }
+    if (approveMutation.isPending) return;
+    try {
+      await approveMutation.mutateAsync({
+        projectId: mr.project_id,
+        mrIid: mr.iid,
+        sha: mr.head_pipeline?.id?.toString(),
+      });
+      toast.success('MR approved successfully');
+      queryClient.invalidateQueries({ queryKey: ['mergeRequests'] });
+      onClose?.();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to approve MR';
+      toast.error(message);
+    }
+  }, [isAuthor, userHasApproved, approveMutation, mr.project_id, mr.iid, mr.head_pipeline?.id, toast, queryClient, onClose]);
+
   // Toggle viewed status for current file
   const toggleFileViewed = useCallback(() => {
     if (!selectedFile || !currentSha) return;
@@ -358,6 +393,15 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
       handler: scrollUp,
       preventDefault: true,
     },
+    {
+      id: 'approve-mr',
+      label: 'Approve',
+      description: 'Approve merge request',
+      keys: ['shift+a'],
+      category: 'review',
+      handler: handleApproveMR,
+      preventDefault: true,
+    },
   ], { scope: 'mr-detail' });
 
   return (
@@ -367,14 +411,14 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
         <div
           role="status"
           aria-live="polite"
-          className="px-6 py-3 bg-blue-50 dark:bg-blue-900/20 border-b border-blue-200 dark:border-blue-800"
+          className="px-6 py-3 bg-primary-muted border-b border-primary"
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <svg className="w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
-              <span className="text-sm text-blue-700 dark:text-blue-300">
+              <span className="text-sm text-primary-text">
                 {stateChanged
                   ? `This merge request has been ${currentMR?.state === 'merged' ? 'merged' : 'closed'}.`
                   : 'This merge request has been updated.'}
@@ -394,7 +438,7 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
               </Button>
               <button
                 onClick={() => setDismissedUpdate(true)}
-                className="p-1 text-blue-500 hover:text-blue-700 dark:hover:text-blue-300"
+                className="p-1 text-blue-500 hover:text-primary-text"
                 aria-label="Dismiss update notification"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
@@ -407,19 +451,19 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
       )}
 
       {/* Header */}
-      <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+      <div className="px-6 py-4 border-b border-edge">
         <div className="flex items-start justify-between">
           <div className="flex-1 min-w-0">
             {/* Project path */}
-            <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-1">
+            <div className="flex items-center gap-2 text-sm text-content-secondary mb-1">
               <span>{mr.project_path || `Project #${mr.project_id}`}</span>
               <span>•</span>
               <span>!{mr.iid}</span>
             </div>
 
             {/* Title */}
-            <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
-              {mr.draft && <span className="text-gray-400 dark:text-gray-500">Draft: </span>}
+            <h1 className="text-xl font-semibold text-content mb-2">
+              {mr.draft && <span className="text-content-tertiary">Draft: </span>}
               {mr.title}
             </h1>
 
@@ -445,14 +489,14 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
 
             <button
               onClick={handleOpenInGitLab}
-              className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+              className="px-3 py-1.5 text-sm bg-primary text-white rounded hover:bg-primary-hover transition-colors"
             >
               Open in GitLab
             </button>
             {onClose && (
               <button
                 onClick={handleClose}
-                className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                className="p-1.5 text-content-tertiary hover:text-content-muted"
                 aria-label="Close merge request detail view (ESC)"
               >
                 <CloseIcon />
@@ -508,7 +552,7 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
 
             <div className="flex flex-1 min-h-0">
               {/* File tree sidebar */}
-              <div className="w-64 flex-shrink-0 border-r border-gray-200 dark:border-gray-700 overflow-auto">
+              <div className="w-64 flex-shrink-0 border-r border-edge overflow-auto">
                 {isLoadingDiff ? (
                 <div className="p-4 space-y-2">
                   <Skeleton variant="text" width="80%" />
@@ -612,14 +656,14 @@ function TabButton({
       className={`
         px-4 py-2 text-sm font-medium rounded-t-lg transition-colors
         ${active
-          ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border-t border-x border-gray-200 dark:border-gray-700'
-          : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+          ? 'bg-surface text-content border-t border-x border-edge'
+          : 'text-content-secondary hover:text-content-muted'
         }
       `}
     >
       {children}
       {badge !== undefined && (
-        <span className="ml-2 px-1.5 py-0.5 text-xs bg-gray-100 dark:bg-gray-700 rounded">
+        <span className="ml-2 px-1.5 py-0.5 text-xs bg-surface-alt rounded">
           {badge}
         </span>
       )}
@@ -665,8 +709,8 @@ function ActivityTab({
       {/* New comment button */}
       <div className="mb-6">
         {showComposer ? (
-          <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-            <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">
+          <div className="border border-edge rounded-lg p-4">
+            <h3 className="text-sm font-medium text-content mb-3">
               New Comment
             </h3>
             <CommentComposer
@@ -691,7 +735,7 @@ function ActivityTab({
       {/* Unresolved discussions */}
       {unresolvedDiscussions.length > 0 && (
         <div className="mb-8">
-          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">
+          <h3 className="text-sm font-semibold text-content-muted mb-4 flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-yellow-500" />
             Unresolved ({unresolvedDiscussions.length})
           </h3>
@@ -711,7 +755,7 @@ function ActivityTab({
       {/* Resolved discussions */}
       {resolvedDiscussions.length > 0 && (
         <div>
-          <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-4 flex items-center gap-2">
+          <h3 className="text-sm font-semibold text-content-secondary mb-4 flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-green-500" />
             Resolved ({resolvedDiscussions.length})
           </h3>

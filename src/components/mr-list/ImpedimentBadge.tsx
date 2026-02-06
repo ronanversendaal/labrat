@@ -74,11 +74,11 @@ interface BadgeProps {
 }
 
 const typeClasses: Record<BadgeType, string> = {
-  error: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-  warning: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
-  info: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-  success: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-  neutral: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400',
+  error: 'bg-negative-muted text-negative-text',
+  warning: 'bg-caution-muted text-caution-text',
+  info: 'bg-primary-muted text-primary-text',
+  success: 'bg-positive-muted text-positive-text',
+  neutral: 'bg-surface-alt text-content-secondary',
 };
 
 function Badge({ type, icon, children }: BadgeProps) {

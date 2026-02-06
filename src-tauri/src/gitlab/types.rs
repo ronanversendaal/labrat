@@ -369,6 +369,9 @@ pub struct ListMergeRequestsRequest {
     pub search: Option<String>,
     #[serde(default = "default_true")]
     pub use_cache: bool,
+    /// When true, fetch approval states for all returned MRs in parallel on the backend
+    #[serde(default)]
+    pub include_approvals: bool,
 }
 
 fn default_true() -> bool {
@@ -381,6 +384,9 @@ pub struct ListMergeRequestsResponse {
     pub merge_requests: Vec<MergeRequest>,
     pub from_cache: bool,
     pub cached_at: Option<DateTime<Utc>>,
+    /// Approval states keyed by MR id, populated when `include_approvals` is true
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub approval_states: Option<std::collections::HashMap<i64, ApprovalState>>,
 }
 
 /// Request to get a diff

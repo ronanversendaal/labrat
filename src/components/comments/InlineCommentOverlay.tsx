@@ -135,18 +135,18 @@ export function InlineCommentOverlay({
   return (
     <div
       ref={overlayRef}
-      className="bg-[#1e1e2e] border border-[#3d3d5c] rounded shadow-2xl overflow-hidden"
+      className="bg-editor-bg border border-editor-border rounded shadow-2xl overflow-hidden"
     >
       {/* Header - GitLab style "Commenting on lines" */}
-      <div className="px-4 py-2.5 bg-[#262639] border-b border-[#3d3d5c] flex items-center justify-between">
-        <div className="flex items-center gap-2 text-sm text-gray-300">
-          <span className="font-mono text-gray-400 text-xs">{filePath}</span>
-          <span className="text-gray-500">line {lineNumber}</span>
+      <div className="px-4 py-2.5 bg-editor-toolbar border-b border-editor-border flex items-center justify-between">
+        <div className="flex items-center gap-2 text-sm text-content-muted">
+          <span className="font-mono text-content-tertiary text-xs">{filePath}</span>
+          <span className="text-content-secondary">line {lineNumber}</span>
         </div>
         {onClose && (
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-200 p-1 transition-colors rounded hover:bg-gray-700"
+            className="text-content-tertiary hover:text-content-muted p-1 transition-colors rounded hover:bg-surface-hover"
             aria-label="Close"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -158,7 +158,7 @@ export function InlineCommentOverlay({
 
       {/* Existing discussions */}
       {hasExistingDiscussions && (
-        <div className="border-b border-[#3d3d5c] max-h-[200px] overflow-auto">
+        <div className="border-b border-editor-border max-h-[200px] overflow-auto">
           {discussions.map((discussion) => (
             <CommentThread
               key={discussion.id}
@@ -191,7 +191,7 @@ export function InlineCommentOverlay({
           </div>
 
           {/* Action buttons - GitLab style footer */}
-          <div className="px-4 py-3 bg-[#262639] border-t border-[#3d3d5c] flex items-center justify-end gap-3">
+          <div className="px-4 py-3 bg-editor-toolbar border-t border-editor-border flex items-center justify-end gap-3">
             <Button
               variant="secondary"
               size="sm"

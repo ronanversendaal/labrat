@@ -4,7 +4,10 @@
 
 import { useSettings, useUpdateSettings, useCacheStats, useClearCache, useEvictCache } from '../../hooks/useSettings';
 import { Button, Skeleton } from '../common';
-import type { Theme, DiffViewMode } from '../../types';
+import { ThemePicker } from './ThemePicker';
+import { useSettingsStore } from '../../stores/settingsStore';
+import { UI_FONT_OPTIONS, CODE_FONT_OPTIONS } from '../../types/settings';
+import type { DiffViewMode } from '../../types';
 
 export function GeneralSettings() {
   const { data: settings, isLoading: isLoadingSettings } = useSettings();
@@ -13,9 +16,12 @@ export function GeneralSettings() {
   const clearCache = useClearCache();
   const evictCache = useEvictCache();
 
-  const handleThemeChange = (theme: Theme) => {
-    updateSettings.mutate({ theme });
-  };
+  const codeFontSize = useSettingsStore((s) => s.fontSize);
+  const setFontSize = useSettingsStore((s) => s.setFontSize);
+  const fontFamilyUI = useSettingsStore((s) => s.fontFamilyUI);
+  const fontFamilyCode = useSettingsStore((s) => s.fontFamilyCode);
+  const setFontFamilyUI = useSettingsStore((s) => s.setFontFamilyUI);
+  const setFontFamilyCode = useSettingsStore((s) => s.setFontFamilyCode);
 
   const handleDiffModeChange = (mode: DiffViewMode) => {
     updateSettings.mutate({ diff_view_mode: mode });
@@ -30,6 +36,7 @@ export function GeneralSettings() {
   };
 
   const handleFontSizeChange = (size: number) => {
+    setFontSize(size);
     updateSettings.mutate({ font_size: size });
   };
 
@@ -60,37 +67,28 @@ export function GeneralSettings() {
 
   return (
     <div className="space-y-8">
-      {/* Appearance */}
+      {/* Theme */}
       <section>
-        <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Appearance</h2>
-        <div className="space-y-4">
-          {/* Theme */}
-          <div className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
-            <div>
-              <p className="font-medium text-gray-900 dark:text-gray-100">Theme</p>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Choose your preferred color scheme</p>
-            </div>
-            <select
-              value={settings?.theme ?? 'system'}
-              onChange={(e) => handleThemeChange(e.target.value as Theme)}
-              className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-            >
-              <option value="system">System</option>
-              <option value="light">Light</option>
-              <option value="dark">Dark</option>
-            </select>
-          </div>
+        <h2 className="text-lg font-medium text-content mb-4">Theme</h2>
+        <div className="p-4 border border-edge rounded-lg">
+          <ThemePicker />
+        </div>
+      </section>
 
-          {/* Font Size */}
-          <div className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
+      {/* Fonts */}
+      <section>
+        <h2 className="text-lg font-medium text-content mb-4">Fonts</h2>
+        <div className="space-y-4">
+          {/* Code Font Size */}
+          <div className="flex items-center justify-between p-4 border border-edge rounded-lg">
             <div>
-              <p className="font-medium text-gray-900 dark:text-gray-100">Code Font Size</p>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Font size for diff view and code blocks</p>
+              <p className="font-medium text-content">Code Font Size</p>
+              <p className="text-sm text-content-secondary">Font size for diff view and code blocks</p>
             </div>
             <select
-              value={settings?.font_size ?? 14}
+              value={codeFontSize}
               onChange={(e) => handleFontSizeChange(parseInt(e.target.value, 10))}
-              className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+              className="px-3 py-2 border border-edge-strong rounded-md bg-surface text-content"
             >
               <option value={12}>12px</option>
               <option value={13}>13px</option>
@@ -100,23 +98,57 @@ export function GeneralSettings() {
               <option value={18}>18px</option>
             </select>
           </div>
+
+          {/* UI Font Family Override */}
+          <div className="flex items-center justify-between p-4 border border-edge rounded-lg">
+            <div>
+              <p className="font-medium text-content">UI Font Override</p>
+              <p className="text-sm text-content-secondary">Override the theme's default UI font</p>
+            </div>
+            <select
+              value={fontFamilyUI ?? ''}
+              onChange={(e) => setFontFamilyUI(e.target.value || null)}
+              className="px-3 py-2 border border-edge-strong rounded-md bg-surface text-content"
+            >
+              {UI_FONT_OPTIONS.map((opt) => (
+                <option key={opt.label} value={opt.value ?? ''}>{opt.label}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Code Font Family Override */}
+          <div className="flex items-center justify-between p-4 border border-edge rounded-lg">
+            <div>
+              <p className="font-medium text-content">Code Font Override</p>
+              <p className="text-sm text-content-secondary">Override the theme's default code font</p>
+            </div>
+            <select
+              value={fontFamilyCode ?? ''}
+              onChange={(e) => setFontFamilyCode(e.target.value || null)}
+              className="px-3 py-2 border border-edge-strong rounded-md bg-surface text-content"
+            >
+              {CODE_FONT_OPTIONS.map((opt) => (
+                <option key={opt.label} value={opt.value ?? ''}>{opt.label}</option>
+              ))}
+            </select>
+          </div>
         </div>
       </section>
 
       {/* Diff View */}
       <section>
-        <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Diff View</h2>
+        <h2 className="text-lg font-medium text-content mb-4">Diff View</h2>
         <div className="space-y-4">
           {/* Diff Mode */}
-          <div className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
+          <div className="flex items-center justify-between p-4 border border-edge rounded-lg">
             <div>
-              <p className="font-medium text-gray-900 dark:text-gray-100">Diff View Mode</p>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Choose how diffs are displayed</p>
+              <p className="font-medium text-content">Diff View Mode</p>
+              <p className="text-sm text-content-secondary">Choose how diffs are displayed</p>
             </div>
             <select
               value={settings?.diff_view_mode ?? 'unified'}
               onChange={(e) => handleDiffModeChange(e.target.value as DiffViewMode)}
-              className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+              className="px-3 py-2 border border-edge-strong rounded-md bg-surface text-content"
             >
               <option value="unified">Unified</option>
               <option value="split">Split</option>
@@ -124,10 +156,10 @@ export function GeneralSettings() {
           </div>
 
           {/* Show Whitespace */}
-          <div className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
+          <div className="flex items-center justify-between p-4 border border-edge rounded-lg">
             <div>
-              <p className="font-medium text-gray-900 dark:text-gray-100">Show Whitespace</p>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Display whitespace characters in diffs</p>
+              <p className="font-medium text-content">Show Whitespace</p>
+              <p className="text-sm text-content-secondary">Display whitespace characters in diffs</p>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
               <input
@@ -136,7 +168,7 @@ export function GeneralSettings() {
                 onChange={(e) => handleWhitespaceToggle(e.target.checked)}
                 className="sr-only peer"
               />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+              <div className="w-11 h-6 bg-surface-alt peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-ring rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-edge-strong after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
             </label>
           </div>
         </div>
@@ -144,18 +176,18 @@ export function GeneralSettings() {
 
       {/* Data & Sync */}
       <section>
-        <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Data & Sync</h2>
+        <h2 className="text-lg font-medium text-content mb-4">Data & Sync</h2>
         <div className="space-y-4">
           {/* Refresh Interval */}
-          <div className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
+          <div className="flex items-center justify-between p-4 border border-edge rounded-lg">
             <div>
-              <p className="font-medium text-gray-900 dark:text-gray-100">Auto-Refresh Interval</p>
-              <p className="text-sm text-gray-500 dark:text-gray-400">How often to check for MR updates</p>
+              <p className="font-medium text-content">Auto-Refresh Interval</p>
+              <p className="text-sm text-content-secondary">How often to check for MR updates</p>
             </div>
             <select
               value={settings?.mr_refresh_interval_seconds ?? 300}
               onChange={(e) => handleRefreshIntervalChange(parseInt(e.target.value, 10))}
-              className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+              className="px-3 py-2 border border-edge-strong rounded-md bg-surface text-content"
             >
               <option value={60}>1 minute</option>
               <option value={180}>3 minutes</option>
@@ -167,15 +199,15 @@ export function GeneralSettings() {
           </div>
 
           {/* Cache Size */}
-          <div className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
+          <div className="flex items-center justify-between p-4 border border-edge rounded-lg">
             <div>
-              <p className="font-medium text-gray-900 dark:text-gray-100">Maximum Cache Size</p>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Limit for cached MR data</p>
+              <p className="font-medium text-content">Maximum Cache Size</p>
+              <p className="text-sm text-content-secondary">Limit for cached MR data</p>
             </div>
             <select
               value={settings?.cache_size_mb ?? 500}
               onChange={(e) => handleCacheSizeChange(parseInt(e.target.value, 10))}
-              className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+              className="px-3 py-2 border border-edge-strong rounded-md bg-surface text-content"
             >
               <option value={100}>100 MB</option>
               <option value={250}>250 MB</option>
@@ -189,29 +221,29 @@ export function GeneralSettings() {
 
       {/* Cache Management */}
       <section>
-        <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Cache Management</h2>
+        <h2 className="text-lg font-medium text-content mb-4">Cache Management</h2>
         {isLoadingCache ? (
           <Skeleton variant="rectangular" height={120} />
         ) : (
-          <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
+          <div className="p-4 border border-edge rounded-lg">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
               <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Total Size</p>
-                <p className="font-medium text-gray-900 dark:text-gray-100">
+                <p className="text-sm text-content-secondary">Total Size</p>
+                <p className="font-medium text-content">
                   {formatBytes(cacheStats?.total_size_bytes ?? 0)}
                 </p>
               </div>
               <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Merge Requests</p>
-                <p className="font-medium text-gray-900 dark:text-gray-100">{cacheStats?.mr_count ?? 0}</p>
+                <p className="text-sm text-content-secondary">Merge Requests</p>
+                <p className="font-medium text-content">{cacheStats?.mr_count ?? 0}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Diffs</p>
-                <p className="font-medium text-gray-900 dark:text-gray-100">{cacheStats?.diff_count ?? 0}</p>
+                <p className="text-sm text-content-secondary">Diffs</p>
+                <p className="font-medium text-content">{cacheStats?.diff_count ?? 0}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">AI Suggestions</p>
-                <p className="font-medium text-gray-900 dark:text-gray-100">{cacheStats?.suggestion_count ?? 0}</p>
+                <p className="text-sm text-content-secondary">AI Suggestions</p>
+                <p className="font-medium text-content">{cacheStats?.suggestion_count ?? 0}</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -238,11 +270,11 @@ export function GeneralSettings() {
 
       {/* Keyboard */}
       <section>
-        <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Keyboard</h2>
-        <div className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
+        <h2 className="text-lg font-medium text-content mb-4">Keyboard</h2>
+        <div className="flex items-center justify-between p-4 border border-edge rounded-lg">
           <div>
-            <p className="font-medium text-gray-900 dark:text-gray-100">Keyboard Shortcuts</p>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
+            <p className="font-medium text-content">Keyboard Shortcuts</p>
+            <p className="text-sm text-content-secondary">
               Enable keyboard shortcuts for navigation (press ? to see shortcuts)
             </p>
           </div>
@@ -253,7 +285,7 @@ export function GeneralSettings() {
               onChange={(e) => handleKeyboardShortcutsToggle(e.target.checked)}
               className="sr-only peer"
             />
-            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+            <div className="w-11 h-6 bg-surface-alt peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-ring rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-edge-strong after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
           </label>
         </div>
       </section>

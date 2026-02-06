@@ -6,6 +6,8 @@ interface SettingsState {
   // Appearance
   theme: Theme;
   fontSize: number;
+  fontFamilyUI: string | null;
+  fontFamilyCode: string | null;
 
   // Behavior
   mrRefreshInterval: number; // seconds
@@ -25,6 +27,8 @@ interface SettingsState {
   // Actions
   setTheme: (theme: Theme) => void;
   setFontSize: (size: number) => void;
+  setFontFamilyUI: (font: string | null) => void;
+  setFontFamilyCode: (font: string | null) => void;
   setMrRefreshInterval: (seconds: number) => void;
   setCacheSizeMb: (mb: number) => void;
   setAiAutoAnalyze: (enabled: boolean) => void;
@@ -40,6 +44,8 @@ interface SettingsState {
 const defaultSettings = {
   theme: 'system' as Theme,
   fontSize: 14,
+  fontFamilyUI: null as string | null,
+  fontFamilyCode: null as string | null,
   mrRefreshInterval: 300,
   cacheSizeMb: 500,
   aiAutoAnalyze: true,
@@ -59,6 +65,8 @@ export const useSettingsStore = create<SettingsState>()(
       // Actions
       setTheme: (theme) => set({ theme }),
       setFontSize: (fontSize) => set({ fontSize }),
+      setFontFamilyUI: (fontFamilyUI) => set({ fontFamilyUI }),
+      setFontFamilyCode: (fontFamilyCode) => set({ fontFamilyCode }),
       setMrRefreshInterval: (mrRefreshInterval) => set({ mrRefreshInterval }),
       setCacheSizeMb: (cacheSizeMb) => set({ cacheSizeMb }),
       setAiAutoAnalyze: (aiAutoAnalyze) => set({ aiAutoAnalyze }),
@@ -74,7 +82,20 @@ export const useSettingsStore = create<SettingsState>()(
     }),
     {
       name: 'labrat-settings',
-      version: 1,
+      version: 2,
+      migrate: (persisted, version) => {
+        const state = persisted as Record<string, unknown>;
+        if (version < 2) {
+          // Migrate old theme values: 'light' → 'default-light', 'dark' → 'default-dark'
+          const oldTheme = state.theme as string;
+          if (oldTheme === 'light') state.theme = 'default-light';
+          else if (oldTheme === 'dark') state.theme = 'default-dark';
+          // Add new font fields
+          if (!('fontFamilyUI' in state)) state.fontFamilyUI = null;
+          if (!('fontFamilyCode' in state)) state.fontFamilyCode = null;
+        }
+        return state as unknown as SettingsState;
+      },
     }
   )
 );

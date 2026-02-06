@@ -1,42 +1,94 @@
 @import "tailwindcss";
+@import "./themes/index.css";
 
-/* Custom CSS variables for theming */
-:root {
-  --color-primary: #6b4fbb;
-  --color-primary-hover: #5a3fa8;
-  --color-success: #22c55e;
-  --color-warning: #f59e0b;
-  --color-error: #ef4444;
-  --color-info: #3b82f6;
+/* ============================================
+   Tailwind v4 @theme inline — semantic tokens
+   ============================================
+   Using `@theme inline` so var() references survive
+   build-time and enable runtime theme switching.
+*/
+@theme inline {
+  /* Backgrounds */
+  --color-canvas: var(--th-canvas);
+  --color-surface: var(--th-surface);
+  --color-surface-alt: var(--th-surface-alt);
+  --color-surface-hover: var(--th-surface-hover);
+  --color-surface-active: var(--th-surface-active);
+  --color-surface-raised: var(--th-surface-raised);
+  --color-surface-inset: var(--th-surface-inset);
 
-  /* GitLab-inspired colors */
-  --color-gitlab-orange: #fc6d26;
-  --color-gitlab-purple: #6b4fbb;
+  /* Text */
+  --color-content: var(--th-content);
+  --color-content-secondary: var(--th-content-secondary);
+  --color-content-tertiary: var(--th-content-tertiary);
+  --color-content-muted: var(--th-content-muted);
+
+  /* Borders */
+  --color-edge: var(--th-edge);
+  --color-edge-strong: var(--th-edge-strong);
+  --color-edge-subtle: var(--th-edge-subtle);
+
+  /* Primary / Accent */
+  --color-primary: var(--th-primary);
+  --color-primary-hover: var(--th-primary-hover);
+  --color-primary-muted: var(--th-primary-muted);
+  --color-primary-text: var(--th-primary-text);
+
+  /* Positive / Success */
+  --color-positive: var(--th-positive);
+  --color-positive-muted: var(--th-positive-muted);
+  --color-positive-text: var(--th-positive-text);
+
+  /* Negative / Error */
+  --color-negative: var(--th-negative);
+  --color-negative-muted: var(--th-negative-muted);
+  --color-negative-text: var(--th-negative-text);
+
+  /* Caution / Warning */
+  --color-caution: var(--th-caution);
+  --color-caution-muted: var(--th-caution-muted);
+  --color-caution-text: var(--th-caution-text);
+
+  /* Info */
+  --color-info: var(--th-info);
+  --color-info-muted: var(--th-info-muted);
+  --color-info-text: var(--th-info-text);
+
+  /* Diffs */
+  --color-diff-add-bg: var(--th-diff-add-bg);
+  --color-diff-add-text: var(--th-diff-add-text);
+  --color-diff-del-bg: var(--th-diff-del-bg);
+  --color-diff-del-text: var(--th-diff-del-text);
+
+  /* Editor (comment threads, suggestion blocks) */
+  --color-editor-bg: var(--th-editor-bg);
+  --color-editor-toolbar: var(--th-editor-toolbar);
+  --color-editor-border: var(--th-editor-border);
+  --color-editor-text: var(--th-editor-text);
+
+  /* Focus ring */
+  --color-ring: var(--th-ring);
+
+  /* Sidebar */
+  --color-sidebar: var(--th-sidebar);
+  --color-sidebar-hover: var(--th-sidebar-hover);
+  --color-sidebar-active: var(--th-sidebar-active);
+  --color-sidebar-text: var(--th-sidebar-text);
+  --color-sidebar-muted: var(--th-sidebar-muted);
+  --color-sidebar-border: var(--th-sidebar-border);
+
+  /* Fonts */
+  --font-ui: var(--th-font-ui);
+  --font-code: var(--th-font-code);
 }
 
-/* Dark mode variables */
-.dark {
-  --color-bg: #1a1a2e;
-  --color-surface: #16213e;
-  --color-border: #334155;
-  --color-text: #f1f5f9;
-  --color-text-muted: #94a3b8;
-}
-
-/* Light mode variables */
-.light {
-  --color-bg: #ffffff;
-  --color-surface: #f8fafc;
-  --color-border: #e2e8f0;
-  --color-text: #1e293b;
-  --color-text-muted: #64748b;
-}
-
-/* Base styles */
+/* ============================================
+   Base styles
+   ============================================ */
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-  background-color: var(--color-bg);
-  color: var(--color-text);
+  font-family: var(--th-font-ui);
+  background-color: var(--th-canvas);
+  color: var(--th-content);
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 
@@ -47,21 +99,21 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--color-surface);
+  background: var(--th-surface);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--color-border);
+  background: var(--th-edge);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-text-muted);
+  background: var(--th-content-secondary);
 }
 
 /* Focus styles for accessibility */
 *:focus-visible {
-  outline: 2px solid var(--color-primary);
+  outline: 2px solid var(--th-ring);
   outline-offset: 2px;
 }
 
@@ -70,33 +122,36 @@ body {
   user-select: none;
 }
 
-/* Monaco editor container styles */
+/* ============================================
+   Monaco editor container styles
+   ============================================ */
 .monaco-editor-container {
   height: 100%;
   width: 100%;
 }
 
-/* Monaco Editor glyph margin - ensure cursor shows as pointer */
 .monaco-editor .glyph-margin {
   cursor: pointer;
 }
 
 /* Line highlight when commenting */
 .monaco-editor .comment-active-line {
-  background-color: rgba(59, 130, 246, 0.15) !important;
+  background-color: var(--th-primary-muted) !important;
 }
 
 .monaco-editor .comment-active-glyph {
-  background-color: #3b82f6 !important;
+  background-color: var(--th-primary) !important;
   border-radius: 2px;
 }
 
-/* TipTap Editor styles */
+/* ============================================
+   TipTap Editor styles
+   ============================================ */
 .ProseMirror {
   outline: none;
   padding: 0.75rem;
   min-height: 80px;
-  color: #e5e5e5;
+  color: var(--th-editor-text);
   font-size: 0.875rem;
   line-height: 1.5;
 }
@@ -112,92 +167,89 @@ body {
 .ProseMirror p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
   float: left;
-  color: #6b7280;
+  color: var(--th-content-tertiary);
   pointer-events: none;
   height: 0;
 }
 
 .ProseMirror code {
-  background-color: #3d3d5c;
+  background-color: var(--th-surface-alt);
   padding: 0.125rem 0.25rem;
   border-radius: 0.25rem;
   font-size: 0.8125rem;
 }
 
 .ProseMirror pre {
-  background-color: #262639;
+  background-color: var(--th-surface-inset);
   padding: 0.75rem;
   border-radius: 0.25rem;
   overflow-x: auto;
+  font-family: var(--th-font-code);
+  font-size: 0.875rem;
 }
 
 .ProseMirror pre code {
   background: none;
   padding: 0;
+  font-size: inherit;
 }
 
-/* ==============================================
+/* ============================================
    Suggestion Block Styling - GitLab Diff Style
-   ============================================== */
+   ============================================ */
 
-/* Suggestion block wrapper */
 .suggestion-block-wrapper {
   margin: 0.75rem 0;
-  border: 1px solid #238636;
+  border: 1px solid var(--th-positive);
   border-radius: 0.375rem;
-  background-color: #0d1117;
+  background-color: var(--th-canvas);
   overflow: hidden;
-  font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', monospace;
+  font-family: var(--th-font-code);
 }
 
-/* Suggestion header */
 .suggestion-header {
   padding: 0.375rem 0.75rem;
   font-size: 0.6875rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.025em;
-  color: #3fb950;
-  background-color: rgba(35, 134, 54, 0.15);
-  border-bottom: 1px solid #238636;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: var(--th-positive-text);
+  background-color: var(--th-positive-muted);
+  border-bottom: 1px solid var(--th-positive);
+  font-family: var(--th-font-ui);
 }
 
-/* Suggestion content area */
 .suggestion-content {
   padding: 0;
 }
 
-/* Individual suggestion line (addition style) */
 .suggestion-line {
   display: flex;
   align-items: flex-start;
-  background-color: rgba(35, 134, 54, 0.15);
-  border-left: 3px solid #238636;
+  background-color: var(--th-diff-add-bg);
+  border-left: 3px solid var(--th-positive);
   padding: 0;
   min-height: 1.5rem;
 }
 
-/* Plus sign for additions */
 .suggestion-plus {
   flex-shrink: 0;
   width: 2rem;
   padding: 0.125rem 0;
   text-align: center;
-  color: #3fb950;
+  color: var(--th-positive-text);
   font-weight: 500;
-  background-color: rgba(35, 134, 54, 0.25);
+  background-color: var(--th-positive-muted);
   user-select: none;
 }
 
-/* Code content */
 .suggestion-code {
   flex: 1;
   padding: 0.125rem 0.75rem 0.125rem 0.5rem;
   font-size: 0.8125rem;
   line-height: 1.5;
   white-space: pre;
-  color: #c9d1d9;
+  color: var(--th-content);
   overflow-x: auto;
 }
 
@@ -208,9 +260,9 @@ pre[lang^="suggestion"],
 pre.suggestion {
   position: relative;
   margin: 0.75rem 0 !important;
-  border: 1px solid #238636 !important;
+  border: 1px solid var(--th-positive) !important;
   border-radius: 0.375rem !important;
-  background-color: #0d1117 !important;
+  background-color: var(--th-canvas) !important;
   overflow: hidden;
   padding: 0 !important;
 }
@@ -226,9 +278,9 @@ pre.suggestion::before {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.025em;
-  color: #3fb950;
-  background-color: rgba(35, 134, 54, 0.15);
-  border-bottom: 1px solid #238636;
+  color: var(--th-positive-text);
+  background-color: var(--th-positive-muted);
+  border-bottom: 1px solid var(--th-positive);
 }
 
 .prose pre[lang^="suggestion"] code,
@@ -237,19 +289,13 @@ pre[lang^="suggestion"] code,
 pre.suggestion code {
   display: block;
   padding: 0.5rem 0.75rem 0.5rem 2.5rem !important;
-  font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', monospace;
+  font-family: var(--th-font-code);
   font-size: 0.8125rem;
   line-height: 1.6;
   white-space: pre;
-  background: linear-gradient(
-    to right,
-    rgba(35, 134, 54, 0.25) 0,
-    rgba(35, 134, 54, 0.25) 2rem,
-    rgba(35, 134, 54, 0.15) 2rem,
-    rgba(35, 134, 54, 0.15) 100%
-  ) !important;
-  border-left: 3px solid #238636;
-  color: #c9d1d9;
+  background: var(--th-diff-add-bg) !important;
+  border-left: 3px solid var(--th-positive);
+  color: var(--th-content);
 }
 
 .prose pre[lang^="suggestion"] code::before,
@@ -259,96 +305,68 @@ pre.suggestion code::before {
   content: '+';
   position: absolute;
   left: 0.75rem;
-  color: #3fb950;
+  color: var(--th-positive-text);
   font-weight: 500;
 }
 
-/* TipTap code block styling */
-.ProseMirror pre {
-  background-color: #f3f4f6;
-  border-radius: 0.375rem;
-  padding: 0.75rem;
-  font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', monospace;
-  font-size: 0.875rem;
-  overflow-x: auto;
-}
-
-.dark .ProseMirror pre {
-  background-color: #1f2937;
-}
-
-.ProseMirror pre code {
-  background: none;
-  padding: 0;
-  font-size: inherit;
-}
-
-/* ==============================================
+/* ============================================
    Inline Comment Thread Styles
-   ============================================== */
+   ============================================ */
 
-/* Main inline thread container - GitLab dark style */
 .inline-comment-thread {
   position: relative;
-  background: #1e1e2e;
-  border: 1px solid #3d3d5c;
+  background: var(--th-editor-bg);
+  border: 1px solid var(--th-editor-border);
   border-radius: 6px;
   margin: 8px 0;
   overflow: hidden;
 }
 
 .inline-comment-thread--resolved {
-  border-color: #238636;
-  background: #1e1e2e;
+  border-color: var(--th-positive);
+  background: var(--th-editor-bg);
 }
 
 .inline-comment-thread--compact {
   margin: 4px 0;
 }
 
-/* Thread notes container */
 .inline-comment-thread__notes {
   padding: 0;
 }
 
-/* Replies section */
 .inline-comment-thread__replies {
-  border-top: 1px solid #3d3d5c;
+  border-top: 1px solid var(--th-editor-border);
   background: rgba(0, 0, 0, 0.1);
 }
 
-/* Reply trigger */
 .inline-comment-thread__reply-trigger {
   padding: 8px 12px;
-  border-top: 1px solid #3d3d5c;
+  border-top: 1px solid var(--th-editor-border);
 }
 
-/* Reply form container */
 .inline-comment-thread__reply-form {
   padding: 12px;
-  border-top: 1px solid #3d3d5c;
+  border-top: 1px solid var(--th-editor-border);
   background: rgba(0, 0, 0, 0.1);
 }
 
-/* New thread form container */
 .inline-comment-thread__new-thread-form {
   padding: 0 12px 12px;
 }
 
-/* Footer with action buttons */
 .inline-comment-thread__footer {
   padding: 8px 12px;
-  border-top: 1px solid #3d3d5c;
-  background: #262639;
+  border-top: 1px solid var(--th-editor-border);
+  background: var(--th-editor-toolbar);
 }
 
-/* Individual note styling */
 .inline-note {
   padding: 12px;
 }
 
 .inline-note--reply {
-  border-top: 1px solid #3d3d5c;
+  border-top: 1px solid var(--th-editor-border);
   background: rgba(0, 0, 0, 0.05);
 }
 
@@ -356,7 +374,6 @@ pre.suggestion code::before {
   padding: 8px 12px;
 }
 
-/* Owner badge - GitLab style */
 .inline-note__owner-badge {
   display: inline-flex;
   align-items: center;
@@ -364,20 +381,19 @@ pre.suggestion code::before {
   font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
-  color: #818cf8;
-  background: rgba(129, 140, 248, 0.15);
-  border: 1px solid rgba(129, 140, 248, 0.3);
+  color: var(--th-info-text);
+  background: var(--th-info-muted);
+  border: 1px solid var(--th-info-text);
   border-radius: 3px;
   letter-spacing: 0.5px;
 }
 
-/* ==============================================
+/* ============================================
    Monaco Gutter Comment Indicators
-   ============================================== */
+   ============================================ */
 
-/* Open thread indicator - small colored dot in gutter */
 .monaco-editor .comment-indicator-open {
-  background-color: #fbbf24 !important;
+  background-color: var(--th-caution) !important;
   border-radius: 50%;
   width: 8px !important;
   height: 8px !important;
@@ -386,9 +402,8 @@ pre.suggestion code::before {
   cursor: pointer;
 }
 
-/* Resolved thread indicator - small avatar-like circle */
 .monaco-editor .comment-indicator-resolved {
-  background-color: #22c55e !important;
+  background-color: var(--th-positive) !important;
   border-radius: 50%;
   width: 8px !important;
   height: 8px !important;
@@ -402,18 +417,17 @@ pre.suggestion code::before {
   opacity: 1;
 }
 
-/* View zone container for inline threads */
+/* View zone containers */
 .monaco-view-zone-thread {
-  background: var(--color-bg, #1a1a2e);
+  background: var(--th-canvas);
   min-height: 50px;
   position: relative;
   z-index: 1;
   box-sizing: border-box;
 }
 
-/* View zone container for comment/suggestion forms */
 .monaco-view-zone-comment {
-  background: var(--color-bg, #1a1a2e);
+  background: var(--th-canvas);
   min-height: 50px;
   position: relative;
   z-index: 10;
@@ -422,16 +436,16 @@ pre.suggestion code::before {
 
 /* Highlight line with existing comments */
 .monaco-editor .has-comment-line {
-  background-color: rgba(251, 191, 36, 0.08) !important;
+  background-color: var(--th-caution-muted) !important;
 }
 
 /* Line hover state when can add comment */
 .monaco-editor .comment-hover-line {
-  background-color: rgba(59, 130, 246, 0.08) !important;
+  background-color: var(--th-primary-muted) !important;
 }
 
 /* Focused line cursor for keyboard navigation */
 .monaco-editor .focused-line-cursor {
-  background-color: rgba(59, 130, 246, 0.12) !important;
-  border-left: 3px solid #3b82f6 !important;
+  background-color: var(--th-primary-muted) !important;
+  border-left: 3px solid var(--th-primary) !important;
 }

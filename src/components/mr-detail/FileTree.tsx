@@ -76,18 +76,18 @@ export function FileTree({
 
   return (
     <div className="text-sm">
-      <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-gray-700">
-        <span className="font-medium text-gray-700 dark:text-gray-300">
+      <div className="flex items-center justify-between px-3 py-2 border-b border-edge">
+        <span className="font-medium text-content-muted">
           Files Changed
         </span>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-gray-500 dark:text-gray-400">
+          <span className="text-xs text-content-secondary">
             {files.length}
           </span>
           {/* View mode toggle button */}
           <button
             onClick={() => setFileViewMode(fileViewMode === 'tree' ? 'flat' : 'tree')}
-            className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400"
+            className="p-1 rounded hover:bg-surface-hover text-content-secondary"
             title={fileViewMode === 'tree' ? 'Switch to flat list' : 'Switch to tree view'}
           >
             {fileViewMode === 'tree' ? <ListIcon /> : <TreeIcon />}
@@ -95,7 +95,7 @@ export function FileTree({
         </div>
       </div>
 
-      <div ref={listRef} className="divide-y divide-gray-100 dark:divide-gray-800">
+      <div ref={listRef} className="divide-y divide-edge-subtle">
         {fileViewMode === 'tree' ? (
           // Tree view - folder hierarchy
           tree.children.map((node) => (
@@ -127,7 +127,7 @@ export function FileTree({
       </div>
 
       {/* Summary */}
-      <div className="px-3 py-2 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+      <div className="px-3 py-2 border-t border-edge bg-surface">
         <FileStats files={files} />
       </div>
     </div>
@@ -174,11 +174,11 @@ function FileTreeNode({
       <div>
         <button
           onClick={() => onToggleFolder(fullPath)}
-          className="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-800 text-left"
+          className="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-surface-hover text-left"
         >
           <ChevronIcon expanded={isExpanded} />
           <FolderIcon />
-          <span className="text-gray-700 dark:text-gray-300 truncate">{node.name}</span>
+          <span className="text-content-muted truncate">{node.name}</span>
           <span className="ml-auto text-xs text-gray-400">
             {countFiles(node)} files
           </span>
@@ -216,8 +216,8 @@ function FileTreeNode({
       className={`
         w-full flex items-center gap-2 px-3 py-1.5 text-left
         ${isSelected
-          ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
-          : 'hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300'
+          ? 'bg-primary-muted text-primary-text'
+          : 'hover:bg-surface-hover text-content-muted'
         }
       `}
     >
@@ -246,10 +246,10 @@ function FileChangeBadge({ file }: { file: DiffFile }) {
   return (
     <span className="flex items-center gap-1 text-xs">
       {file.additions > 0 && (
-        <span className="text-green-600 dark:text-green-400">+{file.additions}</span>
+        <span className="text-diff-add-text">+{file.additions}</span>
       )}
       {file.deletions > 0 && (
-        <span className="text-red-600 dark:text-red-400">-{file.deletions}</span>
+        <span className="text-diff-del-text">-{file.deletions}</span>
       )}
     </span>
   );
@@ -261,10 +261,10 @@ function FileStats({ files }: { files: DiffFile[] }) {
 
   return (
     <div className="flex items-center gap-4 text-xs">
-      <span className="text-green-600 dark:text-green-400">
+      <span className="text-diff-add-text">
         +{totalAdditions} additions
       </span>
-      <span className="text-red-600 dark:text-red-400">
+      <span className="text-diff-del-text">
         -{totalDeletions} deletions
       </span>
     </div>
@@ -362,8 +362,8 @@ function FlatFileItem({
       className={`
         w-full flex items-center gap-2 px-3 py-1.5 text-left
         ${isSelected
-          ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
-          : 'hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300'
+          ? 'bg-primary-muted text-primary-text'
+          : 'hover:bg-surface-hover text-content-muted'
         }
       `}
     >

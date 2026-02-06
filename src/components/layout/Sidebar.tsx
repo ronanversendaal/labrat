@@ -11,19 +11,19 @@ export function Sidebar({ collapsed = false, onToggleCollapse, children }: Sideb
     <aside
       className={`
         flex flex-col
-        h-full bg-gray-900 text-gray-100
+        h-full bg-sidebar text-sidebar-text
         transition-all duration-300 ease-in-out
         ${collapsed ? 'w-16' : 'w-64'}
       `}
     >
       {/* Logo/Brand */}
-      <div className="flex items-center justify-between h-14 px-4 border-b border-gray-800">
+      <div className="flex items-center justify-between h-14 px-4 border-b border-sidebar-border">
         {!collapsed && (
           <span className="font-semibold text-lg whitespace-nowrap">LabRat</span>
         )}
         <button
           onClick={onToggleCollapse}
-          className="p-2 rounded hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="p-2 rounded hover:bg-sidebar-hover focus:outline-none focus:ring-2 focus:ring-ring"
           aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
           <svg
@@ -48,9 +48,9 @@ export function Sidebar({ collapsed = false, onToggleCollapse, children }: Sideb
       </nav>
 
       {/* Footer */}
-      <div className="p-4 border-t border-gray-800">
+      <div className="p-4 border-t border-sidebar-border">
         {!collapsed && (
-          <div className="text-xs text-gray-500">
+          <div className="text-xs text-sidebar-muted">
             v0.1.0
           </div>
         )}
@@ -83,8 +83,8 @@ export function SidebarItem({
         w-full flex items-center gap-3 px-4 py-2.5
         transition-colors duration-150
         ${active
-          ? 'bg-blue-600 text-white'
-          : 'text-gray-400 hover:text-white hover:bg-gray-800'
+          ? 'bg-primary text-white'
+          : 'text-sidebar-muted hover:text-sidebar-text hover:bg-sidebar-hover'
         }
         ${collapsed ? 'justify-center' : ''}
       `}
@@ -118,7 +118,7 @@ export function SidebarSection({ title, collapsed, children }: SidebarSectionPro
   return (
     <div className="mb-4">
       {title && !collapsed && (
-        <h3 className="px-4 mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+        <h3 className="px-4 mb-2 text-xs font-semibold text-sidebar-muted uppercase tracking-wider">
           {title}
         </h3>
       )}

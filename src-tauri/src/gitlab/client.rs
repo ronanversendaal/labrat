@@ -54,6 +54,7 @@ pub enum GitLabClientError {
 }
 
 /// GitLab API client
+#[derive(Clone)]
 pub struct GitLabClient {
     client: Client,
     base_url: String,

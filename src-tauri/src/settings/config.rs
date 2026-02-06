@@ -6,20 +6,45 @@ use serde::{Deserialize, Serialize};
 
 /// Application theme
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
-#[serde(rename_all = "lowercase")]
 pub enum Theme {
-    Light,
-    Dark,
+    #[serde(rename = "system")]
     #[default]
     System,
+    #[serde(rename = "default-light")]
+    DefaultLight,
+    #[serde(rename = "default-dark")]
+    DefaultDark,
+    #[serde(rename = "kanagawa")]
+    Kanagawa,
+    #[serde(rename = "catppuccin-mocha")]
+    CatppuccinMocha,
+    #[serde(rename = "rose-pine")]
+    RosePine,
 }
 
 impl std::fmt::Display for Theme {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Theme::Light => write!(f, "light"),
-            Theme::Dark => write!(f, "dark"),
             Theme::System => write!(f, "system"),
+            Theme::DefaultLight => write!(f, "default-light"),
+            Theme::DefaultDark => write!(f, "default-dark"),
+            Theme::Kanagawa => write!(f, "kanagawa"),
+            Theme::CatppuccinMocha => write!(f, "catppuccin-mocha"),
+            Theme::RosePine => write!(f, "rose-pine"),
+        }
+    }
+}
+
+impl Theme {
+    /// Parse from database string, with backward compatibility for old values
+    pub fn from_db_str(s: &str) -> Self {
+        match s {
+            "default-light" | "light" => Theme::DefaultLight,
+            "default-dark" | "dark" => Theme::DefaultDark,
+            "kanagawa" => Theme::Kanagawa,
+            "catppuccin-mocha" => Theme::CatppuccinMocha,
+            "rose-pine" => Theme::RosePine,
+            _ => Theme::System,
         }
     }
 }
@@ -73,6 +98,12 @@ pub struct Settings {
 
     #[serde(default = "default_true")]
     pub keyboard_shortcuts_enabled: bool,
+
+    #[serde(default)]
+    pub font_family_ui: Option<String>,
+
+    #[serde(default)]
+    pub font_family_code: Option<String>,
 }
 
 fn default_refresh_interval() -> i32 {
@@ -104,6 +135,8 @@ impl Default for Settings {
             show_whitespace: false,
             font_size: default_font_size(),
             keyboard_shortcuts_enabled: true,
+            font_family_ui: None,
+            font_family_code: None,
         }
     }
 }
@@ -122,6 +155,10 @@ pub struct UpdateSettingsRequest {
     pub show_whitespace: Option<bool>,
     pub font_size: Option<i32>,
     pub keyboard_shortcuts_enabled: Option<bool>,
+    #[serde(default, deserialize_with = "deserialize_optional_nullable")]
+    pub font_family_ui: Option<Option<String>>,
+    #[serde(default, deserialize_with = "deserialize_optional_nullable")]
+    pub font_family_code: Option<Option<String>>,
 }
 
 /// Deserialize a field that can be null, absent, or present
@@ -166,6 +203,12 @@ impl Settings {
         if let Some(enabled) = update.keyboard_shortcuts_enabled {
             self.keyboard_shortcuts_enabled = enabled;
         }
+        if let Some(font_ui) = update.font_family_ui {
+            self.font_family_ui = font_ui;
+        }
+        if let Some(font_code) = update.font_family_code {
+            self.font_family_code = font_code;
+        }
     }
 }
 
@@ -181,22 +224,75 @@ mod tests {
         assert_eq!(settings.cache_size_mb, 500);
         assert!(settings.ai_auto_analyze);
         assert_eq!(settings.font_size, 14);
+        assert_eq!(settings.font_family_ui, None);
+        assert_eq!(settings.font_family_code, None);
     }
 
     #[test]
     fn test_apply_update() {
         let mut settings = Settings::default();
         let update = UpdateSettingsRequest {
-            theme: Some(Theme::Dark),
+            theme: Some(Theme::DefaultDark),
             font_size: Some(16),
             ..Default::default()
         };
 
         settings.apply_update(update);
 
-        assert_eq!(settings.theme, Theme::Dark);
+        assert_eq!(settings.theme, Theme::DefaultDark);
         assert_eq!(settings.font_size, 16);
-        // Other fields should remain unchanged
         assert_eq!(settings.mr_refresh_interval_seconds, 300);
+    }
+
+    #[test]
+    fn test_theme_from_db_str() {
+        assert_eq!(Theme::from_db_str("light"), Theme::DefaultLight);
+        assert_eq!(Theme::from_db_str("dark"), Theme::DefaultDark);
+        assert_eq!(Theme::from_db_str("default-light"), Theme::DefaultLight);
+        assert_eq!(Theme::from_db_str("default-dark"), Theme::DefaultDark);
+        assert_eq!(Theme::from_db_str("kanagawa"), Theme::Kanagawa);
+        assert_eq!(Theme::from_db_str("catppuccin-mocha"), Theme::CatppuccinMocha);
+        assert_eq!(Theme::from_db_str("rose-pine"), Theme::RosePine);
+        assert_eq!(Theme::from_db_str("system"), Theme::System);
+        assert_eq!(Theme::from_db_str("unknown"), Theme::System);
+    }
+
+    #[test]
+    fn test_theme_display() {
+        assert_eq!(Theme::System.to_string(), "system");
+        assert_eq!(Theme::DefaultLight.to_string(), "default-light");
+        assert_eq!(Theme::DefaultDark.to_string(), "default-dark");
+        assert_eq!(Theme::Kanagawa.to_string(), "kanagawa");
+        assert_eq!(Theme::CatppuccinMocha.to_string(), "catppuccin-mocha");
+        assert_eq!(Theme::RosePine.to_string(), "rose-pine");
+    }
+
+    #[test]
+    fn test_theme_serde_roundtrip() {
+        let json = serde_json::to_string(&Theme::CatppuccinMocha).unwrap();
+        assert_eq!(json, "\"catppuccin-mocha\"");
+        let parsed: Theme = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed, Theme::CatppuccinMocha);
+    }
+
+    #[test]
+    fn test_font_update() {
+        let mut settings = Settings::default();
+        let update = UpdateSettingsRequest {
+            font_family_ui: Some(Some("Inter".to_string())),
+            font_family_code: Some(Some("Fira Code".to_string())),
+            ..Default::default()
+        };
+        settings.apply_update(update);
+        assert_eq!(settings.font_family_ui, Some("Inter".to_string()));
+        assert_eq!(settings.font_family_code, Some("Fira Code".to_string()));
+
+        // Clear font
+        let update2 = UpdateSettingsRequest {
+            font_family_ui: Some(None),
+            ..Default::default()
+        };
+        settings.apply_update(update2);
+        assert_eq!(settings.font_family_ui, None);
     }
 }

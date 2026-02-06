@@ -13,7 +13,7 @@ export function Skeleton({
   height,
   animation = 'pulse',
 }: SkeletonProps) {
-  const baseClasses = 'bg-gray-200 dark:bg-gray-700';
+  const baseClasses = 'bg-surface-alt';
 
   const animationClasses = {
     pulse: 'animate-pulse',
@@ -83,7 +83,7 @@ Skeleton.Avatar = function SkeletonAvatar({
 Skeleton.Card = function SkeletonCard({ className = '' }: { className?: string }) {
   return (
     <div
-      className={`p-4 border border-gray-200 dark:border-gray-700 rounded-lg ${className}`}
+      className={`p-4 border border-edge rounded-lg ${className}`}
     >
       <div className="flex items-center gap-3 mb-4">
         <Skeleton.Avatar size={40} />

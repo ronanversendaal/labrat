@@ -17,10 +17,10 @@ export function CommitList({ commits, isLoading, onCommitClick }: CommitListProp
         {[1, 2, 3].map((i) => (
           <div key={i} className="animate-pulse">
             <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700" />
+              <div className="w-8 h-8 rounded-full bg-surface-alt" />
               <div className="flex-1 space-y-2">
-                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4" />
-                <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2" />
+                <div className="h-4 bg-surface-alt rounded w-3/4" />
+                <div className="h-3 bg-surface-alt rounded w-1/2" />
               </div>
             </div>
           </div>
@@ -32,14 +32,14 @@ export function CommitList({ commits, isLoading, onCommitClick }: CommitListProp
   if (commits.length === 0) {
     return (
       <div className="p-8 text-center">
-        <CommitIcon className="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-4" />
-        <p className="text-sm text-gray-500 dark:text-gray-400">No commits found</p>
+        <CommitIcon className="w-12 h-12 mx-auto text-content-tertiary mb-4" />
+        <p className="text-sm text-content-secondary">No commits found</p>
       </div>
     );
   }
 
   return (
-    <div className="divide-y divide-gray-200 dark:divide-gray-700">
+    <div className="divide-y divide-edge">
       {commits.map((commit) => (
         <CommitItem
           key={commit.id}
@@ -73,7 +73,7 @@ function CommitItem({ commit, onClick }: CommitItemProps) {
       tabIndex={onClick ? 0 : undefined}
       className={`px-4 py-3 ${
         onClick
-          ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500'
+          ? 'cursor-pointer hover:bg-surface-hover focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500'
           : ''
       }`}
       onClick={onClick}
@@ -88,14 +88,14 @@ function CommitItem({ commit, onClick }: CommitItemProps) {
         <div className="flex-1 min-w-0">
           {/* Commit title */}
           <div className="flex items-center gap-2">
-            <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+            <h4 className="text-sm font-medium text-content truncate">
               {commit.title}
             </h4>
           </div>
 
           {/* Commit metadata */}
-          <div className="flex items-center gap-2 mt-1 text-xs text-gray-500 dark:text-gray-400">
-            <span className="font-mono bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded">
+          <div className="flex items-center gap-2 mt-1 text-xs text-content-secondary">
+            <span className="font-mono bg-surface px-1.5 py-0.5 rounded">
               {commit.short_id}
             </span>
             <span>{commit.author_name}</span>
@@ -104,7 +104,7 @@ function CommitItem({ commit, onClick }: CommitItemProps) {
 
           {/* Full message if different from title */}
           {commit.message !== commit.title && commit.message.length > commit.title.length && (
-            <p className="mt-2 text-xs text-gray-600 dark:text-gray-400 whitespace-pre-wrap line-clamp-3">
+            <p className="mt-2 text-xs text-content-secondary whitespace-pre-wrap line-clamp-3">
               {commit.message.slice(commit.title.length).trim()}
             </p>
           )}
@@ -116,7 +116,7 @@ function CommitItem({ commit, onClick }: CommitItemProps) {
             href={commit.web_url}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex-shrink-0 p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
+            className="flex-shrink-0 p-1 text-gray-400 hover:text-content-muted focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
             onClick={(e) => e.stopPropagation()}
             aria-label={`View commit ${commit.short_id} in GitLab`}
           >

@@ -10,7 +10,9 @@ import { usePostComment } from '../../hooks/useGitLab';
 import { isMac } from '../../services/keyboard';
 import type { CommentPosition } from '../../types';
 import type * as Monaco from 'monaco-editor';
+import { useResolvedTheme } from '../../hooks/useTheme';
 import { useSettingsStore } from '../../stores/settingsStore';
+import { registerMonacoThemes, getMonacoThemeName } from '../../styles/themes/monaco';
 
 interface SuggestionEditorProps {
   /** Original code content for the line(s) */
@@ -46,21 +48,19 @@ export function SuggestionEditor({
 }: SuggestionEditorProps) {
   const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
   const monaco = useMonaco();
-  const appTheme = useSettingsStore((state) => state.theme);
+  const codeFontSize = useSettingsStore((s) => s.fontSize);
+  const resolvedTheme = useResolvedTheme();
+  const monacoThemeName = getMonacoThemeName(resolvedTheme);
   const postCommentMutation = usePostComment();
   const toast = useToast();
   const [editedCode, setEditedCode] = useState(originalCode);
 
-  // Determine Monaco theme
-  const [theme, setTheme] = useState<'vs' | 'vs-dark'>('vs-dark');
+  // Register themes when Monaco is available
   useEffect(() => {
-    if (appTheme === 'system') {
-      const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      setTheme(isDark ? 'vs-dark' : 'vs');
-    } else {
-      setTheme(appTheme === 'dark' ? 'vs-dark' : 'vs');
+    if (monaco) {
+      registerMonacoThemes(monaco);
     }
-  }, [appTheme]);
+  }, [monaco]);
 
   // Handle submit
   const handleSubmit = useCallback(async () => {
@@ -126,19 +126,19 @@ export function SuggestionEditor({
   const editorHeight = Math.max(60, Math.min(200, lineCount * 20 + 20));
 
   return (
-    <div className="bg-[#1e1e2e] border border-[#3d3d5c] rounded shadow-2xl overflow-hidden">
+    <div className="bg-editor-bg border border-editor-border rounded shadow-2xl overflow-hidden">
       {/* Header */}
-      <div className="px-4 py-2.5 bg-[#262639] border-b border-[#3d3d5c] flex items-center justify-between">
+      <div className="px-4 py-2.5 bg-editor-toolbar border-b border-editor-border flex items-center justify-between">
         <div className="flex items-center gap-2 text-sm">
-          <svg className="w-4 h-4 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg className="w-4 h-4 text-positive-text" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
           </svg>
-          <span className="text-green-400 font-medium">Suggest a change</span>
-          <span className="text-gray-500">line {lineNumber}</span>
+          <span className="text-positive-text font-medium">Suggest a change</span>
+          <span className="text-content-secondary">line {lineNumber}</span>
         </div>
-        <div className="flex items-center gap-1 text-xs text-gray-500">
-          <kbd className="px-1.5 py-0.5 bg-gray-700 rounded text-gray-400">
-            {isMac() ? '⌘' : 'Ctrl'}+↵
+        <div className="flex items-center gap-1 text-xs text-content-tertiary">
+          <kbd className="px-1.5 py-0.5 bg-surface-alt rounded text-content-secondary">
+            {isMac() ? '\u2318' : 'Ctrl'}+\u21b5
           </kbd>
           <span>submit</span>
         </div>
@@ -149,7 +149,7 @@ export function SuggestionEditor({
         <Editor
           value={editedCode}
           language={language}
-          theme={theme === 'vs-dark' ? 'vs-dark' : 'vs'}
+          theme={monacoThemeName}
           onChange={(value) => setEditedCode(value || '')}
           onMount={handleEditorMount}
           options={{
@@ -160,8 +160,8 @@ export function SuggestionEditor({
             scrollBeyondLastLine: false,
             wordWrap: 'on',
             automaticLayout: true,
-            fontSize: 13,
-            fontFamily: "'JetBrains Mono', 'Fira Code', 'SF Mono', Menlo, Monaco, monospace",
+            fontSize: codeFontSize,
+            fontFamily: "var(--th-font-code)",
             renderWhitespace: 'none',
             scrollbar: {
               vertical: 'hidden',
@@ -176,7 +176,7 @@ export function SuggestionEditor({
       </div>
 
       {/* Footer */}
-      <div className="px-4 py-2.5 bg-[#262639] border-t border-[#3d3d5c] flex items-center justify-end gap-3">
+      <div className="px-4 py-2.5 bg-editor-toolbar border-t border-editor-border flex items-center justify-end gap-3">
         <Button
           variant="secondary"
           size="sm"

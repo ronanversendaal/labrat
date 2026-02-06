@@ -70,10 +70,10 @@ export function SettingsPage({ onClose }: SettingsPageProps) {
   };
 
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-gray-900">
+    <div className="flex flex-col h-full bg-canvas">
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-        <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Settings</h1>
+      <div className="flex items-center justify-between px-6 py-4 border-b border-edge">
+        <h1 className="text-xl font-semibold text-content">Settings</h1>
         <div className="flex items-center gap-2">
           <Button
             variant="ghost"
@@ -85,7 +85,7 @@ export function SettingsPage({ onClose }: SettingsPageProps) {
           {onClose && (
             <button
               onClick={onClose}
-              className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+              className="p-2 text-gray-400 hover:text-content-muted"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -97,22 +97,22 @@ export function SettingsPage({ onClose }: SettingsPageProps) {
 
       {/* Secure storage warning */}
       {storageStatus && !storageStatus.available && !dismissedStorageWarning && (
-        <div className="mx-6 mt-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+        <div className="mx-6 mt-4 p-4 bg-caution-muted border border-caution-muted rounded-lg">
           <div className="flex items-start gap-3">
             <svg className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
             <div className="flex-1">
-              <h3 className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+              <h3 className="text-sm font-medium text-caution-text">
                 Secure Storage Unavailable
               </h3>
-              <p className="mt-1 text-sm text-yellow-700 dark:text-yellow-300">
+              <p className="mt-1 text-sm text-caution-text">
                 {storageStatus.warning || 'Secure credential storage is not available on this system.'}
               </p>
             </div>
             <button
               onClick={() => setDismissedStorageWarning(true)}
-              className="text-yellow-500 hover:text-yellow-700 dark:hover:text-yellow-300"
+              className="text-yellow-500 hover:text-caution-text"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -125,7 +125,7 @@ export function SettingsPage({ onClose }: SettingsPageProps) {
       {/* Content */}
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar navigation */}
-        <nav className="w-56 flex-shrink-0 border-r border-gray-200 dark:border-gray-700 p-4">
+        <nav className="w-56 flex-shrink-0 border-r border-edge p-4">
           <ul className="space-y-1">
             {tabs.map((tab) => (
               <li key={tab.id}>
@@ -134,8 +134,8 @@ export function SettingsPage({ onClose }: SettingsPageProps) {
                   className={`
                     w-full flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-colors
                     ${activeTab === tab.id
-                      ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
-                      : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
+                      ? 'bg-primary-muted text-primary-text'
+                      : 'text-content-secondary hover:bg-surface-hover'
                     }
                   `}
                 >
@@ -163,7 +163,7 @@ export function SettingsPage({ onClose }: SettingsPageProps) {
         size="sm"
       >
         <div className="p-4">
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+          <p className="text-sm text-content-secondary mb-4">
             Are you sure you want to reset all settings to their default values? This cannot be undone.
           </p>
           <div className="flex justify-end gap-2">

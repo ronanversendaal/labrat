@@ -308,10 +308,44 @@ pub async fn list_merge_requests_inner(
         filtered
     };
 
+    // Optionally fetch approval states for all MRs in parallel
+    let approval_states = if request.include_approvals && !searched.is_empty() {
+        let mut approvals = std::collections::HashMap::new();
+        let batch_size = 10;
+
+        for chunk in searched.chunks(batch_size) {
+            let mut join_set = tokio::task::JoinSet::new();
+
+            for mr in chunk {
+                let client_clone = client.clone();
+                let project_id = mr.project_id;
+                let mr_iid = mr.iid;
+                let mr_id = mr.id;
+
+                join_set.spawn(async move {
+                    let result = client_clone.get_approval_state(project_id, mr_iid).await;
+                    (mr_id, result)
+                });
+            }
+
+            while let Some(result) = join_set.join_next().await {
+                if let Ok((mr_id, Ok(state))) = result {
+                    approvals.insert(mr_id, state);
+                }
+            }
+        }
+
+        debug!("Fetched {} approval states in batch", approvals.len());
+        Some(approvals)
+    } else {
+        None
+    };
+
     Ok(ListMergeRequestsResponse {
         merge_requests: searched,
         from_cache: false,
         cached_at: None,
+        approval_states,
     })
 }
 
@@ -336,30 +370,49 @@ pub async fn get_diff_inner(
     state: &SharedAppState,
     request: GetDiffRequest,
 ) -> TauriResult<Diff> {
+    // Look up the global MR id from the merge_requests table (diffs.mr_id is an FK to merge_requests.id)
+    let mr_global_id = {
+        let state_read = state.read().await;
+        sqlx::query_scalar::<_, i64>(
+            "SELECT id FROM merge_requests WHERE project_id = ? AND iid = ?",
+        )
+        .bind(request.project_id)
+        .bind(request.mr_iid)
+        .fetch_optional(&state_read.db_pool)
+        .await
+        .ok()
+        .flatten()
+    };
+
     // Try cache first if allowed
     if request.use_cache {
-        let state_read = state.read().await;
-        let cache = DiffCache::new(state_read.db_pool.clone());
+        if let Some(global_id) = mr_global_id {
+            let state_read = state.read().await;
+            let cache = DiffCache::new(state_read.db_pool.clone());
 
-        if let Ok(Some(cached_diff)) = cache.get(request.mr_iid).await {
-            debug!("Returning cached diff for MR {}", request.mr_iid);
-            return Ok(cached_diff);
+            if let Ok(Some(cached_diff)) = cache.get(global_id).await {
+                debug!("Returning cached diff for MR {}", request.mr_iid);
+                return Ok(cached_diff);
+            }
         }
     }
 
     let (_account, client) = get_active_client(state).await?;
 
     // Fetch from API
-    let diff = client
+    let mut diff = client
         .get_merge_request_diff(request.project_id, request.mr_iid)
         .await
         .map_err(|e| TauriError::api_error(e.to_string()))?;
 
-    // Cache the result
-    let state_read = state.read().await;
-    let cache = DiffCache::new(state_read.db_pool.clone());
-    if let Err(e) = cache.store(&diff).await {
-        warn!("Failed to cache diff: {}", e);
+    // Cache the result using the global MR id (required by FK constraint)
+    if let Some(global_id) = mr_global_id {
+        diff.mr_id = global_id;
+        let state_read = state.read().await;
+        let cache = DiffCache::new(state_read.db_pool.clone());
+        if let Err(e) = cache.store(&diff).await {
+            warn!("Failed to cache diff: {}", e);
+        }
     }
 
     Ok(diff)

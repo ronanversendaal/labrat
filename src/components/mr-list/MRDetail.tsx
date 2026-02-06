@@ -16,13 +16,13 @@ export function MRDetail({ mr }: MRDetailProps) {
     <div className="p-6">
       {/* Header */}
       <div className="mb-6">
-        <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-2">
+        <div className="flex items-center gap-2 text-sm text-content-secondary mb-2">
           <span>{mr.project_path || `Project #${mr.project_id}`}</span>
           <span>•</span>
           <span>!{mr.iid}</span>
         </div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">
-          {mr.draft && <span className="text-gray-400 dark:text-gray-500">Draft: </span>}
+        <h1 className="text-2xl font-bold text-content mb-4">
+          {mr.draft && <span className="text-content-tertiary">Draft: </span>}
           {mr.title}
         </h1>
 
@@ -32,7 +32,7 @@ export function MRDetail({ mr }: MRDetailProps) {
         </div>
 
         {/* Meta info */}
-        <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
+        <div className="flex items-center gap-4 text-sm text-content-secondary">
           <div className="flex items-center gap-2">
             <Avatar src={mr.author.avatar_url} name={mr.author.name} size="sm" />
             <span>{mr.author.name}</span>
@@ -47,11 +47,11 @@ export function MRDetail({ mr }: MRDetailProps) {
       {/* Description */}
       {mr.description && (
         <div className="mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+          <h2 className="text-lg font-semibold text-content mb-2">
             Description
           </h2>
-          <div className="prose prose-sm dark:prose-invert max-w-none">
-            <p className="whitespace-pre-wrap text-gray-700 dark:text-gray-300">{mr.description}</p>
+          <div className="prose prose-sm max-w-none">
+            <p className="whitespace-pre-wrap text-content-muted">{mr.description}</p>
           </div>
         </div>
       )}
@@ -59,12 +59,12 @@ export function MRDetail({ mr }: MRDetailProps) {
       {/* Labels */}
       {mr.labels.length > 0 && (
         <div className="mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Labels</h2>
+          <h2 className="text-lg font-semibold text-content mb-2">Labels</h2>
           <div className="flex flex-wrap gap-2">
             {mr.labels.map((label) => (
               <span
                 key={label}
-                className="px-2 py-1 text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded"
+                className="px-2 py-1 text-xs font-medium bg-surface-alt text-content-secondary rounded"
               >
                 {label}
               </span>
@@ -76,12 +76,12 @@ export function MRDetail({ mr }: MRDetailProps) {
       {/* Reviewers */}
       {mr.reviewers.length > 0 && (
         <div className="mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Reviewers</h2>
+          <h2 className="text-lg font-semibold text-content mb-2">Reviewers</h2>
           <div className="flex flex-wrap gap-3">
             {mr.reviewers.map((reviewer) => (
               <div key={reviewer.id} className="flex items-center gap-2">
                 <Avatar src={reviewer.avatar_url} name={reviewer.name} size="md" />
-                <span className="text-sm text-gray-700 dark:text-gray-300">{reviewer.name}</span>
+                <span className="text-sm text-content-muted">{reviewer.name}</span>
               </div>
             ))}
           </div>
@@ -91,12 +91,12 @@ export function MRDetail({ mr }: MRDetailProps) {
       {/* Assignees */}
       {mr.assignees.length > 0 && (
         <div className="mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Assignees</h2>
+          <h2 className="text-lg font-semibold text-content mb-2">Assignees</h2>
           <div className="flex flex-wrap gap-3">
             {mr.assignees.map((assignee) => (
               <div key={assignee.id} className="flex items-center gap-2">
                 <Avatar src={assignee.avatar_url} name={assignee.name} size="md" />
-                <span className="text-sm text-gray-700 dark:text-gray-300">{assignee.name}</span>
+                <span className="text-sm text-content-muted">{assignee.name}</span>
               </div>
             ))}
           </div>
@@ -104,12 +104,12 @@ export function MRDetail({ mr }: MRDetailProps) {
       )}
 
       {/* Actions */}
-      <div className="flex items-center gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+      <div className="flex items-center gap-3 pt-4 border-t border-edge">
         <a
           href={mr.web_url}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-hover transition-colors"
         >
           <ExternalLinkIcon />
           Open in GitLab
@@ -117,7 +117,7 @@ export function MRDetail({ mr }: MRDetailProps) {
       </div>
 
       {/* Diff placeholder */}
-      <div className="mt-8 p-8 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-center">
+      <div className="mt-8 p-8 border border-dashed border-edge-strong rounded-lg text-center">
         <svg
           className="w-12 h-12 mx-auto text-gray-400 mb-4"
           fill="none"
@@ -131,7 +131,7 @@ export function MRDetail({ mr }: MRDetailProps) {
             d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
           />
         </svg>
-        <p className="text-gray-500 dark:text-gray-400">
+        <p className="text-content-secondary">
           Diff view will be available in a future update
         </p>
       </div>

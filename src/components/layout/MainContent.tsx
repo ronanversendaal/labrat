@@ -12,7 +12,7 @@ export function MainContent({ children, className = '' }: MainContentProps) {
       tabIndex={-1}
       className={`
         flex-1 overflow-auto
-        bg-gray-50 dark:bg-gray-900
+        bg-canvas
         focus:outline-none
         ${className}
       `}
@@ -43,12 +43,12 @@ export function ContentSection({
         <div className="flex items-start justify-between mb-6">
           <div>
             {title && (
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+              <h2 className="text-xl font-semibold text-content">
                 {title}
               </h2>
             )}
             {description && (
-              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              <p className="mt-1 text-sm text-content-secondary">
                 {description}
               </p>
             )}
@@ -76,15 +76,15 @@ export function EmptyState({ icon, title, description, action }: EmptyStateProps
   return (
     <div className="flex flex-col items-center justify-center py-12 text-center">
       {icon && (
-        <div className="mb-4 text-gray-400 dark:text-gray-500">
+        <div className="mb-4 text-content-tertiary">
           {icon}
         </div>
       )}
-      <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+      <h3 className="text-lg font-medium text-content">
         {title}
       </h3>
       {description && (
-        <p className="mt-2 text-sm text-gray-500 dark:text-gray-400 max-w-sm">
+        <p className="mt-2 text-sm text-content-secondary max-w-sm">
           {description}
         </p>
       )}
@@ -105,7 +105,7 @@ export function LoadingState({ message = 'Loading...' }: LoadingStateProps) {
   return (
     <div className="flex flex-col items-center justify-center py-12">
       <svg
-        className="animate-spin h-8 w-8 text-blue-600"
+        className="animate-spin h-8 w-8 text-primary-text"
         xmlns="http://www.w3.org/2000/svg"
         fill="none"
         viewBox="0 0 24 24"
@@ -124,7 +124,7 @@ export function LoadingState({ message = 'Loading...' }: LoadingStateProps) {
           d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
         />
       </svg>
-      <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">{message}</p>
+      <p className="mt-4 text-sm text-content-secondary">{message}</p>
     </div>
   );
 }
@@ -152,16 +152,16 @@ export function ErrorState({
           />
         </svg>
       </div>
-      <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+      <h3 className="text-lg font-medium text-content">
         {title}
       </h3>
-      <p className="mt-2 text-sm text-gray-500 dark:text-gray-400 max-w-sm">
+      <p className="mt-2 text-sm text-content-secondary max-w-sm">
         {message}
       </p>
       {retry && (
         <button
           onClick={retry}
-          className="mt-6 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="mt-6 px-4 py-2 text-sm font-medium text-white bg-primary rounded-md hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-ring"
         >
           Try again
         </button>

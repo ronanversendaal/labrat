@@ -221,14 +221,14 @@ export function QuickFilePicker({
     <Modal isOpen={isOpen} onClose={onClose} title="" size="md">
       <div className="flex flex-col" onKeyDown={handleKeyDown}>
         {/* Search input */}
-        <div className="p-2 border-b border-gray-200 dark:border-gray-700">
+        <div className="p-2 border-b border-edge">
           <input
             ref={inputRef}
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search files..."
-            className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-gray-100"
+            className="w-full px-3 py-2 bg-surface border border-edge rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-content"
             autoComplete="off"
             spellCheck={false}
           />
@@ -260,8 +260,8 @@ export function QuickFilePicker({
                     className={`
                       flex items-center gap-2 px-3 py-2 cursor-pointer text-sm
                       ${isSelected
-                        ? 'bg-blue-100 dark:bg-blue-900/30'
-                        : 'hover:bg-gray-100 dark:hover:bg-gray-800'
+                        ? 'bg-primary-muted'
+                        : 'hover:bg-surface-hover'
                       }
                       ${isCurrent ? 'font-medium' : ''}
                     `}
@@ -274,17 +274,17 @@ export function QuickFilePicker({
                     {/* File info */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="text-gray-900 dark:text-gray-100 truncate">
+                        <span className="text-gray-900 text-content truncate">
                           {highlightMatch(fileName)}
                         </span>
                         {isCurrent && (
-                          <span className="text-xs text-gray-400 dark:text-gray-500">
+                          <span className="text-xs text-content-tertiary">
                             (current)
                           </span>
                         )}
                       </div>
                       {directory && (
-                        <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                        <div className="text-xs text-content-secondary truncate">
                           {highlightMatch(directory)}
                         </div>
                       )}
@@ -294,10 +294,10 @@ export function QuickFilePicker({
                     <div className="flex-shrink-0 flex items-center gap-1 text-xs">
                       {file.diff && (
                         <>
-                          <span className="text-green-600 dark:text-green-400">
+                          <span className="text-diff-add-text">
                             +{countAdditions(file.diff)}
                           </span>
-                          <span className="text-red-600 dark:text-red-400">
+                          <span className="text-diff-del-text">
                             -{countDeletions(file.diff)}
                           </span>
                         </>
@@ -311,17 +311,17 @@ export function QuickFilePicker({
         </div>
 
         {/* Footer with hints */}
-        <div className="px-3 py-2 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 text-xs text-gray-500 dark:text-gray-400 flex items-center gap-4">
+        <div className="px-3 py-2 border-t border-edge bg-surface text-xs text-content-secondary flex items-center gap-4">
           <span>
-            <kbd className="px-1.5 py-0.5 bg-gray-200 dark:bg-gray-700 rounded text-xs">↑↓</kbd>
+            <kbd className="px-1.5 py-0.5 bg-surface-alt rounded text-xs">↑↓</kbd>
             {' '}to navigate
           </span>
           <span>
-            <kbd className="px-1.5 py-0.5 bg-gray-200 dark:bg-gray-700 rounded text-xs">↵</kbd>
+            <kbd className="px-1.5 py-0.5 bg-surface-alt rounded text-xs">↵</kbd>
             {' '}to select
           </span>
           <span>
-            <kbd className="px-1.5 py-0.5 bg-gray-200 dark:bg-gray-700 rounded text-xs">esc</kbd>
+            <kbd className="px-1.5 py-0.5 bg-surface-alt rounded text-xs">esc</kbd>
             {' '}to close
           </span>
         </div>

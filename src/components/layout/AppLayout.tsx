@@ -61,85 +61,94 @@ export function AppLayout({ children }: AppLayoutProps) {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-100 dark:bg-gray-900">
-      {/* Sidebar */}
-      <Sidebar
-        collapsed={sidebarCollapsed}
-        onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
-      >
-        {/* Account selector */}
-        {accounts && accounts.length > 0 && (
-          <SidebarSection title="Accounts" collapsed={sidebarCollapsed}>
-            {accounts.map((account) => (
+    <div className="flex flex-col h-screen overflow-hidden bg-canvas">
+      {/* macOS-style toolbar / drag region — spans full window width */}
+      <div
+        data-tauri-drag-region="true"
+        className="h-[38px] flex-shrink-0 flex items-center bg-surface border-b border-edge select-none"
+      />
+
+      {/* Sidebar + content below the toolbar */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Sidebar */}
+        <Sidebar
+          collapsed={sidebarCollapsed}
+          onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+        >
+          {/* Account selector */}
+          {accounts && accounts.length > 0 && (
+            <SidebarSection title="Accounts" collapsed={sidebarCollapsed}>
+              {accounts.map((account) => (
+                <SidebarItem
+                  key={account.id}
+                  icon={<Avatar src={account.avatar_url} name={account.name} size="xs" />}
+                  label={account.name}
+                  active={account.is_active}
+                  collapsed={sidebarCollapsed}
+                  onClick={() => handleSelectAccount(account.id)}
+                />
+              ))}
               <SidebarItem
-                key={account.id}
-                icon={<Avatar src={account.avatar_url} name={account.name} size="xs" />}
-                label={account.name}
-                active={account.is_active}
+                icon={
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                }
+                label="Add Account"
                 collapsed={sidebarCollapsed}
-                onClick={() => handleSelectAccount(account.id)}
+                onClick={() => openModal('addAccount')}
               />
-            ))}
+            </SidebarSection>
+          )}
+
+          <SidebarSection collapsed={sidebarCollapsed}>
             <SidebarItem
               icon={
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                  />
                 </svg>
               }
-              label="Add Account"
+              label="My Reviews"
+              active={true}
               collapsed={sidebarCollapsed}
-              onClick={() => openModal('addAccount')}
+              onClick={applyMyReviewsDefaults}
             />
           </SidebarSection>
-        )}
 
-        <SidebarSection collapsed={sidebarCollapsed}>
-          <SidebarItem
-            icon={
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-                />
-              </svg>
-            }
-            label="My Reviews"
-            active={true}
-            collapsed={sidebarCollapsed}
-            onClick={applyMyReviewsDefaults}
-          />
-        </SidebarSection>
+          <SidebarSection title="Settings" collapsed={sidebarCollapsed}>
+            <SidebarItem
+              icon={
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                  />
+                </svg>
+              }
+              label="Settings"
+              collapsed={sidebarCollapsed}
+              onClick={() => openModal('settings')}
+            />
+          </SidebarSection>
+        </Sidebar>
 
-        <SidebarSection title="Settings" collapsed={sidebarCollapsed}>
-          <SidebarItem
-            icon={
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-                />
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                />
-              </svg>
-            }
-            label="Settings"
-            collapsed={sidebarCollapsed}
-            onClick={() => openModal('settings')}
-          />
-        </SidebarSection>
-      </Sidebar>
-
-      {/* Main content area */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <MainContent>{children}</MainContent>
+        {/* Main content area */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <MainContent>{children}</MainContent>
+        </div>
       </div>
     </div>
   );

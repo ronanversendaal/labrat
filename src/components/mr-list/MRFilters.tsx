@@ -267,7 +267,7 @@ export function MRFilters({ projects = [], authors = [], labels = [] }: MRFilter
                 }}
                 onFocus={() => setShowSuggestions(true)}
                 onKeyDown={handleKeyDown}
-                className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full pl-9 pr-4 py-2 text-sm border border-edge rounded-md bg-surface text-content focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
               />
               {localQuery && (
                 <button
@@ -275,7 +275,7 @@ export function MRFilters({ projects = [], authors = [], labels = [] }: MRFilter
                     setLocalQuery('');
                     clearFilters();
                   }}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-content-tertiary hover:text-content-secondary"
                   aria-label="Clear filter"
                 >
                   <CloseIcon className="w-4 h-4" aria-hidden="true" />
@@ -286,7 +286,7 @@ export function MRFilters({ projects = [], authors = [], labels = [] }: MRFilter
               {showSuggestions && suggestions.length > 0 && (
                 <div
                   ref={suggestionsRef}
-                  className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg max-h-60 overflow-auto"
+                  className="absolute z-50 w-full mt-1 bg-surface border border-edge rounded-md shadow-lg max-h-60 overflow-auto"
                 >
                   {suggestions.map((suggestion, index) => (
                     <button
@@ -297,14 +297,14 @@ export function MRFilters({ projects = [], authors = [], labels = [] }: MRFilter
                       className={`
                         w-full px-3 py-2 text-left text-sm flex items-center justify-between
                         ${index === selectedSuggestionIndex
-                          ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
-                          : 'hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100'
+                          ? 'bg-primary-muted text-primary-text'
+                          : 'hover:bg-surface-hover text-content'
                         }
                       `}
                     >
                       <span className="font-mono">{suggestion.label}</span>
                       {suggestion.description && (
-                        <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
+                        <span className="text-xs text-content-secondary ml-2">
                           {suggestion.description}
                         </span>
                       )}
@@ -344,16 +344,16 @@ export function MRFilters({ projects = [], authors = [], labels = [] }: MRFilter
 
       {/* Unified toolbar: group + sort (toggled via `g` keybinding) */}
       {toolbarVisible && (
-        <div className="mb-2 flex items-center gap-4 p-2 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+        <div className="mb-2 flex items-center gap-4 p-2 bg-surface rounded-lg border border-edge">
           <div className="flex items-center gap-1.5">
-            <label className="text-xs font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap">
+            <label className="text-xs font-medium text-content-secondary whitespace-nowrap">
               Group by
             </label>
             <select
               ref={toolbarFirstRef}
               value={groupBy}
               onChange={(e) => setGroupBy(e.target.value as 'project' | 'author' | 'date' | 'none')}
-              className="px-2 py-1 text-sm border border-gray-200 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+              className="px-2 py-1 text-sm border border-edge-strong rounded-md bg-surface-alt text-content"
             >
               <option value="none">None</option>
               <option value="project">Project</option>
@@ -363,13 +363,13 @@ export function MRFilters({ projects = [], authors = [], labels = [] }: MRFilter
           </div>
 
           <div className="flex items-center gap-1.5">
-            <label className="text-xs font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap">
+            <label className="text-xs font-medium text-content-secondary whitespace-nowrap">
               Sort
             </label>
             <select
               value={sort.field}
               onChange={(e) => setSort({ ...sort, field: e.target.value as 'updated_at' | 'created_at' | 'title' })}
-              className="px-2 py-1 text-sm border border-gray-200 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+              className="px-2 py-1 text-sm border border-edge-strong rounded-md bg-surface-alt text-content"
             >
               <option value="updated_at">Updated</option>
               <option value="created_at">Created</option>
@@ -377,7 +377,7 @@ export function MRFilters({ projects = [], authors = [], labels = [] }: MRFilter
             </select>
             <button
               onClick={() => setSort({ ...sort, direction: sort.direction === 'asc' ? 'desc' : 'asc' })}
-              className="p-1 rounded-md text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+              className="p-1 rounded-md text-content-secondary hover:bg-surface-active transition-colors"
               aria-label={`Sort ${sort.direction === 'asc' ? 'descending' : 'ascending'}`}
               title={sort.direction === 'asc' ? 'Ascending' : 'Descending'}
             >
@@ -413,19 +413,19 @@ function FilterChip({ filter, onRemove }: { filter: ParsedFilter; onRemove: () =
   const getColor = () => {
     // Negated filters get a red-ish tint
     if (filter.negated) {
-      return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
+      return 'bg-negative-muted text-negative-text';
     }
     switch (filter.type) {
       case 'author':
-        return 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400';
+        return 'bg-info-muted text-info-text';
       case 'project':
-        return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
+        return 'bg-positive-muted text-positive-text';
       case 'status':
-        return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400';
+        return 'bg-caution-muted text-caution-text';
       case 'label':
-        return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400';
+        return 'bg-primary-muted text-primary-text';
       default:
-        return 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300';
+        return 'bg-surface-alt text-content-secondary';
     }
   };
 
@@ -446,7 +446,7 @@ function FilterChip({ filter, onRemove }: { filter: ParsedFilter; onRemove: () =
 // Special filter chip (for programmatic filters like "reviewer is me")
 function SpecialFilterChip({ label, onRemove }: { label: string; onRemove: () => void }) {
   return (
-    <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+    <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded bg-primary-muted text-primary-text">
       {label}
       <button
         onClick={onRemove}

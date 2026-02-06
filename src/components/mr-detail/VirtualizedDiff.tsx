@@ -88,7 +88,7 @@ function UnifiedRow({
     return (
       <div
         style={style}
-        className="flex bg-blue-50 dark:bg-blue-900/20 cursor-pointer select-none"
+        className="flex bg-primary-muted cursor-pointer select-none"
         onClick={() => onToggleHunk(line.hunkIndex)}
         role="button"
         tabIndex={0}
@@ -98,10 +98,10 @@ function UnifiedRow({
           }
         }}
       >
-        <span className="w-24 px-2 text-center text-blue-700 dark:text-blue-300 flex-shrink-0">
+        <span className="w-24 px-2 text-center text-primary-text flex-shrink-0">
           {collapsedHunks.has(line.hunkIndex) ? '▶' : '▼'}
         </span>
-        <span className="flex-1 px-2 text-blue-700 dark:text-blue-300 truncate">
+        <span className="flex-1 px-2 text-primary-text truncate">
           {line.content}
         </span>
       </div>
@@ -112,7 +112,7 @@ function UnifiedRow({
     highlightedLine !== null &&
     (line.newLine === highlightedLine || line.oldLine === highlightedLine);
   const bgClass = isHighlighted
-    ? 'bg-yellow-200 dark:bg-yellow-700/50'
+    ? 'bg-caution-muted'
     : getLineBgClass(line.type);
   const content = showWhitespace ? renderWhitespace(line.content) : line.content;
 
@@ -122,10 +122,10 @@ function UnifiedRow({
       className={`flex ${bgClass}`}
       data-line={line.newLine ?? line.oldLine}
     >
-      <span className="w-12 px-2 text-right text-gray-400 select-none border-r border-gray-200 dark:border-gray-700 flex-shrink-0">
+      <span className="w-12 px-2 text-right text-gray-400 select-none border-r border-edge flex-shrink-0">
         {line.oldLine ?? ''}
       </span>
-      <span className="w-12 px-2 text-right text-gray-400 select-none border-r border-gray-200 dark:border-gray-700 flex-shrink-0">
+      <span className="w-12 px-2 text-right text-gray-400 select-none border-r border-edge flex-shrink-0">
         {line.newLine ?? ''}
       </span>
       <span className="flex-1 px-2 whitespace-pre truncate font-mono text-sm">
@@ -212,7 +212,7 @@ function SplitRow({
     return (
       <div
         style={style}
-        className="flex bg-blue-50 dark:bg-blue-900/20 cursor-pointer select-none"
+        className="flex bg-primary-muted cursor-pointer select-none"
         onClick={() => onToggleHunk(pair.hunkIndex)}
         role="button"
         tabIndex={0}
@@ -222,10 +222,10 @@ function SplitRow({
           }
         }}
       >
-        <span className="w-24 px-2 text-center text-blue-700 dark:text-blue-300">
+        <span className="w-24 px-2 text-center text-primary-text">
           {collapsedHunks.has(pair.hunkIndex) ? '▶' : '▼'}
         </span>
-        <span className="flex-1 px-2 text-blue-700 dark:text-blue-300 truncate">
+        <span className="flex-1 px-2 text-primary-text truncate">
           {pair.content}
         </span>
       </div>
@@ -242,22 +242,22 @@ function SplitRow({
     <div style={style} className="flex" data-line={dataLine}>
       {/* Old side */}
       <span
-        className={`w-12 px-2 text-right text-gray-400 select-none border-r border-gray-200 dark:border-gray-700 flex-shrink-0 ${
+        className={`w-12 px-2 text-right text-gray-400 select-none border-r border-edge flex-shrink-0 ${
           isLeftHighlighted
-            ? 'bg-yellow-200 dark:bg-yellow-700/50'
+            ? 'bg-caution-muted'
             : pair.left?.type === 'deletion'
-              ? 'bg-red-100 dark:bg-red-900/30'
+              ? 'bg-diff-del-bg'
               : ''
         }`}
       >
         {pair.left?.oldLine ?? ''}
       </span>
       <span
-        className={`w-1/2 px-2 whitespace-pre truncate font-mono text-sm border-r border-gray-200 dark:border-gray-700 ${
+        className={`w-1/2 px-2 whitespace-pre truncate font-mono text-sm border-r border-edge ${
           isLeftHighlighted
-            ? 'bg-yellow-200 dark:bg-yellow-700/50'
+            ? 'bg-caution-muted'
             : pair.left?.type === 'deletion'
-              ? 'bg-red-100 dark:bg-red-900/30'
+              ? 'bg-diff-del-bg'
               : ''
         }`}
       >
@@ -269,11 +269,11 @@ function SplitRow({
       </span>
       {/* New side */}
       <span
-        className={`w-12 px-2 text-right text-gray-400 select-none border-r border-gray-200 dark:border-gray-700 flex-shrink-0 ${
+        className={`w-12 px-2 text-right text-gray-400 select-none border-r border-edge flex-shrink-0 ${
           isRightHighlighted
-            ? 'bg-yellow-200 dark:bg-yellow-700/50'
+            ? 'bg-caution-muted'
             : pair.right?.type === 'addition'
-              ? 'bg-green-100 dark:bg-green-900/30'
+              ? 'bg-diff-add-bg'
               : ''
         }`}
       >
@@ -282,9 +282,9 @@ function SplitRow({
       <span
         className={`w-1/2 px-2 whitespace-pre truncate font-mono text-sm ${
           isRightHighlighted
-            ? 'bg-yellow-200 dark:bg-yellow-700/50'
+            ? 'bg-caution-muted'
             : pair.right?.type === 'addition'
-              ? 'bg-green-100 dark:bg-green-900/30'
+              ? 'bg-diff-add-bg'
               : ''
         }`}
       >
@@ -354,9 +354,9 @@ export function VirtualizedSplitDiff({
 function getLineBgClass(type: LineType): string {
   switch (type) {
     case 'addition':
-      return 'bg-green-50 dark:bg-green-900/20';
+      return 'bg-diff-add-bg';
     case 'deletion':
-      return 'bg-red-50 dark:bg-red-900/20';
+      return 'bg-diff-del-bg';
     default:
       return '';
   }

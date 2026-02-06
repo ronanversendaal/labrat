@@ -146,24 +146,24 @@ export function Modal({
         ref={modalRef}
         className={`
           relative z-10 w-full ${sizeClasses[size]}
-          mx-4 bg-white dark:bg-gray-800
+          mx-4 bg-surface
           rounded-lg shadow-xl
           transform transition-all
         `}
       >
         {/* Header */}
         {title && (
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-edge">
             <h2
               id="modal-title"
-              className="text-lg font-semibold text-gray-900 dark:text-gray-100"
+              className="text-lg font-semibold text-content"
             >
               {title}
             </h2>
             <button
               type="button"
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
+              className="text-content-tertiary hover:text-content-secondary focus:outline-none focus:ring-2 focus:ring-ring rounded"
             >
               <span className="sr-only">Close</span>
               <svg
@@ -193,7 +193,7 @@ export function Modal({
 // Modal sub-components for composition
 Modal.Footer = function ModalFooter({ children }: { children: ReactNode }) {
   return (
-    <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 rounded-b-lg">
+    <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-edge bg-canvas rounded-b-lg">
       {children}
     </div>
   );

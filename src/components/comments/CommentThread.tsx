@@ -91,17 +91,17 @@ export function CommentThread({
       className={clsx(
         'border rounded-lg overflow-hidden',
         isResolved
-          ? 'border-green-200 dark:border-green-800 bg-green-50/30 dark:bg-green-900/10'
-          : 'border-gray-200 dark:border-gray-700',
+          ? 'border-positive-muted bg-positive-muted'
+          : 'border-edge',
         compact && 'text-sm'
       )}
     >
       {/* Position indicator for inline comments */}
       {isInlineComment && position && !compact && (
-        <div className="px-4 py-2 bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 text-xs font-mono text-gray-600 dark:text-gray-400">
-          <span className="text-gray-400 dark:text-gray-500">{position.new_path}</span>
+        <div className="px-4 py-2 bg-surface border-b border-edge text-xs font-mono text-content-secondary">
+          <span className="text-content-tertiary">{position.new_path}</span>
           {position.new_line && (
-            <span className="ml-2 text-blue-600 dark:text-blue-400">
+            <span className="ml-2 text-primary-text">
               line {position.new_line}
             </span>
           )}
@@ -120,7 +120,7 @@ export function CommentThread({
       {isCollapsed && replyCount > 0 && (
         <button
           onClick={() => setIsCollapsed(false)}
-          className="w-full px-4 py-2 text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 text-left"
+          className="w-full px-4 py-2 text-sm text-content-secondary hover:bg-surface-hover text-left"
         >
           Show {replyCount} {replyCount === 1 ? 'reply' : 'replies'}
         </button>
@@ -131,7 +131,7 @@ export function CommentThread({
         <>
           <button
             onClick={() => setIsCollapsed(true)}
-            className="w-full px-4 py-1 text-xs text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800 text-left border-t border-gray-200 dark:border-gray-700"
+            className="w-full px-4 py-1 text-xs text-content-tertiary hover:bg-surface-hover text-left border-t border-edge"
           >
             {replyCount} {replyCount === 1 ? 'reply' : 'replies'}
           </button>
@@ -149,7 +149,7 @@ export function CommentThread({
 
       {/* Reply form */}
       {isReplying ? (
-        <div className="border-t border-gray-200 dark:border-gray-700 p-4">
+        <div className="border-t border-edge p-4">
           <ReplyForm
             projectId={projectId}
             mrIid={mrIid}
@@ -160,10 +160,10 @@ export function CommentThread({
         </div>
       ) : (
         /* GitLab-style footer with Reply on left, Resolve on right */
-        <div className="border-t border-gray-200 dark:border-gray-700 px-4 py-2 flex items-center justify-between bg-gray-50/50 dark:bg-gray-800/30">
+        <div className="border-t border-edge px-4 py-2 flex items-center justify-between bg-surface">
           <button
             onClick={() => setIsReplying(true)}
-            className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+            className="text-sm text-content-secondary hover:text-content-muted"
           >
             Reply...
           </button>
@@ -207,7 +207,7 @@ function NoteDisplay({
     <div
       className={clsx(
         compact ? 'p-3' : 'p-4',
-        !isFirst && 'border-t border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50'
+        !isFirst && 'border-t border-edge bg-surface'
       )}
     >
       <div className="flex items-start gap-3">
@@ -221,15 +221,15 @@ function NoteDisplay({
           {/* Author line with Owner badge */}
           <div className="flex items-center flex-wrap gap-2 mb-1.5">
             <span className={clsx(
-              'font-medium text-gray-900 dark:text-gray-100',
+              'font-medium text-content',
               compact ? 'text-xs' : 'text-sm'
             )}>
               {note.author.name}
             </span>
-            <span className="text-xs text-gray-500 dark:text-gray-400">
+            <span className="text-xs text-content-secondary">
               @{note.author.username}
             </span>
-            <span className="text-xs text-gray-400 dark:text-gray-500">
+            <span className="text-xs text-content-tertiary">
               {formatRelativeTime(note.created_at)}
             </span>
             {isOwner && (
@@ -241,7 +241,7 @@ function NoteDisplay({
 
           {/* Note body */}
           <div className={clsx(
-            'prose dark:prose-invert max-w-none',
+            'prose max-w-none',
             compact ? 'prose-xs' : 'prose-sm'
           )}>
             <NoteBody html={note.body_html} text={note.body} />

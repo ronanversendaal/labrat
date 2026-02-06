@@ -76,12 +76,34 @@ impl Database {
         info!("Running database migrations...");
 
         // Read and execute the initial schema migration
-        let migration_sql = include_str!("../../migrations/001_initial_schema.sql");
-
-        sqlx::query(migration_sql)
+        let migration_001 = include_str!("../../migrations/001_initial_schema.sql");
+        sqlx::query(migration_001)
             .execute(&self.pool)
             .await
             .map_err(|e| DbError::Migration(e.to_string()))?;
+
+        // 002: Theme system — add font columns and migrate theme values
+        // Run each statement individually since SQLite doesn't support multi-statement ALTER TABLE
+        let has_font_ui: bool = sqlx::query_scalar::<_, i32>(
+            "SELECT COUNT(*) FROM pragma_table_info('settings') WHERE name = 'font_family_ui'"
+        )
+        .fetch_one(&self.pool)
+        .await
+        .map(|c| c > 0)
+        .unwrap_or(false);
+
+        if !has_font_ui {
+            // Migrate old theme values
+            sqlx::query("UPDATE settings SET theme = 'default-light' WHERE theme = 'light'")
+                .execute(&self.pool).await.map_err(|e| DbError::Migration(e.to_string()))?;
+            sqlx::query("UPDATE settings SET theme = 'default-dark' WHERE theme = 'dark'")
+                .execute(&self.pool).await.map_err(|e| DbError::Migration(e.to_string()))?;
+
+            sqlx::query("ALTER TABLE settings ADD COLUMN font_family_ui TEXT")
+                .execute(&self.pool).await.map_err(|e| DbError::Migration(e.to_string()))?;
+            sqlx::query("ALTER TABLE settings ADD COLUMN font_family_code TEXT")
+                .execute(&self.pool).await.map_err(|e| DbError::Migration(e.to_string()))?;
+        }
 
         info!("Database migrations completed");
         Ok(())

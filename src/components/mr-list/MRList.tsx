@@ -176,9 +176,9 @@ export function MRList({
       {groupedMRs.map(({ key, label, mrs }) => (
         <div key={key}>
           {label && (
-            <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3 px-1">
+            <h3 className="text-sm font-medium text-content-secondary mb-3 px-1">
               {label}
-              <span className="ml-2 text-gray-400 dark:text-gray-500">({mrs.length})</span>
+              <span className="ml-2 text-content-tertiary">({mrs.length})</span>
             </h3>
           )}
           <div className="space-y-3">
@@ -213,7 +213,7 @@ function MRListSkeleton() {
       {Array.from({ length: 5 }).map((_, i) => (
         <div
           key={i}
-          className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg"
+          className="p-4 border border-edge rounded-lg"
         >
           <div className="flex items-center justify-between mb-2">
             <Skeleton variant="text" width="40%" height="0.875rem" />

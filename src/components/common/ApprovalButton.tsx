@@ -149,7 +149,7 @@ export function ApprovalStatus({ projectId, mrIid }: ApprovalStatusProps) {
   return (
     <div className="flex items-center gap-2">
       {/* Approval count */}
-      <span className="text-sm text-gray-600 dark:text-gray-400">
+      <span className="text-sm text-content-secondary">
         {approvalCount}/{approvals_required} approvals
         {approvals_left > 0 && ` (${approvals_left} needed)`}
       </span>
@@ -164,11 +164,11 @@ export function ApprovalStatus({ projectId, mrIid }: ApprovalStatusProps) {
               name={approver.user.name}
               size="sm"
               title={`Approved by ${approver.user.name}`}
-              className="border-2 border-white dark:border-gray-800"
+              className="border-2 border-canvas"
             />
           ))}
           {approved_by.length > 5 && (
-            <span className="flex items-center justify-center w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-700 border-2 border-white dark:border-gray-800 text-xs">
+            <span className="flex items-center justify-center w-6 h-6 rounded-full bg-surface-alt border-2 border-canvas text-xs">
               +{approved_by.length - 5}
             </span>
           )}

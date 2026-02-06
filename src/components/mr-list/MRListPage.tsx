@@ -3,8 +3,9 @@
  * Wires MRList to Tauri backend via useGitLab hooks
  */
 
-import { useMemo, useState, useEffect } from 'react';
-import { useMergeRequests, useRefresh, useAccounts } from '../../hooks/useGitLab';
+import { useMemo, useState, useEffect, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { useMergeRequests, useRefresh, useAccounts, queryKeys } from '../../hooks/useGitLab';
 import { MRList } from './MRList';
 import { MRFilters } from './MRFilters';
 import { useMRStore, useUIStore } from '../../stores';
@@ -12,6 +13,8 @@ import { MRDetailView } from '../mr-detail';
 import type { MergeRequest, ApprovalState } from '../../types';
 import type { NegatedFilter, SpecialFilters } from '../../stores/mrStore';
 import { getApprovalState } from '../../services/tauri';
+import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
+import { useFocusStore } from '../../hooks/useFocusManager';
 
 /** Apply negated filters to a list of MRs (client-side) */
 function applyNegatedFilters(mrs: MergeRequest[], negatedFilters: NegatedFilter[]): MergeRequest[] {
@@ -78,10 +81,50 @@ function applySpecialFilters(
 }
 
 export function MRListPage() {
-  const { selectedMr, isDetailOpen, closeDetail, groupBy, negatedFilters, specialFilters } = useMRStore();
+  const { selectedMr, isDetailOpen, closeDetail, groupBy, negatedFilters, specialFilters, toggleToolbar, setSearchVisible } = useMRStore();
+  const currentZone = useFocusStore((s) => s.currentZone);
   const { data: accounts } = useAccounts();
-  const { data: mergeRequests, isLoading, isError, error, refetch } = useMergeRequests();
+
+  const handleToggleToolbar = useCallback(() => {
+    toggleToolbar();
+  }, [toggleToolbar]);
+
+  const handleShowSearch = useCallback(() => {
+    setSearchVisible(true);
+    requestAnimationFrame(() => {
+      const input = document.querySelector<HTMLInputElement>('input[aria-label="Filter merge requests"]');
+      input?.focus();
+    });
+  }, [setSearchVisible]);
+
+  useKeyboardShortcuts(
+    [
+      {
+        id: 'toggle-toolbar',
+        keys: ['g'],
+        handler: handleToggleToolbar,
+        label: 'Toggle Toolbar',
+        description: 'Show/hide group & sort toolbar',
+        category: 'mr-list',
+      },
+      {
+        id: 'show-search',
+        keys: ['/'],
+        handler: handleShowSearch,
+        label: 'Search',
+        description: 'Show search & focus input',
+        category: 'mr-list',
+      },
+    ],
+    { enabled: currentZone === 'mr-list', scope: 'mr-list' }
+  );
+  // When excludeApprovedByMe is active, ask the backend to batch-fetch approval states
+  const mrQueryRequest = useMemo(() => (
+    specialFilters.excludeApprovedByMe ? { include_approvals: true } : undefined
+  ), [specialFilters.excludeApprovedByMe]);
+  const { data: mergeRequests, isLoading, isError, error, refetch } = useMergeRequests(mrQueryRequest);
   const refreshMutation = useRefresh();
+  const queryClient = useQueryClient();
   const [approvalStates, setApprovalStates] = useState<Map<number, ApprovalState>>(new Map());
 
   const activeAccount = accounts?.find((a) => a.is_active);
@@ -93,21 +136,49 @@ export function MRListPage() {
 
   const hasActiveAccount = accounts?.some((a) => a.is_active);
 
-  // Fetch approval states when needed for excludeApprovedByMe filter
+  // Build approval states map from React Query cache (seeded by batch response)
+  // or fetch individually as a fallback.
   useEffect(() => {
     if (!specialFilters.excludeApprovedByMe || !mergeRequests?.length) {
       return;
     }
 
-    const fetchApprovalStates = async () => {
-      const newStates = new Map<number, ApprovalState>();
+    let cancelled = false;
 
-      // Fetch approval states in parallel (with concurrency limit)
+    const buildApprovalStates = async () => {
+      const newStates = new Map<number, ApprovalState>();
+      const uncachedMRs: MergeRequest[] = [];
+
+      // First pass: read from cache (batch response seeds these)
+      for (const mr of mergeRequests) {
+        const cached = queryClient.getQueryData<ApprovalState>(
+          queryKeys.approvalState(mr.project_id, mr.iid)
+        );
+        if (cached) {
+          newStates.set(mr.id, cached);
+        } else {
+          uncachedMRs.push(mr);
+        }
+      }
+
+      // If all MRs were cached (typical with batch response), we're done
+      if (uncachedMRs.length === 0) {
+        if (!cancelled) setApprovalStates(newStates);
+        return;
+      }
+
+      // Fallback: fetch uncached approval states individually
       const batchSize = 5;
-      for (let i = 0; i < mergeRequests.length; i += batchSize) {
-        const batch = mergeRequests.slice(i, i + batchSize);
+      for (let i = 0; i < uncachedMRs.length; i += batchSize) {
+        if (cancelled) return;
+        const batch = uncachedMRs.slice(i, i + batchSize);
         const results = await Promise.allSettled(
-          batch.map(mr => getApprovalState(mr.project_id, mr.iid))
+          batch.map(mr =>
+            queryClient.fetchQuery({
+              queryKey: queryKeys.approvalState(mr.project_id, mr.iid),
+              queryFn: () => getApprovalState(mr.project_id, mr.iid),
+            })
+          )
         );
 
         results.forEach((result, index) => {
@@ -117,11 +188,15 @@ export function MRListPage() {
         });
       }
 
-      setApprovalStates(newStates);
+      if (!cancelled) {
+        setApprovalStates(newStates);
+      }
     };
 
-    fetchApprovalStates();
-  }, [mergeRequests, specialFilters.excludeApprovedByMe]);
+    buildApprovalStates();
+
+    return () => { cancelled = true; };
+  }, [mergeRequests, specialFilters.excludeApprovedByMe, queryClient]);
 
   // Apply negated filters client-side
   const negatedFilteredMRs = useMemo(() => {
@@ -129,27 +204,21 @@ export function MRListPage() {
     return applyNegatedFilters(mergeRequests, negatedFilters);
   }, [mergeRequests, negatedFilters]);
 
-  // Apply special filters (requires approval states)
-  const filteredMergeRequests = useMemo(() => {
-    // If we need approval data but don't have it yet, show all (will filter when loaded)
-    const needsApprovalData = specialFilters.excludeApprovedByMe;
-    if (needsApprovalData && approvalStates.size === 0 && negatedFilteredMRs.length > 0) {
-      // Still loading approval states, apply other filters only
-      if (specialFilters.reviewerIsMe && activeAccount?.username) {
-        return negatedFilteredMRs.filter(mr =>
-          mr.reviewers.some(r => r.username.toLowerCase() === activeAccount.username.toLowerCase())
-        );
-      }
-      return negatedFilteredMRs;
-    }
+  // Synchronous check: are we still waiting for approval data?
+  const awaitingApprovalData = specialFilters.excludeApprovedByMe &&
+    negatedFilteredMRs.length > 0 && approvalStates.size === 0;
 
+  // Apply special filters (requires approval states).
+  // Return empty while waiting for approval data — prevents flash of unfiltered MRs.
+  const filteredMergeRequests = useMemo(() => {
+    if (awaitingApprovalData) return [];
     return applySpecialFilters(
       negatedFilteredMRs,
       specialFilters,
       approvalStates,
       activeAccount?.username
     );
-  }, [negatedFilteredMRs, specialFilters, approvalStates, activeAccount?.username]);
+  }, [negatedFilteredMRs, specialFilters, approvalStates, activeAccount?.username, awaitingApprovalData]);
 
   // Extract unique projects and authors from MRs for filter dropdowns
   const { projects, authors } = useMemo(() => {
@@ -205,13 +274,13 @@ export function MRListPage() {
     <div className="h-full overflow-y-auto">
       <div className="p-4">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+          <h2 className="text-lg font-semibold text-content">
             Review Requests
           </h2>
           <button
             onClick={handleRefresh}
             disabled={refreshMutation.isPending}
-            className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-50"
+            className="p-2 text-content-secondary hover:text-content-muted rounded-md hover:bg-surface-hover disabled:opacity-50"
             title="Refresh"
           >
             <RefreshIcon spinning={refreshMutation.isPending} />
@@ -222,7 +291,7 @@ export function MRListPage() {
 
         <MRList
           mergeRequests={filteredMergeRequests}
-          isLoading={isLoading}
+          isLoading={isLoading || awaitingApprovalData}
           isError={isError}
           error={error as Error | null}
           onRetry={() => refetch()}
@@ -251,16 +320,16 @@ function NoAccountsState() {
           d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
         />
       </svg>
-      <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
+      <h2 className="text-xl font-semibold text-content mb-2">
         No GitLab Accounts
       </h2>
-      <p className="text-gray-600 dark:text-gray-400 text-center max-w-md mb-4">
+      <p className="text-content-secondary text-center max-w-md mb-4">
         Add a GitLab account to start reviewing merge requests. You'll need a personal access token
-        with <code className="text-sm bg-gray-100 dark:bg-gray-800 px-1 rounded">api</code> scope.
+        with <code className="text-sm bg-surface px-1 rounded">api</code> scope.
       </p>
       <button
         onClick={() => openModal('addAccount')}
-        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+        className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-hover transition-colors"
       >
         Add GitLab Account
       </button>
@@ -284,10 +353,10 @@ function SelectAccountState() {
           d="M8 9l4-4 4 4m0 6l-4 4-4-4"
         />
       </svg>
-      <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
+      <h2 className="text-xl font-semibold text-content mb-2">
         Select an Account
       </h2>
-      <p className="text-gray-600 dark:text-gray-400 text-center max-w-md">
+      <p className="text-content-secondary text-center max-w-md">
         You have GitLab accounts configured, but none are currently active. Select an account from
         the sidebar to view your merge requests.
       </p>

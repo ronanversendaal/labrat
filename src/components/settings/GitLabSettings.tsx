@@ -71,8 +71,8 @@ export function GitLabSettings() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100">GitLab Accounts</h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+          <h2 className="text-lg font-medium text-content">GitLab Accounts</h2>
+          <p className="text-sm text-content-secondary">
             Manage your GitLab account connections
           </p>
         </div>
@@ -87,7 +87,7 @@ export function GitLabSettings() {
             <Skeleton variant="rectangular" height={80} />
           </>
         ) : accounts?.length === 0 ? (
-          <div className="text-center py-8 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg">
+          <div className="text-center py-8 border border-dashed border-edge-strong rounded-lg">
             <svg
               className="w-12 h-12 mx-auto text-gray-400 mb-4"
               fill="none"
@@ -101,7 +101,7 @@ export function GitLabSettings() {
                 d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"
               />
             </svg>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            <p className="text-sm text-content-secondary mb-4">
               No GitLab accounts configured
             </p>
             <Button size="sm" onClick={() => setShowAddModal(true)}>
@@ -115,8 +115,8 @@ export function GitLabSettings() {
               className={`
                 flex items-center justify-between p-4 border rounded-lg
                 ${account.is_active
-                  ? 'border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20'
-                  : 'border-gray-200 dark:border-gray-700'
+                  ? 'border-primary bg-primary-muted'
+                  : 'border-edge'
                 }
               `}
             >
@@ -124,11 +124,11 @@ export function GitLabSettings() {
                 <Avatar src={account.avatar_url} name={account.name} size="lg" />
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="font-medium text-gray-900 dark:text-gray-100">
+                    <span className="font-medium text-content">
                       {account.name}
                     </span>
                     {account.is_active && (
-                      <span className="px-2 py-0.5 text-xs font-medium bg-blue-100 dark:bg-blue-800 text-blue-800 dark:text-blue-200 rounded">
+                      <span className="px-2 py-0.5 text-xs font-medium bg-primary-muted text-primary-text rounded">
                         Active
                       </span>
                     )}
@@ -137,11 +137,11 @@ export function GitLabSettings() {
                       onRefresh={() => checkConnectionMutation.mutate(account.id)}
                     />
                   </div>
-                  <span className="text-sm text-gray-500 dark:text-gray-400">
+                  <span className="text-sm text-content-secondary">
                     {account.instance_url}
                   </span>
                   {account.username && (
-                    <span className="text-sm text-gray-500 dark:text-gray-400 ml-2">
+                    <span className="text-sm text-content-secondary ml-2">
                       (@{account.username})
                     </span>
                   )}
@@ -162,7 +162,7 @@ export function GitLabSettings() {
                   size="sm"
                   variant="ghost"
                   onClick={() => setShowRemoveModal(account.id)}
-                  className="text-red-600 hover:text-red-700 dark:text-red-400"
+                  className="text-negative-text"
                 >
                   Remove
                 </Button>
@@ -204,7 +204,7 @@ export function GitLabSettings() {
             required
           />
           {addMutation.isError && (
-            <p className="text-sm text-red-600 dark:text-red-400">
+            <p className="text-sm text-negative-text">
               {addMutation.error?.message || 'Failed to add account'}
             </p>
           )}
@@ -227,7 +227,7 @@ export function GitLabSettings() {
         size="sm"
       >
         <div className="p-4">
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+          <p className="text-sm text-content-secondary mb-4">
             Are you sure you want to remove this account? This will delete all cached data for this account.
           </p>
           <div className="flex justify-end gap-2">
@@ -258,17 +258,17 @@ function ConnectionStatusIndicator({
   if (!status) {
     return (
       <span className="inline-flex items-center gap-1 text-xs text-gray-400">
-        <span className="w-2 h-2 rounded-full bg-gray-300 dark:bg-gray-600" />
+        <span className="w-2 h-2 rounded-full bg-surface-alt" />
         Unknown
       </span>
     );
   }
 
   const statusConfig: Record<ConnectionStatus, { color: string; bgColor: string; label: string }> = {
-    connected: { color: 'text-green-600 dark:text-green-400', bgColor: 'bg-green-500', label: 'Connected' },
-    disconnected: { color: 'text-red-600 dark:text-red-400', bgColor: 'bg-red-500', label: 'Disconnected' },
-    checking: { color: 'text-yellow-600 dark:text-yellow-400', bgColor: 'bg-yellow-500', label: 'Checking...' },
-    error: { color: 'text-red-600 dark:text-red-400', bgColor: 'bg-red-500', label: 'Error' },
+    connected: { color: 'text-positive-text', bgColor: 'bg-green-500', label: 'Connected' },
+    disconnected: { color: 'text-negative-text', bgColor: 'bg-red-500', label: 'Disconnected' },
+    checking: { color: 'text-caution-text', bgColor: 'bg-yellow-500', label: 'Checking...' },
+    error: { color: 'text-negative-text', bgColor: 'bg-red-500', label: 'Error' },
   };
 
   const config = statusConfig[status];

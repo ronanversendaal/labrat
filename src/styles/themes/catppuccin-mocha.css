@@ -1,0 +1,76 @@
+[data-theme="catppuccin-mocha"] {
+  color-scheme: dark;
+
+  /* Backgrounds — warm purple-blue base */
+  --th-canvas: #1e1e2e;
+  --th-surface: #313244;
+  --th-surface-alt: #45475a;
+  --th-surface-hover: #45475a;
+  --th-surface-active: #585b70;
+  --th-surface-raised: #313244;
+  --th-surface-inset: #181825;
+
+  /* Text — soft lavender whites */
+  --th-content: #cdd6f4;
+  --th-content-secondary: #a6adc8;
+  --th-content-tertiary: #6c7086;
+  --th-content-muted: #bac2de;
+
+  /* Borders */
+  --th-edge: #45475a;
+  --th-edge-strong: #585b70;
+  --th-edge-subtle: #313244;
+
+  /* Primary — blue */
+  --th-primary: #89b4fa;
+  --th-primary-hover: #74c7ec;
+  --th-primary-muted: rgba(137, 180, 250, 0.15);
+  --th-primary-text: #89b4fa;
+
+  /* Positive — green */
+  --th-positive: #a6e3a1;
+  --th-positive-muted: rgba(166, 227, 161, 0.12);
+  --th-positive-text: #a6e3a1;
+
+  /* Negative — red */
+  --th-negative: #f38ba8;
+  --th-negative-muted: rgba(243, 139, 168, 0.12);
+  --th-negative-text: #f38ba8;
+
+  /* Caution — yellow */
+  --th-caution: #f9e2af;
+  --th-caution-muted: rgba(249, 226, 175, 0.12);
+  --th-caution-text: #f9e2af;
+
+  /* Info — mauve */
+  --th-info: #cba6f7;
+  --th-info-muted: rgba(203, 166, 247, 0.12);
+  --th-info-text: #cba6f7;
+
+  /* Diffs */
+  --th-diff-add-bg: rgba(166, 227, 161, 0.12);
+  --th-diff-add-text: #a6e3a1;
+  --th-diff-del-bg: rgba(243, 139, 168, 0.12);
+  --th-diff-del-text: #f38ba8;
+
+  /* Editor */
+  --th-editor-bg: #1e1e2e;
+  --th-editor-toolbar: #313244;
+  --th-editor-border: #45475a;
+  --th-editor-text: #cdd6f4;
+
+  /* Focus ring — lavender */
+  --th-ring: #b4befe;
+
+  /* Sidebar — mantle */
+  --th-sidebar: #181825;
+  --th-sidebar-hover: #313244;
+  --th-sidebar-active: #45475a;
+  --th-sidebar-text: #cdd6f4;
+  --th-sidebar-muted: #6c7086;
+  --th-sidebar-border: #45475a;
+
+  /* Fonts — soft geometric sans pairs with pastel palette */
+  --th-font-ui: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --th-font-code: 'Cascadia Code', 'JetBrains Mono', 'Fira Code', monospace;
+}

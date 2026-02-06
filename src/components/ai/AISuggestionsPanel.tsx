@@ -130,12 +130,12 @@ export function AISuggestionsPanel({ projectId, mrIid, onJumpToLine }: AISuggest
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+      <div className="px-4 py-3 border-b border-edge">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-3">
-            <h3 className="font-semibold text-gray-900 dark:text-gray-100">AI Suggestions</h3>
+            <h3 className="font-semibold text-content">AI Suggestions</h3>
             {pendingCount > 0 && (
-              <span className="px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 rounded">
+              <span className="px-2 py-0.5 text-xs font-medium bg-primary-muted text-primary-text rounded">
                 {pendingCount} pending
               </span>
             )}
@@ -155,17 +155,17 @@ export function AISuggestionsPanel({ projectId, mrIid, onJumpToLine }: AISuggest
         {Object.keys(summary).length > 0 && (
           <div className="flex items-center gap-2 mb-3">
             {summary.error && (
-              <span className="px-2 py-0.5 text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 rounded">
+              <span className="px-2 py-0.5 text-xs font-medium bg-negative-muted text-negative-text rounded">
                 {summary.error} errors
               </span>
             )}
             {summary.warning && (
-              <span className="px-2 py-0.5 text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300 rounded">
+              <span className="px-2 py-0.5 text-xs font-medium bg-caution-muted text-caution-text rounded">
                 {summary.warning} warnings
               </span>
             )}
             {summary.info && (
-              <span className="px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 rounded">
+              <span className="px-2 py-0.5 text-xs font-medium bg-primary-muted text-primary-text rounded">
                 {summary.info} info
               </span>
             )}
@@ -177,7 +177,7 @@ export function AISuggestionsPanel({ projectId, mrIid, onJumpToLine }: AISuggest
           <select
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value as FilterCategory)}
-            className="px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+            className="px-2 py-1 text-xs border border-edge-strong rounded bg-surface text-content"
           >
             {categoryOptions.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -188,7 +188,7 @@ export function AISuggestionsPanel({ projectId, mrIid, onJumpToLine }: AISuggest
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as FilterStatus)}
-            className="px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+            className="px-2 py-1 text-xs border border-edge-strong rounded bg-surface text-content"
           >
             {statusOptions.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -210,24 +210,24 @@ export function AISuggestionsPanel({ projectId, mrIid, onJumpToLine }: AISuggest
         ) : analyzeMutation.isPending ? (
           <div className="flex flex-col items-center justify-center py-12">
             <div className="animate-spin w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full mb-4" />
-            <p className="text-sm text-gray-500 dark:text-gray-400">Analyzing merge request...</p>
-            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">This may take a moment</p>
+            <p className="text-sm text-content-secondary">Analyzing merge request...</p>
+            <p className="text-xs text-content-tertiary mt-1">This may take a moment</p>
           </div>
         ) : filteredSuggestions.length === 0 ? (
           <div className="text-center py-12">
             {suggestions?.length === 0 ? (
               <>
-                <AIIcon className="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-4" />
-                <p className="text-sm text-gray-500 dark:text-gray-400">
+                <AIIcon className="w-12 h-12 mx-auto text-content-tertiary mb-4" />
+                <p className="text-sm text-content-secondary">
                   No AI suggestions yet
                 </p>
-                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                <p className="text-xs text-content-tertiary mt-1">
                   Click "Analyze with AI" to get code review suggestions
                 </p>
               </>
             ) : (
               <>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
+                <p className="text-sm text-content-secondary">
                   No suggestions match your filters
                 </p>
                 <button
@@ -259,13 +259,13 @@ export function AISuggestionsPanel({ projectId, mrIid, onJumpToLine }: AISuggest
 
         {/* Error state */}
         {analyzeMutation.isError && (
-          <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-            <p className="text-sm text-red-700 dark:text-red-300">
+          <div className="mt-4 p-3 bg-negative-muted border border-negative-muted rounded-lg">
+            <p className="text-sm text-negative-text">
               Analysis failed: {analyzeMutation.error?.message || 'Unknown error'}
             </p>
             <button
               onClick={handleAnalyze}
-              className="text-xs text-red-600 hover:text-red-700 dark:text-red-400 mt-1"
+              className="text-xs text-negative-text mt-1"
             >
               Try again
             </button>

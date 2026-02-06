@@ -190,6 +190,28 @@ pub fn run() {
                     let _ = window.set_size(tauri::LogicalSize::new(win_width, screen_h));
                     let _ = window.set_position(tauri::LogicalPosition::new(x, 0.0));
                 }
+
+                // Set initial NSWindow background color (default-dark canvas: #111827)
+                // This prevents white flash and makes the overlay titlebar match the theme.
+                #[cfg(target_os = "macos")]
+                {
+                    use cocoa::appkit::{NSColor, NSWindow};
+                    use cocoa::base::{id, nil};
+
+                    if let Ok(ns_win) = window.ns_window() {
+                        let ns_win = ns_win as id;
+                        unsafe {
+                            let color = NSColor::colorWithRed_green_blue_alpha_(
+                                nil,
+                                17.0 / 255.0,  // #11
+                                24.0 / 255.0,  // #18
+                                39.0 / 255.0,  // #27
+                                1.0,
+                            );
+                            ns_win.setBackgroundColor_(color);
+                        }
+                    }
+                }
             }
 
             // Initialize app state asynchronously
@@ -246,6 +268,8 @@ pub fn run() {
             commands::cache::cache_get_stats,
             commands::cache::cache_clear,
             commands::cache::cache_evict_old,
+            // Window commands
+            commands::window::set_window_bg_color,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

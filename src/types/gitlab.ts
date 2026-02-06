@@ -223,6 +223,8 @@ export interface ListMergeRequestsRequest {
   sort?: MergeRequestSort;
   search?: string;
   use_cache?: boolean;
+  /** When true, fetch approval states for all returned MRs in parallel on the backend */
+  include_approvals?: boolean;
 }
 
 /** Response from listing merge requests */
@@ -230,6 +232,8 @@ export interface ListMergeRequestsResponse {
   merge_requests: MergeRequest[];
   from_cache: boolean;
   cached_at: string | null;
+  /** Approval states keyed by MR id, populated when include_approvals is true */
+  approval_states?: Record<number, ApprovalState>;
 }
 
 /** Request to get a diff */

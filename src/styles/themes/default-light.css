@@ -1,0 +1,76 @@
+[data-theme="default-light"] {
+  color-scheme: light;
+
+  /* Backgrounds */
+  --th-canvas: #ffffff;
+  --th-surface: #f8fafc;
+  --th-surface-alt: #f1f5f9;
+  --th-surface-hover: #f1f5f9;
+  --th-surface-active: #e2e8f0;
+  --th-surface-raised: #ffffff;
+  --th-surface-inset: #f8fafc;
+
+  /* Text */
+  --th-content: #1e293b;
+  --th-content-secondary: #64748b;
+  --th-content-tertiary: #94a3b8;
+  --th-content-muted: #475569;
+
+  /* Borders */
+  --th-edge: #e2e8f0;
+  --th-edge-strong: #cbd5e1;
+  --th-edge-subtle: #f1f5f9;
+
+  /* Primary / Accent */
+  --th-primary: #2563eb;
+  --th-primary-hover: #1d4ed8;
+  --th-primary-muted: #eff6ff;
+  --th-primary-text: #2563eb;
+
+  /* Positive / Success */
+  --th-positive: #16a34a;
+  --th-positive-muted: #f0fdf4;
+  --th-positive-text: #15803d;
+
+  /* Negative / Error */
+  --th-negative: #dc2626;
+  --th-negative-muted: #fef2f2;
+  --th-negative-text: #b91c1c;
+
+  /* Caution / Warning */
+  --th-caution: #d97706;
+  --th-caution-muted: #fffbeb;
+  --th-caution-text: #b45309;
+
+  /* Info */
+  --th-info: #7c3aed;
+  --th-info-muted: #f5f3ff;
+  --th-info-text: #6d28d9;
+
+  /* Diffs */
+  --th-diff-add-bg: #dcfce7;
+  --th-diff-add-text: #166534;
+  --th-diff-del-bg: #fee2e2;
+  --th-diff-del-text: #991b1b;
+
+  /* Inline editor (comment threads, suggestion blocks) */
+  --th-editor-bg: #ffffff;
+  --th-editor-toolbar: #f8fafc;
+  --th-editor-border: #e2e8f0;
+  --th-editor-text: #1e293b;
+
+  /* Focus ring */
+  --th-ring: #3b82f6;
+
+  /* Sidebar */
+  --th-sidebar: #f8fafc;
+  --th-sidebar-hover: #f1f5f9;
+  --th-sidebar-active: #e2e8f0;
+  --th-sidebar-text: #1e293b;
+  --th-sidebar-muted: #64748b;
+  --th-sidebar-border: #e2e8f0;
+
+  /* Fonts (defaults) */
+  --th-font-ui: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  --th-font-code: 'JetBrains Mono', 'Fira Code', 'SF Mono', Menlo, Consolas, monospace;
+}

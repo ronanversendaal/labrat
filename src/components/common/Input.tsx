@@ -29,7 +29,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         {label && (
           <label
             htmlFor={inputId}
-            className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+            className="block text-sm font-medium text-content-muted mb-1"
           >
             {label}
           </label>
@@ -45,13 +45,13 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             id={inputId}
             className={`
               block w-full rounded-md
-              border ${error ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'}
-              bg-white dark:bg-gray-800
-              text-gray-900 dark:text-gray-100
-              placeholder-gray-400 dark:placeholder-gray-500
-              focus:outline-none focus:ring-2 ${error ? 'focus:ring-red-500' : 'focus:ring-blue-500'}
+              border ${error ? 'border-red-500' : 'border-edge'}
+              bg-surface
+              text-content
+              placeholder-content-secondary
+              focus:outline-none focus:ring-2 ${error ? 'focus:ring-red-500' : 'focus:ring-ring'}
               focus:border-transparent
-              disabled:bg-gray-100 dark:disabled:bg-gray-700
+              disabled:bg-surface-alt
               disabled:cursor-not-allowed disabled:opacity-60
               ${leftIcon ? 'pl-10' : 'pl-3'}
               ${rightIcon ? 'pr-10' : 'pr-3'}
@@ -71,12 +71,12 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           )}
         </div>
         {error && (
-          <p id={`${inputId}-error`} className="mt-1 text-sm text-red-600 dark:text-red-400">
+          <p id={`${inputId}-error`} className="mt-1 text-sm text-negative-text">
             {error}
           </p>
         )}
         {helperText && !error && (
-          <p id={`${inputId}-helper`} className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          <p id={`${inputId}-helper`} className="mt-1 text-sm text-content-secondary">
             {helperText}
           </p>
         )}

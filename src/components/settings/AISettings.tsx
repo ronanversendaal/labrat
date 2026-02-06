@@ -67,11 +67,11 @@ export function AISettings() {
     <div>
       {/* Auto-analyze toggle */}
       <div className="mb-8">
-        <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">Analysis Settings</h2>
-        <div className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
+        <h2 className="text-lg font-medium text-content mb-2">Analysis Settings</h2>
+        <div className="flex items-center justify-between p-4 border border-edge rounded-lg">
           <div>
-            <p className="font-medium text-gray-900 dark:text-gray-100">Auto-analyze Merge Requests</p>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
+            <p className="font-medium text-content">Auto-analyze Merge Requests</p>
+            <p className="text-sm text-content-secondary">
               Automatically run AI analysis when opening a merge request
             </p>
           </div>
@@ -82,47 +82,47 @@ export function AISettings() {
               onChange={(e) => handleAutoAnalyzeToggle(e.target.checked)}
               className="sr-only peer"
             />
-            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+            <div className="w-11 h-6 bg-surface-alt peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-ring rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-edge-strong after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
           </label>
         </div>
       </div>
 
       {/* Claude CLI status */}
       <div className="mb-8">
-        <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">Claude CLI Status</h2>
+        <h2 className="text-lg font-medium text-content mb-2">Claude CLI Status</h2>
         {isLoadingCli ? (
           <Skeleton variant="rectangular" height={60} />
         ) : cliStatus?.available ? (
-          <div className="p-4 border border-green-200 dark:border-green-700 bg-green-50 dark:bg-green-900/20 rounded-lg">
+          <div className="p-4 border border-positive-muted bg-positive-muted rounded-lg">
             <div className="flex items-center gap-2">
               <svg className="w-5 h-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
-              <span className="font-medium text-green-800 dark:text-green-200">Claude CLI Available</span>
+              <span className="font-medium text-positive-text">Claude CLI Available</span>
             </div>
             {cliStatus.version && (
-              <p className="text-sm text-green-600 dark:text-green-400 mt-1">Version: {cliStatus.version}</p>
+              <p className="text-sm text-positive-text mt-1">Version: {cliStatus.version}</p>
             )}
             {cliStatus.path && (
-              <p className="text-sm text-green-600 dark:text-green-400">Path: {cliStatus.path}</p>
+              <p className="text-sm text-positive-text">Path: {cliStatus.path}</p>
             )}
           </div>
         ) : (
-          <div className="p-4 border border-yellow-200 dark:border-yellow-700 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+          <div className="p-4 border border-caution-muted bg-caution-muted rounded-lg">
             <div className="flex items-center gap-2">
               <svg className="w-5 h-5 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
-              <span className="font-medium text-yellow-800 dark:text-yellow-200">Claude CLI Not Found</span>
+              <span className="font-medium text-caution-text">Claude CLI Not Found</span>
             </div>
-            <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
+            <p className="text-sm text-caution-text mt-1">
               Install Claude CLI to use local AI analysis without API keys.
             </p>
             <a
               href="https://docs.anthropic.com/en/docs/claude-code/overview"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm text-blue-600 dark:text-blue-400 hover:underline mt-2 inline-block"
+              className="text-sm text-primary-text hover:underline mt-2 inline-block"
             >
               Learn how to install Claude CLI
             </a>
@@ -134,8 +134,8 @@ export function AISettings() {
       <div>
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100">AI Providers</h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
+            <h2 className="text-lg font-medium text-content">AI Providers</h2>
+            <p className="text-sm text-content-secondary">
               Configure API-based AI providers for code analysis
             </p>
           </div>
@@ -149,7 +149,7 @@ export function AISettings() {
               <Skeleton variant="rectangular" height={80} />
             </>
           ) : providers?.length === 0 ? (
-            <div className="text-center py-8 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg">
+            <div className="text-center py-8 border border-dashed border-edge-strong rounded-lg">
               <svg
                 className="w-12 h-12 mx-auto text-gray-400 mb-4"
                 fill="none"
@@ -163,7 +163,7 @@ export function AISettings() {
                   d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
                 />
               </svg>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+              <p className="text-sm text-content-secondary mb-4">
                 No AI providers configured
               </p>
               <Button size="sm" onClick={() => setShowAddModal(true)}>
@@ -177,8 +177,8 @@ export function AISettings() {
                 className={`
                   flex items-center justify-between p-4 border rounded-lg
                   ${provider.is_default
-                    ? 'border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20'
-                    : 'border-gray-200 dark:border-gray-700'
+                    ? 'border-primary bg-primary-muted'
+                    : 'border-edge'
                   }
                 `}
               >
@@ -186,14 +186,14 @@ export function AISettings() {
                   <div
                     className={`w-10 h-10 rounded-full flex items-center justify-center ${
                       provider.is_available
-                        ? 'bg-green-100 dark:bg-green-900'
-                        : 'bg-gray-100 dark:bg-gray-800'
+                        ? 'bg-positive-muted'
+                        : 'bg-surface-alt'
                     }`}
                   >
                     <svg
                       className={`w-5 h-5 ${
                         provider.is_available
-                          ? 'text-green-600 dark:text-green-400'
+                          ? 'text-positive-text'
                           : 'text-gray-400'
                       }`}
                       fill="none"
@@ -210,21 +210,21 @@ export function AISettings() {
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="font-medium text-gray-900 dark:text-gray-100">
+                      <span className="font-medium text-content">
                         {provider.name}
                       </span>
                       {provider.is_default && (
-                        <span className="px-2 py-0.5 text-xs font-medium bg-blue-100 dark:bg-blue-800 text-blue-800 dark:text-blue-200 rounded">
+                        <span className="px-2 py-0.5 text-xs font-medium bg-primary-muted text-primary-text rounded">
                           Default
                         </span>
                       )}
                       {!provider.is_available && (
-                        <span className="px-2 py-0.5 text-xs font-medium bg-yellow-100 dark:bg-yellow-800 text-yellow-800 dark:text-yellow-200 rounded">
+                        <span className="px-2 py-0.5 text-xs font-medium bg-caution-muted text-caution-text rounded">
                           Unavailable
                         </span>
                       )}
                     </div>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">
+                    <span className="text-sm text-content-secondary">
                       {providerTypeLabels[provider.provider_type]}
                       {provider.model && ` · ${provider.model}`}
                     </span>
@@ -245,7 +245,7 @@ export function AISettings() {
                     size="sm"
                     variant="ghost"
                     onClick={() => setShowRemoveModal(provider.id)}
-                    className="text-red-600 hover:text-red-700 dark:text-red-400"
+                    className="text-negative-text"
                   >
                     Remove
                   </Button>
@@ -265,7 +265,7 @@ export function AISettings() {
       >
         <form onSubmit={handleAddProvider} className="p-4 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="block text-sm font-medium text-content-muted mb-1">
               Provider Type
             </label>
             <select
@@ -276,7 +276,7 @@ export function AISettings() {
                   provider_type: e.target.value as AIProviderType,
                 }))
               }
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+              className="w-full px-3 py-2 border border-edge-strong rounded-md bg-surface text-content"
             >
               <option value="anthropic_api">Anthropic API</option>
               <option value="openai_api">OpenAI API</option>
@@ -316,7 +316,7 @@ export function AISettings() {
             </>
           )}
           {addMutation.isError && (
-            <p className="text-sm text-red-600 dark:text-red-400">
+            <p className="text-sm text-negative-text">
               {addMutation.error?.message || 'Failed to add provider'}
             </p>
           )}
@@ -339,7 +339,7 @@ export function AISettings() {
         size="sm"
       >
         <div className="p-4">
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+          <p className="text-sm text-content-secondary mb-4">
             Are you sure you want to remove this AI provider? The API key will be deleted from your system.
           </p>
           <div className="flex justify-end gap-2">

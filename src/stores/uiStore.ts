@@ -20,9 +20,6 @@ interface UIState {
   isRefreshing: boolean;
   isAnalyzing: boolean;
 
-  // Filter panel
-  filterPanelExpanded: boolean;
-
   // Inline comments - track which resolved threads are expanded
   expandedResolvedThreads: Set<string>;
 
@@ -37,8 +34,6 @@ interface UIState {
   setFontSize: (size: number) => void;
   setRefreshing: (isRefreshing: boolean) => void;
   setAnalyzing: (isAnalyzing: boolean) => void;
-  toggleFilterPanel: () => void;
-  setFilterPanelExpanded: (expanded: boolean) => void;
   toggleResolvedThread: (discussionId: string) => void;
   clearExpandedThreads: () => void;
 }
@@ -54,7 +49,6 @@ export const useUIStore = create<UIState>((set) => ({
   fontSize: 14,
   isRefreshing: false,
   isAnalyzing: false,
-  filterPanelExpanded: true,
   expandedResolvedThreads: new Set(),
 
   // Actions
@@ -82,11 +76,6 @@ export const useUIStore = create<UIState>((set) => ({
   setRefreshing: (isRefreshing) => set({ isRefreshing }),
 
   setAnalyzing: (isAnalyzing) => set({ isAnalyzing }),
-
-  toggleFilterPanel: () =>
-    set((state) => ({ filterPanelExpanded: !state.filterPanelExpanded })),
-
-  setFilterPanelExpanded: (filterPanelExpanded) => set({ filterPanelExpanded }),
 
   toggleResolvedThread: (discussionId) =>
     set((state) => {

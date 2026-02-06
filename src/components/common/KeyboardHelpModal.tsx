@@ -56,7 +56,7 @@ export function KeyboardHelpModal({ isOpen, onClose }: KeyboardHelpModalProps) {
 
             return (
               <div key={category}>
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3 border-b border-gray-200 dark:border-gray-700 pb-1">
+                <h3 className="text-sm font-semibold text-content mb-3 border-b border-edge pb-1">
                   {getCategoryDisplayName(category)}
                 </h3>
                 <div className="space-y-2">
@@ -65,16 +65,16 @@ export function KeyboardHelpModal({ isOpen, onClose }: KeyboardHelpModalProps) {
                       key={id}
                       className="flex items-center justify-between text-sm"
                     >
-                      <span className="text-gray-600 dark:text-gray-400">
+                      <span className="text-content-secondary">
                         {shortcut.description}
                       </span>
                       <div className="flex items-center gap-1 ml-4">
                         {shortcut.keys.slice(0, 2).map((key, i) => (
                           <span key={key}>
                             {i > 0 && (
-                              <span className="text-gray-400 dark:text-gray-500 mx-1">or</span>
+                              <span className="text-content-tertiary mx-1">or</span>
                             )}
-                            <kbd className="px-2 py-1 text-xs font-mono bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-gray-800 dark:text-gray-200">
+                            <kbd className="px-2 py-1 text-xs font-mono bg-surface-alt border border-edge-strong rounded text-content">
                               {formatKeyCombo(key)}
                             </kbd>
                           </span>
@@ -88,9 +88,9 @@ export function KeyboardHelpModal({ isOpen, onClose }: KeyboardHelpModalProps) {
           })}
         </div>
 
-        <div className="border-t border-gray-200 dark:border-gray-700 p-4 mt-4">
-          <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
-            Press <kbd className="px-1.5 py-0.5 text-xs font-mono bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded">?</kbd> anytime to show this help
+        <div className="border-t border-edge p-4 mt-4">
+          <p className="text-xs text-content-secondary text-center">
+            Press <kbd className="px-1.5 py-0.5 text-xs font-mono bg-surface-alt border border-edge-strong rounded">?</kbd> anytime to show this help
           </p>
         </div>
       </div>

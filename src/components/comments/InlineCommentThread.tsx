@@ -192,9 +192,9 @@ export function InlineCommentThread({
         <div className="inline-comment-thread__reply-trigger">
           <button
             onClick={() => setIsReplying(true)}
-            className="flex items-center gap-2 text-sm text-gray-400 hover:text-gray-200"
+            className="flex items-center gap-2 text-sm text-content-tertiary hover:text-content-muted"
           >
-            <span className="text-gray-500">Reply...</span>
+            <span className="text-content-secondary">Reply...</span>
           </button>
         </div>
       )}
@@ -202,7 +202,7 @@ export function InlineCommentThread({
       {/* New thread form */}
       {isStartingNewThread && position && (
         <div className="inline-comment-thread__new-thread-form">
-          <div className="border-t border-[#3d3d5c] mt-3 pt-3">
+          <div className="border-t border-editor-border mt-3 pt-3">
             <CommentEditor
               ref={newThreadEditorRef}
               placeholder="Start a new thread..."
@@ -242,7 +242,7 @@ export function InlineCommentThread({
           {position && !isStartingNewThread && (
             <button
               onClick={() => setIsStartingNewThread(true)}
-              className="text-sm text-gray-400 hover:text-gray-200"
+              className="text-sm text-content-tertiary hover:text-content-muted"
             >
               Start another thread
             </button>
@@ -271,7 +271,7 @@ export function InlineCommentThread({
       {isResolved && onCollapse && (
         <button
           onClick={onCollapse}
-          className="absolute top-2 right-2 text-gray-500 hover:text-gray-300 p-1 rounded hover:bg-gray-700/50"
+          className="absolute top-2 right-2 text-content-secondary hover:text-content-muted p-1 rounded hover:bg-surface-hover"
           title="Collapse resolved thread"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -314,13 +314,13 @@ function InlineNoteDisplay({
         <div className="flex-1 min-w-0">
           {/* Author line */}
           <div className="flex items-center flex-wrap gap-2 mb-1">
-            <span className="font-medium text-sm text-gray-100">
+            <span className="font-medium text-sm text-content">
               {note.author.name}
             </span>
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-content-secondary">
               @{note.author.username}
             </span>
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-content-secondary">
               {formatRelativeTime(note.created_at)}
             </span>
             {isOwner && (

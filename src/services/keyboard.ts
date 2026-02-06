@@ -84,7 +84,9 @@ export function matchesKeyCombo(event: KeyboardEvent, combo: string): boolean {
   if (!parsed.meta && metaPressed) return false;
 
   if (parsed.shift && !event.shiftKey) return false;
-  if (!parsed.shift && event.shiftKey && parsed.key.length === 1) return false;
+  // Allow shifted symbol keys (e.g. '?' = Shift+/) without requiring explicit shift+ prefix
+  const isSymbolKey = parsed.key.length === 1 && /[^a-z0-9]/.test(parsed.key);
+  if (!parsed.shift && event.shiftKey && parsed.key.length === 1 && !isSymbolKey) return false;
 
   if (parsed.alt && !event.altKey) return false;
   if (!parsed.alt && event.altKey) return false;
@@ -106,8 +108,8 @@ export function matchesKeyCombo(event: KeyboardEvent, combo: string): boolean {
     'arrowdown': ['arrowdown', 'down'],
     'arrowleft': ['arrowleft', 'left'],
     'arrowright': ['arrowright', 'right'],
-    '/': ['/', '?'],
-    '?': ['?', '/'],
+    '/': ['/'],
+    '?': ['?'],
   };
 
   const validKeys = keyMap[targetKey] || [targetKey];
@@ -348,6 +350,24 @@ export const DEFAULT_SHORTCUTS: Array<{
       category: 'mr-list',
     },
   },
+  {
+    id: 'toggle-toolbar',
+    shortcut: {
+      label: 'Toggle Toolbar',
+      description: 'Show/hide group & sort toolbar',
+      keys: ['g'],
+      category: 'mr-list',
+    },
+  },
+  {
+    id: 'show-search',
+    shortcut: {
+      label: 'Search',
+      description: 'Show search & focus input',
+      keys: ['/'],
+      category: 'mr-list',
+    },
+  },
 
   // MR Detail / Diff Navigation
   {
@@ -466,6 +486,15 @@ export const DEFAULT_SHORTCUTS: Array<{
       label: 'Suggest',
       description: 'Suggest a change on current line',
       keys: ['s'],
+      category: 'review',
+    },
+  },
+  {
+    id: 'approve-mr',
+    shortcut: {
+      label: 'Approve',
+      description: 'Approve merge request',
+      keys: ['shift+a'],
       category: 'review',
     },
   },

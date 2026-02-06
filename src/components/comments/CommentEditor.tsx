@@ -79,8 +79,8 @@ function ToolbarButton({
       className={clsx(
         'px-2 py-1.5 rounded text-sm font-medium transition-colors',
         active
-          ? 'bg-[#3d3d5c] text-blue-400'
-          : 'text-gray-400 hover:bg-[#3d3d5c] hover:text-gray-200',
+          ? 'bg-editor-toolbar text-primary-text'
+          : 'text-content-tertiary hover:bg-editor-toolbar hover:text-content-muted',
         disabled && 'opacity-50 cursor-not-allowed'
       )}
     >
@@ -106,7 +106,7 @@ function EditorToolbar({
   if (!editor) return null;
 
   return (
-    <div className="flex items-center gap-0.5 p-2 border-b border-[#3d3d5c] bg-[#262639]">
+    <div className="flex items-center gap-0.5 p-2 border-b border-editor-border bg-editor-toolbar">
       <ToolbarButton
         onClick={() => editor.chain().focus().toggleBold().run()}
         active={editor.isActive('bold')}
@@ -134,7 +134,7 @@ function EditorToolbar({
         <s>S</s>
       </ToolbarButton>
 
-      <div className="w-px h-4 bg-[#3d3d5c] mx-1" />
+      <div className="w-px h-4 bg-editor-border mx-1" />
 
       <ToolbarButton
         onClick={() => editor.chain().focus().toggleCode().run()}
@@ -154,7 +154,7 @@ function EditorToolbar({
         <span className="text-xs font-mono">{'{ }'}</span>
       </ToolbarButton>
 
-      <div className="w-px h-4 bg-[#3d3d5c] mx-1" />
+      <div className="w-px h-4 bg-editor-border mx-1" />
 
       <ToolbarButton
         onClick={() => editor.chain().focus().toggleBulletList().run()}
@@ -185,7 +185,7 @@ function EditorToolbar({
 
       {showSuggestionButton && (
         <>
-          <div className="w-px h-4 bg-[#3d3d5c] mx-1" />
+          <div className="w-px h-4 bg-editor-border mx-1" />
 
           <ToolbarButton
             onClick={onInsertSuggestion}
@@ -193,7 +193,7 @@ function EditorToolbar({
             disabled={disabled}
             title="Insert Code Suggestion"
           >
-            <span className="text-xs text-green-600 dark:text-green-400 font-semibold">
+            <span className="text-xs text-positive-text font-semibold">
               +/-
             </span>
           </ToolbarButton>
@@ -295,18 +295,18 @@ export const CommentEditor = forwardRef<CommentEditorRef, CommentEditorProps>(
         Link.configure({
           openOnClick: false,
           HTMLAttributes: {
-            class: 'text-blue-600 dark:text-blue-400 underline',
+            class: 'text-primary-text underline',
           },
         }),
         Placeholder.configure({
           placeholder,
           emptyEditorClass:
-            'before:content-[attr(data-placeholder)] before:text-gray-400 before:dark:text-gray-500 before:float-left before:h-0 before:pointer-events-none',
+            'before:content-[attr(data-placeholder)] before:text-content-tertiary before:float-left before:h-0 before:pointer-events-none',
         }),
         CodeBlockLowlight.configure({
           lowlight,
           HTMLAttributes: {
-            class: 'bg-gray-100 dark:bg-gray-800 rounded p-3 font-mono text-sm',
+            class: 'bg-surface rounded p-3 font-mono text-sm',
           },
         }),
         SuggestionExtension,
@@ -322,7 +322,7 @@ export const CommentEditor = forwardRef<CommentEditorRef, CommentEditorProps>(
       editorProps: {
         attributes: {
           class: clsx(
-            'prose prose-sm dark:prose-invert max-w-none',
+            'prose prose-sm max-w-none',
             'focus:outline-none',
             'p-3'
           ),
@@ -389,8 +389,8 @@ export const CommentEditor = forwardRef<CommentEditorRef, CommentEditorProps>(
     return (
       <div
         className={clsx(
-          'border border-[#3d3d5c] rounded overflow-hidden',
-          'focus-within:ring-1 focus-within:ring-blue-500 focus-within:border-blue-500',
+          'border border-editor-border rounded overflow-hidden',
+          'focus-within:ring-1 focus-within:ring-ring focus-within:border-ring',
           disabled && 'opacity-60 cursor-not-allowed',
           className
         )}
@@ -405,15 +405,15 @@ export const CommentEditor = forwardRef<CommentEditorRef, CommentEditorProps>(
         <EditorContent
           editor={editor}
           className={clsx(
-            'bg-[#1e1e2e]',
+            'bg-editor-bg',
             disabled && 'pointer-events-none'
           )}
         />
 
-        <div className="flex items-center justify-between px-3 py-2 bg-[#262639] border-t border-[#3d3d5c]">
-          <span className="text-xs text-gray-400">
+        <div className="flex items-center justify-between px-3 py-2 bg-editor-toolbar border-t border-editor-border">
+          <span className="text-xs text-content-tertiary">
             Markdown supported.{' '}
-            <kbd className="px-1.5 py-0.5 bg-[#3d3d5c] rounded text-xs text-gray-300">
+            <kbd className="px-1.5 py-0.5 bg-editor-toolbar rounded text-xs text-content-muted">
               {typeof navigator !== 'undefined' && navigator.platform?.includes('Mac') ? '⌘' : 'Ctrl'}+Enter
             </kbd>{' '}
             to submit
@@ -423,7 +423,7 @@ export const CommentEditor = forwardRef<CommentEditorRef, CommentEditorProps>(
             <button
               type="button"
               onClick={onCancel}
-              className="text-xs text-gray-400 hover:text-gray-200 transition-colors"
+              className="text-xs text-content-tertiary hover:text-content-muted transition-colors"
             >
               Cancel
             </button>

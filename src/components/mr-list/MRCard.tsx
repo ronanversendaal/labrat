@@ -31,15 +31,15 @@ export const MRCard = forwardRef<HTMLDivElement, MRCardProps>(function MRCard({ 
       className={`
         p-4 border rounded-lg cursor-pointer
         transition-colors duration-150
-        focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
+        focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2
         ${selected
-          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-          : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+          ? 'border-blue-500 bg-primary-muted'
+          : 'border-edge hover:border-edge-strong'
         }
       `}
     >
       {/* Header: Project and time */}
-      <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400 mb-2">
+      <div className="flex items-center justify-between text-sm text-content-secondary mb-2">
         <span
           className="font-medium truncate max-w-[200px]"
           title={mr.project_path || undefined}
@@ -50,9 +50,9 @@ export const MRCard = forwardRef<HTMLDivElement, MRCardProps>(function MRCard({ 
       </div>
 
       {/* Title */}
-      <h3 className="text-base font-medium text-gray-900 dark:text-gray-100 mb-2 line-clamp-2">
+      <h3 className="text-base font-medium text-content mb-2 line-clamp-2">
         {mr.draft && (
-          <span className="text-gray-400 dark:text-gray-500 mr-1">Draft:</span>
+          <span className="text-content-tertiary mr-1">Draft:</span>
         )}
         {mr.title}
       </h3>
@@ -62,13 +62,13 @@ export const MRCard = forwardRef<HTMLDivElement, MRCardProps>(function MRCard({ 
         {/* Author avatar and name */}
         <div className="flex items-center gap-2">
           <Avatar src={mr.author.avatar_url} name={mr.author.name} size="sm" />
-          <span className="text-sm text-gray-600 dark:text-gray-400">
+          <span className="text-sm text-content-secondary">
             {mr.author.name}
           </span>
         </div>
 
         {/* Branch info */}
-        <div className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1">
+        <div className="text-xs text-content-tertiary flex items-center gap-1">
           <span className="truncate max-w-[100px]">{mr.source_branch}</span>
           <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
@@ -85,7 +85,7 @@ export const MRCard = forwardRef<HTMLDivElement, MRCardProps>(function MRCard({ 
         {mr.labels.slice(0, 3).map((label) => (
           <span
             key={label}
-            className="px-2 py-0.5 text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded"
+            className="px-2 py-0.5 text-xs font-medium bg-surface-alt text-content-secondary rounded"
           >
             {label}
           </span>
@@ -98,7 +98,7 @@ export const MRCard = forwardRef<HTMLDivElement, MRCardProps>(function MRCard({ 
       {/* Reviewers */}
       {mr.reviewers.length > 0 && (
         <div className="mt-3 flex items-center gap-2">
-          <span className="text-xs text-gray-500 dark:text-gray-400">Reviewers:</span>
+          <span className="text-xs text-content-secondary">Reviewers:</span>
           <div className="flex -space-x-2">
             {mr.reviewers.slice(0, 3).map((reviewer) => (
               <Avatar
@@ -106,7 +106,7 @@ export const MRCard = forwardRef<HTMLDivElement, MRCardProps>(function MRCard({ 
                 src={reviewer.avatar_url}
                 name={reviewer.name}
                 size="xs"
-                className="border border-white dark:border-gray-800"
+                className="border border-canvas"
               />
             ))}
             {mr.reviewers.length > 3 && (

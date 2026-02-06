@@ -99,17 +99,36 @@ const MR_LIST_REFETCH_INTERVAL = 60 * 1000;
  */
 export function useMergeRequests(request?: ListMergeRequestsRequest) {
   const { filter, sort, searchQuery } = useMRStore();
+  const queryClient = useQueryClient();
 
   const mergedRequest: ListMergeRequestsRequest = {
     filter: request?.filter ?? filter,
     sort: request?.sort ?? sort,
     search: request?.search ?? searchQuery,
     use_cache: request?.use_cache ?? true,
+    include_approvals: request?.include_approvals,
   };
 
   return useQuery({
     queryKey: queryKeys.mergeRequests(mergedRequest),
-    queryFn: () => api.listMergeRequests(mergedRequest),
+    queryFn: async () => {
+      const data = await api.listMergeRequests(mergedRequest);
+
+      // Seed individual approval state caches from batch response
+      if (data.approval_states) {
+        for (const mr of data.merge_requests) {
+          const state = data.approval_states[mr.id];
+          if (state) {
+            queryClient.setQueryData(
+              queryKeys.approvalState(mr.project_id, mr.iid),
+              state
+            );
+          }
+        }
+      }
+
+      return data;
+    },
     select: (data: ListMergeRequestsResponse) => data.merge_requests,
     refetchInterval: MR_LIST_REFETCH_INTERVAL,
     refetchIntervalInBackground: false,
@@ -143,6 +162,7 @@ export function useDiff(projectId: number, mrIid: number, useCache = true) {
     queryKey: queryKeys.diff(projectId, mrIid),
     queryFn: () => api.getDiff(request),
     enabled: projectId > 0 && mrIid > 0,
+    staleTime: 10 * 60 * 1000, // 10 min — diffs rarely change, also SQLite-cached on backend
   });
 }
 

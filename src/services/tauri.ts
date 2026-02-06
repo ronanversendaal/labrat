@@ -366,6 +366,17 @@ export async function checkSecureStorage(): Promise<SecureStorageStatus> {
 }
 
 // ============================================================================
+// Window commands
+// ============================================================================
+
+/**
+ * Set native window background color (syncs titlebar/chrome with theme)
+ */
+export async function setWindowBgColor(r: number, g: number, b: number): Promise<void> {
+  return invokeCommand<void>('set_window_bg_color', { r, g, b });
+}
+
+// ============================================================================
 // Grouped API objects for convenience
 // ============================================================================
 
