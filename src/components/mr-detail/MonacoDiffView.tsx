@@ -90,6 +90,8 @@ function getLanguageFromPath(path: string): string {
     cs: 'csharp',
     swift: 'swift',
     php: 'php',
+    phtml: 'php',
+    twig: 'twig',
     pl: 'perl',
     lua: 'lua',
     r: 'r',
@@ -122,6 +124,7 @@ function getLanguageFromPath(path: string): string {
   const filename = path.split('/').pop()?.toLowerCase() || '';
   if (filename === 'dockerfile') return 'dockerfile';
   if (filename === 'makefile' || filename === 'gnumakefile') return 'makefile';
+  if (filename.endsWith('.blade.php')) return 'php';
   if (filename.endsWith('.d.ts')) return 'typescript';
 
   return languageMap[ext] || 'plaintext';
