@@ -2,9 +2,9 @@
  * AISuggestionsPanel - Panel showing AI suggestions for a merge request
  */
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import type { AISuggestion, SuggestionCategory, SuggestionStatus } from '../../types';
-import { useAISuggestions, useAnalyzeDiff, useUpdateSuggestionStatus } from '../../hooks/useAI';
+import { useAISuggestions, useAnalyzeDiff, useUpdateSuggestionStatus, useAnalysisProgress } from '../../hooks/useAI';
 import { usePostComment, useDiff } from '../../hooks/useGitLab';
 import { SuggestionCard } from './SuggestionCard';
 import { PostSuggestionModal } from './PostSuggestionModal';
@@ -40,8 +40,10 @@ const statusOptions: { value: FilterStatus; label: string }[] = [
 
 export function AISuggestionsPanel({ projectId, mrIid, onJumpToLine }: AISuggestionsPanelProps) {
   const [categoryFilter, setCategoryFilter] = useState<FilterCategory>('all');
-  const [statusFilter, setStatusFilter] = useState<FilterStatus>('pending');
+  const [statusFilter, setStatusFilter] = useState<FilterStatus>('all');
   const [postingSuggestion, setPostingSuggestion] = useState<AISuggestion | null>(null);
+  const [batchPosting, setBatchPosting] = useState(false);
+  const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0 });
 
   const toast = useToast();
   const { data: suggestions, isLoading } = useAISuggestions(mrIid);
@@ -49,8 +51,10 @@ export function AISuggestionsPanel({ projectId, mrIid, onJumpToLine }: AISuggest
   const analyzeMutation = useAnalyzeDiff();
   const updateStatusMutation = useUpdateSuggestionStatus();
   const postCommentMutation = usePostComment();
+  const { progress, reset: resetProgress } = useAnalysisProgress(mrIid);
 
   const handleAnalyze = () => {
+    resetProgress();
     analyzeMutation.mutate({
       project_id: projectId,
       mr_iid: mrIid,
@@ -107,6 +111,77 @@ export function AISuggestionsPanel({ projectId, mrIid, onJumpToLine }: AISuggest
     );
   };
 
+  const acceptedSuggestions = suggestions?.filter((s) => s.status === 'accepted') || [];
+  const [includeDescription, setIncludeDescription] = useState(true);
+
+  const buildPostBody = useCallback((suggestion: AISuggestion) => {
+    const desc = includeDescription
+      ? `**${suggestion.title}**\n\n${suggestion.description}`
+      : '';
+
+    if (suggestion.suggested_code) {
+      // Format as GitLab suggestion block with optional description prefix
+      const suggestionBlock = `\`\`\`suggestion\n${suggestion.suggested_code}\n\`\`\``;
+      return {
+        body: desc ? `${desc}\n\n${suggestionBlock}` : suggestionBlock,
+        // We format the suggestion block ourselves, so don't let the backend wrap it again
+        asSuggestion: false,
+      };
+    }
+
+    return {
+      body: desc || suggestion.title,
+      asSuggestion: false,
+    };
+  }, [includeDescription]);
+
+  const handlePostAllAccepted = useCallback(async () => {
+    if (!diff || acceptedSuggestions.length === 0) return;
+
+    setBatchPosting(true);
+    setBatchProgress({ current: 0, total: acceptedSuggestions.length });
+
+    let posted = 0;
+    let failed = 0;
+
+    for (const suggestion of acceptedSuggestions) {
+      const position = {
+        base_sha: diff.base_commit_sha,
+        head_sha: diff.head_commit_sha,
+        new_path: suggestion.file_path,
+        new_line: suggestion.start_line,
+        position_type: 'text' as const,
+      };
+
+      const { body, asSuggestion } = buildPostBody(suggestion);
+
+      try {
+        await postCommentMutation.mutateAsync({
+          project_id: projectId,
+          mr_iid: mrIid,
+          body,
+          position,
+          as_suggestion: asSuggestion,
+        });
+        updateStatusMutation.mutate({
+          suggestion_id: suggestion.id,
+          status: 'posted',
+        });
+        posted++;
+      } catch {
+        failed++;
+      }
+      setBatchProgress({ current: posted + failed, total: acceptedSuggestions.length });
+    }
+
+    setBatchPosting(false);
+    if (failed === 0) {
+      toast.success(`Posted ${posted} suggestion${posted !== 1 ? 's' : ''} to GitLab`);
+    } else {
+      toast.error(`Posted ${posted}, failed ${failed} suggestion${failed !== 1 ? 's' : ''}`);
+    }
+  }, [diff, acceptedSuggestions, buildPostBody, postCommentMutation, updateStatusMutation, projectId, mrIid, toast]);
+
   // Filter suggestions
   const filteredSuggestions = suggestions?.filter((s) => {
     if (categoryFilter !== 'all' && s.category !== categoryFilter) return false;
@@ -140,15 +215,40 @@ export function AISuggestionsPanel({ projectId, mrIid, onJumpToLine }: AISuggest
               </span>
             )}
           </div>
-          <Button
-            size="sm"
-            variant="primary"
-            loading={analyzeMutation.isPending}
-            onClick={handleAnalyze}
-            leftIcon={<AIIcon />}
-          >
-            {suggestions?.length ? 'Re-analyze' : 'Analyze with AI'}
-          </Button>
+          <div className="flex items-center gap-2">
+            {acceptedSuggestions.length > 0 && (
+              <>
+                <label className="flex items-center gap-1.5 text-xs text-content-secondary cursor-pointer" title="Include title and description in GitLab comments">
+                  <input
+                    type="checkbox"
+                    checked={includeDescription}
+                    onChange={(e) => setIncludeDescription(e.target.checked)}
+                    className="rounded"
+                  />
+                  With context
+                </label>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  loading={batchPosting}
+                  onClick={handlePostAllAccepted}
+                >
+                  {batchPosting
+                    ? `Posting ${batchProgress.current}/${batchProgress.total}...`
+                    : `Post ${acceptedSuggestions.length} accepted`}
+                </Button>
+              </>
+            )}
+            <Button
+              size="sm"
+              variant="primary"
+              loading={analyzeMutation.isPending}
+              onClick={handleAnalyze}
+              leftIcon={<AIIcon />}
+            >
+              {suggestions?.length ? 'Re-analyze' : 'Analyze with AI'}
+            </Button>
+          </div>
         </div>
 
         {/* Summary badges */}
@@ -209,9 +309,20 @@ export function AISuggestionsPanel({ projectId, mrIid, onJumpToLine }: AISuggest
           </div>
         ) : analyzeMutation.isPending ? (
           <div className="flex flex-col items-center justify-center py-12">
-            <div className="animate-spin w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full mb-4" />
-            <p className="text-sm text-content-secondary">Analyzing merge request...</p>
-            <p className="text-xs text-content-tertiary mt-1">This may take a moment</p>
+            <div className="w-48 mb-4">
+              <div className="h-2 bg-surface-overlay rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-blue-500 rounded-full transition-all duration-300"
+                  style={{ width: `${progress?.progress ?? 0}%` }}
+                />
+              </div>
+            </div>
+            <p className="text-sm text-content-secondary">
+              {progress?.message || 'Analyzing merge request...'}
+            </p>
+            <p className="text-xs text-content-tertiary mt-1">
+              {progress?.progress ? `${progress.progress}%` : 'This may take a moment'}
+            </p>
           </div>
         ) : filteredSuggestions.length === 0 ? (
           <div className="text-center py-12">

@@ -79,7 +79,7 @@ pub struct Settings {
     #[serde(default = "default_cache_size")]
     pub cache_size_mb: i32,
 
-    #[serde(default = "default_true")]
+    #[serde(default)]
     pub ai_auto_analyze: bool,
 
     pub default_ai_provider_id: Option<String>,
@@ -128,7 +128,7 @@ impl Default for Settings {
             theme: Theme::default(),
             mr_refresh_interval_seconds: default_refresh_interval(),
             cache_size_mb: default_cache_size(),
-            ai_auto_analyze: true,
+            ai_auto_analyze: false,
             default_ai_provider_id: None,
             sidebar_collapsed: false,
             diff_view_mode: DiffViewMode::default(),
@@ -222,7 +222,7 @@ mod tests {
         assert_eq!(settings.theme, Theme::System);
         assert_eq!(settings.mr_refresh_interval_seconds, 300);
         assert_eq!(settings.cache_size_mb, 500);
-        assert!(settings.ai_auto_analyze);
+        assert!(!settings.ai_auto_analyze);
         assert_eq!(settings.font_size, 14);
         assert_eq!(settings.font_family_ui, None);
         assert_eq!(settings.font_family_code, None);

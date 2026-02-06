@@ -50,7 +50,7 @@ const defaultSettings = {
   fontFamilyCode: null as string | null,
   mrRefreshInterval: 300,
   cacheSizeMb: 500,
-  aiAutoAnalyze: true,
+  aiAutoAnalyze: false,
   keyboardShortcutsEnabled: true,
   sidebarCollapsed: false,
   diffViewMode: 'unified' as DiffViewMode,

@@ -38,7 +38,7 @@ impl MrCache {
 
         sqlx::query(
             r#"
-            INSERT OR REPLACE INTO merge_requests (
+            INSERT INTO merge_requests (
                 id, iid, project_id, title, description, state,
                 source_branch, target_branch, author_json, assignees_json,
                 reviewers_json, labels_json, milestone_json, web_url,
@@ -48,6 +48,30 @@ impl MrCache {
             ) VALUES (
                 ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
             )
+            ON CONFLICT(id) DO UPDATE SET
+                iid = excluded.iid,
+                project_id = excluded.project_id,
+                title = excluded.title,
+                description = excluded.description,
+                state = excluded.state,
+                source_branch = excluded.source_branch,
+                target_branch = excluded.target_branch,
+                author_json = excluded.author_json,
+                assignees_json = excluded.assignees_json,
+                reviewers_json = excluded.reviewers_json,
+                labels_json = excluded.labels_json,
+                milestone_json = excluded.milestone_json,
+                web_url = excluded.web_url,
+                created_at = excluded.created_at,
+                updated_at = excluded.updated_at,
+                merged_at = excluded.merged_at,
+                has_conflicts = excluded.has_conflicts,
+                pipeline_status = excluded.pipeline_status,
+                draft = excluded.draft,
+                blocking_discussions_resolved = excluded.blocking_discussions_resolved,
+                user_notes_count = excluded.user_notes_count,
+                cached_at = excluded.cached_at,
+                diff_cached = excluded.diff_cached
             "#,
         )
         .bind(mr.id)

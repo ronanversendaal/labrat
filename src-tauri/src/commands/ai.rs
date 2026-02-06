@@ -34,8 +34,62 @@ fn emit_progress(app: Option<&AppHandle>, mr_id: i64, status: AnalysisStatus, pr
 // Inner functions — shared by Tauri + HTTP
 // ============================================================================
 
+/// Auto-register Claude CLI provider if the binary is detected and no claude_cli provider exists.
+/// Returns the (id, provider_type, model) tuple if a new provider was registered.
+async fn auto_register_cli_provider(state: &SharedAppState) -> TauriResult<Option<(String, String, Option<String>)>> {
+    let state_read = state.read().await;
+
+    let has_cli_provider: (i64,) = sqlx::query_as(
+        "SELECT COUNT(*) FROM ai_providers WHERE provider_type = 'claude_cli'"
+    )
+    .fetch_one(&state_read.db_pool)
+    .await
+    .map_err(|e| TauriError::cache_error(e.to_string()))?;
+
+    if has_cli_provider.0 != 0 {
+        return Ok(None);
+    }
+
+    let (available, version, _path) = ClaudeCliProvider::check_cli().await
+        .unwrap_or((false, None, None));
+
+    if !available {
+        return Ok(None);
+    }
+
+    let id = Uuid::new_v4().to_string();
+    let now = Utc::now().to_rfc3339();
+    let name = format!("Claude CLI{}", version.as_deref().map(|v| format!(" ({})", v)).unwrap_or_default());
+
+    // Set as default if no other providers exist
+    let count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM ai_providers")
+        .fetch_one(&state_read.db_pool)
+        .await
+        .map_err(|e| TauriError::cache_error(e.to_string()))?;
+    let is_default = count.0 == 0;
+
+    sqlx::query(
+        "INSERT OR IGNORE INTO ai_providers (id, account_id, provider_type, name, model, is_default, enabled, created_at)
+         VALUES (?, NULL, 'claude_cli', ?, NULL, ?, 1, ?)"
+    )
+    .bind(&id)
+    .bind(&name)
+    .bind(if is_default { 1 } else { 0 })
+    .bind(&now)
+    .execute(&state_read.db_pool)
+    .await
+    .map_err(|e| TauriError::cache_error(e.to_string()))?;
+
+    info!("Auto-registered Claude CLI provider: {}", name);
+
+    Ok(Some((id, "claude_cli".to_string(), None)))
+}
+
 /// List configured AI providers (inner)
 pub async fn list_providers_inner(state: &SharedAppState) -> TauriResult<Vec<AIProviderConfig>> {
+    // Auto-register Claude CLI provider if binary is detected and no claude_cli provider exists
+    auto_register_cli_provider(state).await?;
+
     let state = state.read().await;
 
     let rows = sqlx::query_as::<_, (String, Option<String>, String, String, Option<String>, i64, i64, String)>(
@@ -192,7 +246,7 @@ pub async fn analyze_diff_inner(
 
     emit_progress(app, mr_id, AnalysisStatus::Started, 0, "Starting AI analysis...");
 
-    // Get the provider to use
+    // Get the provider to use (auto-register Claude CLI if needed)
     emit_progress(app, mr_id, AnalysisStatus::Processing, 10, "Loading AI provider...");
     let (provider_id, provider_type, model) = {
         let state_read = state.read().await;
@@ -208,40 +262,79 @@ pub async fn analyze_diff_inner(
             )
         };
 
-        query.fetch_optional(&state_read.db_pool)
+        let result = query.fetch_optional(&state_read.db_pool)
             .await
             .map_err(|e| {
                 emit_progress(app, mr_id, AnalysisStatus::Error, 0, &format!("Cache error: {}", e));
                 TauriError::cache_error(e.to_string())
-            })?
-            .ok_or_else(|| {
+            })?;
+
+        match result {
+            Some(row) => row,
+            None if request.provider_id.is_none() => {
+                // No default provider found — try auto-registering Claude CLI
+                drop(state_read);
+                if let Some(provider) = auto_register_cli_provider(state).await? {
+                    (provider.0, provider.1, provider.2)
+                } else {
+                    emit_progress(app, mr_id, AnalysisStatus::Error, 0, "No AI provider configured");
+                    return Err(TauriError::ai_error("No AI provider configured. Add a provider in Settings → AI."));
+                }
+            }
+            None => {
                 emit_progress(app, mr_id, AnalysisStatus::Error, 0, "No AI provider configured");
-                TauriError::ai_error("No AI provider configured")
+                return Err(TauriError::ai_error("No AI provider configured"));
+            }
+        }
+    };
+
+    // Get the diff for this MR (fetch from API if not cached)
+    emit_progress(app, mr_id, AnalysisStatus::Processing, 20, "Loading diff...");
+    let diff = {
+        use crate::gitlab::types::GetDiffRequest;
+        super::gitlab::get_diff_inner(state, GetDiffRequest {
+            project_id: request.project_id,
+            mr_iid: request.mr_iid,
+            use_cache: true,
+        }).await
+            .map_err(|e| {
+                emit_progress(app, mr_id, AnalysisStatus::Error, 0, &format!("Failed to load diff: {}", e));
+                e
             })?
     };
 
-    // Get the diff for this MR
-    emit_progress(app, mr_id, AnalysisStatus::Processing, 20, "Loading diff...");
-    let diff = {
+    // Resolve the global MR id for DB storage (FK requires merge_requests.id, not iid)
+    let mr_global_id = diff.mr_id;
+
+    // Clear old suggestions before re-analyzing
+    {
         let state_read = state.read().await;
-        let cache = crate::cache::diff_cache::DiffCache::new(state_read.db_pool.clone());
-        cache.get(request.mr_iid).await
-            .map_err(|e| {
-                emit_progress(app, mr_id, AnalysisStatus::Error, 0, &format!("Cache error: {}", e));
-                TauriError::cache_error(e.to_string())
-            })?
-            .ok_or_else(|| {
-                emit_progress(app, mr_id, AnalysisStatus::Error, 0, "Diff not cached - please load the diff first");
-                TauriError::not_found("Diff not cached")
-            })?
+        sqlx::query("DELETE FROM ai_suggestions WHERE mr_id = ?")
+            .bind(mr_global_id)
+            .execute(&state_read.db_pool)
+            .await
+            .map_err(|e| TauriError::cache_error(e.to_string()))?;
+    }
+
+    // Fetch MR title and description
+    emit_progress(app, mr_id, AnalysisStatus::Processing, 30, "Preparing analysis context...");
+    let (mr_title, mr_description) = {
+        let state_read = state.read().await;
+        sqlx::query_as::<_, (String, Option<String>)>(
+            "SELECT title, description FROM merge_requests WHERE id = ?"
+        )
+        .bind(mr_global_id)
+        .fetch_optional(&state_read.db_pool)
+        .await
+        .map_err(|e| TauriError::cache_error(e.to_string()))?
+        .unwrap_or_else(|| (format!("MR #{}", request.mr_iid), None))
     };
 
     // Build analysis context
-    emit_progress(app, mr_id, AnalysisStatus::Processing, 30, "Preparing analysis context...");
     let context = AnalysisContext {
-        mr_id: request.mr_iid,
-        mr_title: format!("MR #{}", request.mr_iid),
-        mr_description: None,
+        mr_id: mr_global_id,
+        mr_title,
+        mr_description,
         files: diff.files.iter().map(|f| FileContext {
             path: f.new_path.clone(),
             old_path: if f.renamed_file { Some(f.old_path.clone()) } else { None },
@@ -326,7 +419,7 @@ pub async fn analyze_diff_inner(
     let total_suggestions = raw_suggestions.len();
     for (i, raw) in raw_suggestions.into_iter().enumerate() {
         let suggestion_id = Uuid::new_v4().to_string();
-        let suggestion = raw.to_suggestion(suggestion_id.clone(), request.mr_iid, provider_id.clone());
+        let suggestion = raw.to_suggestion(suggestion_id.clone(), mr_global_id, provider_id.clone());
 
         let now = Utc::now().to_rfc3339();
         if let Err(e) = sqlx::query(
@@ -410,15 +503,22 @@ pub async fn check_cli_available_inner() -> TauriResult<CliAvailableResponse> {
 }
 
 /// Get suggestions for a specific MR (inner)
+/// Note: `mr_id` here is the MR iid (per-project number) as passed from the frontend.
+/// We resolve it to the global merge_requests.id for the DB query.
 pub async fn get_suggestions_inner(
     state: &SharedAppState,
     mr_id: i64,
 ) -> TauriResult<Vec<AISuggestion>> {
     let state_read = state.read().await;
 
+    // The frontend passes iid, but ai_suggestions.mr_id stores the global merge_requests.id.
+    // Join through merge_requests to resolve.
     let rows = sqlx::query_as::<_, (String, i64, String, String, i32, i32, String, String, String, String, Option<String>, String, String, String)>(
-        "SELECT id, mr_id, provider_id, file_path, start_line, end_line, category, severity, title, description, suggested_code, original_code, status, created_at
-         FROM ai_suggestions WHERE mr_id = ? ORDER BY file_path, start_line"
+        "SELECT s.id, s.mr_id, s.provider_id, s.file_path, s.start_line, s.end_line, s.category, s.severity, s.title, s.description, s.suggested_code, s.original_code, s.status, s.created_at
+         FROM ai_suggestions s
+         JOIN merge_requests m ON s.mr_id = m.id
+         WHERE m.iid = ?
+         ORDER BY s.file_path, s.start_line"
     )
     .bind(mr_id)
     .fetch_all(&state_read.db_pool)

@@ -52,7 +52,7 @@ export function PostSuggestionModal({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="Post Suggestion to GitLab" size="lg">
+    <Modal isOpen={isOpen} onClose={handleClose} title="Post Suggestion to GitLab" size="3xl">
       <div className="p-4 space-y-4">
         {/* Suggestion preview */}
         <div className="p-4 bg-surface rounded-lg">

@@ -52,13 +52,13 @@ export function SuggestionCard({
   const categoryColor = categoryColors[suggestion.category] || categoryColors.code_quality;
   const categoryLabel = categoryLabels[suggestion.category] || suggestion.category;
 
-  const isResolved = suggestion.status !== 'pending';
+  const isFinal = suggestion.status === 'dismissed' || suggestion.status === 'posted';
 
   return (
     <div
       className={`
         border rounded-lg overflow-hidden transition-all
-        ${isResolved
+        ${isFinal
           ? 'border-edge opacity-60'
           : 'border-edge-strong'
         }
@@ -157,20 +157,33 @@ export function SuggestionCard({
           </div>
 
           {/* Actions */}
-          {!isResolved && (
+          {suggestion.status === 'dismissed' || suggestion.status === 'posted' ? (
             <div className="flex items-center gap-2 px-3 pb-3">
               <Button
                 size="sm"
-                variant="primary"
+                variant="ghost"
                 disabled={isUpdating}
-                onClick={() => onUpdateStatus(suggestion.id, 'accepted')}
+                onClick={() => onUpdateStatus(suggestion.id, 'pending')}
               >
-                Accept
+                Undo {suggestion.status === 'posted' ? 'post' : 'dismiss'}
               </Button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 px-3 pb-3">
+              {suggestion.status === 'pending' && (
+                <Button
+                  size="sm"
+                  variant="primary"
+                  disabled={isUpdating}
+                  onClick={() => onUpdateStatus(suggestion.id, 'accepted')}
+                >
+                  Accept
+                </Button>
+              )}
               {onPostToGitLab && (
                 <Button
                   size="sm"
-                  variant="secondary"
+                  variant={suggestion.status === 'accepted' ? 'primary' : 'secondary'}
                   disabled={isUpdating}
                   onClick={() => onPostToGitLab(suggestion)}
                 >

@@ -62,15 +62,50 @@ pub struct FileContext {
 /// Raw suggestion from AI provider before processing
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RawSuggestion {
+    #[serde(default, deserialize_with = "nullable_string")]
     pub file_path: String,
+    #[serde(default)]
     pub start_line: i32,
+    #[serde(default)]
     pub end_line: i32,
+    #[serde(default = "default_category", deserialize_with = "nullable_string_or", alias = "type")]
     pub category: String,
+    #[serde(default = "default_severity", deserialize_with = "nullable_string_or")]
     pub severity: String,
+    #[serde(default, deserialize_with = "nullable_string")]
     pub title: String,
+    #[serde(default, deserialize_with = "nullable_string")]
     pub description: String,
     pub suggested_code: Option<String>,
+    #[serde(default, deserialize_with = "nullable_string")]
     pub original_code: String,
+}
+
+fn default_category() -> String {
+    "code_quality".to_string()
+}
+
+fn default_severity() -> String {
+    "info".to_string()
+}
+
+/// Deserialize a string that may be null → empty string
+fn nullable_string<'de, D>(deserializer: D) -> Result<String, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    Option::<String>::deserialize(deserializer).map(|opt| opt.unwrap_or_default())
+}
+
+/// Deserialize a string that may be null → keep existing serde default
+fn nullable_string_or<'de, D>(deserializer: D) -> Result<String, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    // When the field is present but null, return empty string.
+    // The caller's #[serde(default = "...")] only applies when the field is absent,
+    // so we return empty here and fix it up in to_suggestion.
+    Option::<String>::deserialize(deserializer).map(|opt| opt.unwrap_or_default())
 }
 
 impl RawSuggestion {
@@ -170,10 +205,7 @@ pub fn build_analysis_prompt(context: &AnalysisContext) -> String {
 
         prompt.push_str(&header);
         prompt.push_str("```diff\n");
-        prompt.push_str(&file.diff);
-        if !file.diff.ends_with('\n') {
-            prompt.push('\n');
-        }
+        prompt.push_str(&annotate_diff_lines(&file.diff));
         prompt.push_str("```\n\n");
     }
 
@@ -207,12 +239,50 @@ Focus on:
 4. Code quality and maintainability
 5. Best practices violations
 
-Be specific about line numbers (use the new file line numbers from the diff).
+IMPORTANT: Each diff line is prefixed with its actual file line number (e.g. `L165:+  code here`).
+Use these `L{number}` prefixes for your start_line and end_line values — they are the real line numbers.
 Only suggest changes for code that was actually modified (lines with + prefix).
 Do not suggest trivial style changes unless they significantly impact readability.
 "#);
 
     prompt
+}
+
+/// Annotate each line of a unified diff with its actual file line number.
+/// This helps the AI reference correct line numbers in its suggestions.
+///
+/// Input:  `@@ -10,3 +10,4 @@\n context\n-removed\n+added\n+added2\n context`
+/// Output: lines prefixed with `L{new_line}:` for context/added, or `     :` for removed.
+fn annotate_diff_lines(diff: &str) -> String {
+    let mut result = String::new();
+    let mut new_line: i32 = 0;
+
+    for line in diff.lines() {
+        if line.starts_with("@@") {
+            // Parse hunk header: @@ -old_start,old_count +new_start,new_count @@
+            if let Some(plus_pos) = line.find('+') {
+                let after_plus = &line[plus_pos + 1..];
+                if let Some(comma_or_space) = after_plus.find(|c: char| c == ',' || c == ' ') {
+                    new_line = after_plus[..comma_or_space].parse().unwrap_or(0);
+                }
+            }
+            result.push_str(line);
+            result.push('\n');
+        } else if line.starts_with('-') {
+            // Removed line — no new-file line number
+            result.push_str(&format!("      :{}\n", line));
+        } else if line.starts_with('+') {
+            // Added line
+            result.push_str(&format!("L{:<4}:{}\n", new_line, line));
+            new_line += 1;
+        } else {
+            // Context line
+            result.push_str(&format!("L{:<4}:{}\n", new_line, line));
+            new_line += 1;
+        }
+    }
+
+    result
 }
 
 /// Parse AI response to extract suggestions
@@ -310,5 +380,22 @@ That's all!"#;
 
         assert_eq!(suggestion.category, SuggestionCategory::PotentialBug);
         assert_eq!(suggestion.severity, SuggestionSeverity::Warning);
+    }
+
+    #[test]
+    fn test_parse_suggestions_with_null_fields() {
+        let response = r#"{"suggestions": [{"file_path": "test.rs", "start_line": 10, "end_line": 12, "category": "bug", "severity": "warning", "title": "Null test", "description": "Desc", "suggested_code": null, "original_code": null}]}"#;
+        let suggestions = parse_suggestions_response(response).unwrap();
+        assert_eq!(suggestions.len(), 1);
+        assert_eq!(suggestions[0].original_code, "");
+    }
+
+    #[test]
+    fn test_parse_suggestions_with_missing_fields() {
+        let response = r#"{"suggestions": [{"file_path": "test.rs", "title": "Minimal", "description": "Only required fields"}]}"#;
+        let suggestions = parse_suggestions_response(response).unwrap();
+        assert_eq!(suggestions.len(), 1);
+        assert_eq!(suggestions[0].start_line, 0);
+        assert_eq!(suggestions[0].original_code, "");
     }
 }
