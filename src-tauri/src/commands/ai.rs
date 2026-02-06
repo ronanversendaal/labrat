@@ -5,7 +5,8 @@
 use crate::ai::{
     AIProvider, AIProviderType, AISuggestion, AddProviderRequest, AnalysisContext,
     AnalyzeDiffRequest, AnalyzeDiffResponse, ClaudeCliProvider, CliAvailableResponse,
-    FileContext, SuggestionStatus, UpdateSuggestionRequest, AnalysisProgressEvent, AnalysisStatus,
+    CliProvider, FileContext, SuggestionStatus, UpdateSuggestionRequest, AnalysisProgressEvent,
+    AnalysisStatus, CliCheckResponse, ModelsResponse, ValidateCliPathResponse,
 };
 use crate::ai::types::AIProvider as AIProviderConfig;
 use crate::{SharedAppState, TauriError, TauriResult};
@@ -85,6 +86,21 @@ async fn auto_register_cli_provider(state: &SharedAppState) -> TauriResult<Optio
     Ok(Some((id, "claude_cli".to_string(), None)))
 }
 
+/// Parse a provider_type string from DB into AIProviderType
+fn parse_provider_type(s: &str) -> Option<AIProviderType> {
+    match s {
+        "claude_cli" => Some(AIProviderType::ClaudeCli),
+        "opencode_cli" => Some(AIProviderType::OpencodeCli),
+        "ollama_cli" => Some(AIProviderType::OllamaCli),
+        "llm_cli" => Some(AIProviderType::LlmCli),
+        "gemini_cli" => Some(AIProviderType::GeminiCli),
+        "custom_cli" => Some(AIProviderType::CustomCli),
+        "anthropic_api" => Some(AIProviderType::AnthropicApi),
+        "openai_api" => Some(AIProviderType::OpenaiApi),
+        _ => None,
+    }
+}
+
 /// List configured AI providers (inner)
 pub async fn list_providers_inner(state: &SharedAppState) -> TauriResult<Vec<AIProviderConfig>> {
     // Auto-register Claude CLI provider if binary is detected and no claude_cli provider exists
@@ -92,8 +108,8 @@ pub async fn list_providers_inner(state: &SharedAppState) -> TauriResult<Vec<AIP
 
     let state = state.read().await;
 
-    let rows = sqlx::query_as::<_, (String, Option<String>, String, String, Option<String>, i64, i64, String)>(
-        "SELECT id, account_id, provider_type, name, model, is_default, enabled, created_at
+    let rows = sqlx::query_as::<_, (String, Option<String>, String, String, Option<String>, Option<String>, i64, i64, String)>(
+        "SELECT id, account_id, provider_type, name, model, cli_path, is_default, enabled, created_at
          FROM ai_providers ORDER BY name"
     )
     .fetch_all(&state.db_pool)
@@ -101,25 +117,19 @@ pub async fn list_providers_inner(state: &SharedAppState) -> TauriResult<Vec<AIP
     .map_err(|e| TauriError::cache_error(e.to_string()))?;
 
     let mut providers = Vec::new();
-    for (id, account_id, provider_type, name, model, is_default, enabled, created_at) in rows {
-        let provider_type = match provider_type.as_str() {
-            "claude_cli" => AIProviderType::ClaudeCli,
-            "anthropic_api" => AIProviderType::AnthropicApi,
-            "openai_api" => AIProviderType::OpenaiApi,
-            _ => continue,
+    for (id, account_id, provider_type_str, name, model, cli_path, is_default, enabled, created_at) in rows {
+        let provider_type = match parse_provider_type(&provider_type_str) {
+            Some(pt) => pt,
+            None => continue,
         };
 
-        let is_available = match provider_type {
-            AIProviderType::ClaudeCli => {
-                ClaudeCliProvider::check_cli().await
-                    .map(|(available, _, _)| available)
-                    .unwrap_or(false)
-            }
-            AIProviderType::AnthropicApi | AIProviderType::OpenaiApi => {
-                state.credential_cache.get_ai_key(&id)
-                    .map(|opt| opt.is_some())
-                    .unwrap_or(false)
-            }
+        let is_available = if provider_type.is_cli() {
+            let check = CliProvider::check_binary(provider_type, cli_path.as_deref()).await;
+            check.available
+        } else {
+            state.credential_cache.get_ai_key(&id)
+                .map(|opt| opt.is_some())
+                .unwrap_or(false)
         };
 
         providers.push(AIProviderConfig {
@@ -128,6 +138,7 @@ pub async fn list_providers_inner(state: &SharedAppState) -> TauriResult<Vec<AIP
             provider_type,
             name,
             model,
+            cli_path,
             is_default: is_default != 0,
             enabled: enabled != 0,
             is_available,
@@ -167,13 +178,14 @@ pub async fn add_provider_inner(
     let is_default = count.0 == 0;
 
     sqlx::query(
-        "INSERT INTO ai_providers (id, account_id, provider_type, name, model, is_default, enabled, created_at)
-         VALUES (?, NULL, ?, ?, ?, ?, 1, ?)"
+        "INSERT INTO ai_providers (id, account_id, provider_type, name, model, cli_path, is_default, enabled, created_at)
+         VALUES (?, NULL, ?, ?, ?, ?, ?, 1, ?)"
     )
     .bind(&id)
     .bind(request.provider_type.to_string())
     .bind(&request.name)
     .bind(&request.model)
+    .bind(&request.cli_path)
     .bind(if is_default { 1 } else { 0 })
     .bind(&now_str)
     .execute(&state_read.db_pool)
@@ -188,6 +200,7 @@ pub async fn add_provider_inner(
         provider_type: request.provider_type,
         name: request.name,
         model: request.model,
+        cli_path: request.cli_path,
         is_default,
         enabled: true,
         is_available: true,
@@ -248,17 +261,17 @@ pub async fn analyze_diff_inner(
 
     // Get the provider to use (auto-register Claude CLI if needed)
     emit_progress(app, mr_id, AnalysisStatus::Processing, 10, "Loading AI provider...");
-    let (provider_id, provider_type, model) = {
+    let (provider_id, provider_type, model, cli_path) = {
         let state_read = state.read().await;
 
         let query = if let Some(id) = &request.provider_id {
-            sqlx::query_as::<_, (String, String, Option<String>)>(
-                "SELECT id, provider_type, model FROM ai_providers WHERE id = ? AND enabled = 1"
+            sqlx::query_as::<_, (String, String, Option<String>, Option<String>)>(
+                "SELECT id, provider_type, model, cli_path FROM ai_providers WHERE id = ? AND enabled = 1"
             )
             .bind(id)
         } else {
-            sqlx::query_as::<_, (String, String, Option<String>)>(
-                "SELECT id, provider_type, model FROM ai_providers WHERE is_default = 1 AND enabled = 1"
+            sqlx::query_as::<_, (String, String, Option<String>, Option<String>)>(
+                "SELECT id, provider_type, model, cli_path FROM ai_providers WHERE is_default = 1 AND enabled = 1"
             )
         };
 
@@ -275,7 +288,7 @@ pub async fn analyze_diff_inner(
                 // No default provider found — try auto-registering Claude CLI
                 drop(state_read);
                 if let Some(provider) = auto_register_cli_provider(state).await? {
-                    (provider.0, provider.1, provider.2)
+                    (provider.0, provider.1, provider.2, None)
                 } else {
                     emit_progress(app, mr_id, AnalysisStatus::Error, 0, "No AI provider configured");
                     return Err(TauriError::ai_error("No AI provider configured. Add a provider in Settings → AI."));
@@ -347,67 +360,79 @@ pub async fn analyze_diff_inner(
 
     // Create provider instance and analyze
     emit_progress(app, mr_id, AnalysisStatus::Processing, 40, "Sending to AI for analysis...");
-    let provider_type_enum = match provider_type.as_str() {
-        "claude_cli" => AIProviderType::ClaudeCli,
-        "anthropic_api" => AIProviderType::AnthropicApi,
-        "openai_api" => AIProviderType::OpenaiApi,
-        _ => {
+    let provider_type_enum = match parse_provider_type(&provider_type) {
+        Some(pt) => pt,
+        None => {
             emit_progress(app, mr_id, AnalysisStatus::Error, 0, "Unknown provider type");
             return Err(TauriError::ai_error("Unknown provider type"));
         }
     };
 
-    let raw_suggestions = match provider_type_enum {
-        AIProviderType::ClaudeCli => {
-            emit_progress(app, mr_id, AnalysisStatus::Processing, 50, "Analyzing with Claude CLI...");
-            let provider = ClaudeCliProvider::new(provider_id.clone(), "Claude CLI".to_string(), None);
-            provider.analyze(&context).await
-                .map_err(|e| {
-                    emit_progress(app, mr_id, AnalysisStatus::Error, 0, &format!("AI analysis failed: {}", e));
-                    TauriError::ai_error(e.to_string())
-                })?
-        }
-        AIProviderType::AnthropicApi => {
-            emit_progress(app, mr_id, AnalysisStatus::Processing, 50, "Analyzing with Anthropic API...");
-            let api_key = {
-                let state_read = state.read().await;
-                state_read.credential_cache.get_ai_key(&provider_id)
+    let raw_suggestions = if provider_type_enum.is_cli() {
+        let label = crate::ai::cli_provider::get_binary_config(provider_type_enum)
+            .map(|c| c.label)
+            .unwrap_or("CLI");
+        emit_progress(app, mr_id, AnalysisStatus::Processing, 50, &format!("Analyzing with {}...", label));
+        let provider = CliProvider::new(
+            provider_id.clone(),
+            label.to_string(),
+            provider_type_enum,
+            model,
+            cli_path,
+        );
+        provider.analyze(&context).await
+            .map_err(|e| {
+                emit_progress(app, mr_id, AnalysisStatus::Error, 0, &format!("AI analysis failed: {}", e));
+                TauriError::ai_error(e.to_string())
+            })?
+    } else {
+        match provider_type_enum {
+            AIProviderType::AnthropicApi => {
+                emit_progress(app, mr_id, AnalysisStatus::Processing, 50, "Analyzing with Anthropic API...");
+                let api_key = {
+                    let state_read = state.read().await;
+                    state_read.credential_cache.get_ai_key(&provider_id)
+                        .map_err(|e| {
+                            emit_progress(app, mr_id, AnalysisStatus::Error, 0, "Failed to retrieve API key");
+                            TauriError::cache_error(e.to_string())
+                        })?
+                        .ok_or_else(|| {
+                            emit_progress(app, mr_id, AnalysisStatus::Error, 0, "Anthropic API key not found");
+                            TauriError::ai_error("Anthropic API key not found")
+                        })?
+                };
+                let provider = crate::ai::AnthropicProvider::new(provider_id.clone(), "Anthropic".to_string(), api_key, model);
+                provider.analyze(&context).await
                     .map_err(|e| {
-                        emit_progress(app, mr_id, AnalysisStatus::Error, 0, "Failed to retrieve API key");
-                        TauriError::cache_error(e.to_string())
+                        emit_progress(app, mr_id, AnalysisStatus::Error, 0, &format!("AI analysis failed: {}", e));
+                        TauriError::ai_error(e.to_string())
                     })?
-                    .ok_or_else(|| {
-                        emit_progress(app, mr_id, AnalysisStatus::Error, 0, "Anthropic API key not found");
-                        TauriError::ai_error("Anthropic API key not found")
-                    })?
-            };
-            let provider = crate::ai::AnthropicProvider::new(provider_id.clone(), "Anthropic".to_string(), api_key, model);
-            provider.analyze(&context).await
-                .map_err(|e| {
-                    emit_progress(app, mr_id, AnalysisStatus::Error, 0, &format!("AI analysis failed: {}", e));
-                    TauriError::ai_error(e.to_string())
-                })?
-        }
-        AIProviderType::OpenaiApi => {
-            emit_progress(app, mr_id, AnalysisStatus::Processing, 50, "Analyzing with OpenAI API...");
-            let api_key = {
-                let state_read = state.read().await;
-                state_read.credential_cache.get_ai_key(&provider_id)
+            }
+            AIProviderType::OpenaiApi => {
+                emit_progress(app, mr_id, AnalysisStatus::Processing, 50, "Analyzing with OpenAI API...");
+                let api_key = {
+                    let state_read = state.read().await;
+                    state_read.credential_cache.get_ai_key(&provider_id)
+                        .map_err(|e| {
+                            emit_progress(app, mr_id, AnalysisStatus::Error, 0, "Failed to retrieve API key");
+                            TauriError::cache_error(e.to_string())
+                        })?
+                        .ok_or_else(|| {
+                            emit_progress(app, mr_id, AnalysisStatus::Error, 0, "OpenAI API key not found");
+                            TauriError::ai_error("OpenAI API key not found")
+                        })?
+                };
+                let provider = crate::ai::OpenAIProvider::new(provider_id.clone(), "OpenAI".to_string(), api_key, model);
+                provider.analyze(&context).await
                     .map_err(|e| {
-                        emit_progress(app, mr_id, AnalysisStatus::Error, 0, "Failed to retrieve API key");
-                        TauriError::cache_error(e.to_string())
+                        emit_progress(app, mr_id, AnalysisStatus::Error, 0, &format!("AI analysis failed: {}", e));
+                        TauriError::ai_error(e.to_string())
                     })?
-                    .ok_or_else(|| {
-                        emit_progress(app, mr_id, AnalysisStatus::Error, 0, "OpenAI API key not found");
-                        TauriError::ai_error("OpenAI API key not found")
-                    })?
-            };
-            let provider = crate::ai::OpenAIProvider::new(provider_id.clone(), "OpenAI".to_string(), api_key, model);
-            provider.analyze(&context).await
-                .map_err(|e| {
-                    emit_progress(app, mr_id, AnalysisStatus::Error, 0, &format!("AI analysis failed: {}", e));
-                    TauriError::ai_error(e.to_string())
-                })?
+            }
+            _ => {
+                emit_progress(app, mr_id, AnalysisStatus::Error, 0, "Unsupported provider type");
+                return Err(TauriError::ai_error("Unsupported provider type"));
+            }
         }
     };
 
@@ -495,15 +520,53 @@ pub async fn update_suggestion_status_inner(
 
 /// Check if Claude CLI is available (inner)
 pub async fn check_cli_available_inner() -> TauriResult<CliAvailableResponse> {
-    let (available, version, path) = ClaudeCliProvider::check_cli().await
-        .map_err(|e| TauriError::ai_error(e.to_string()))?;
-
+    let check = CliProvider::check_binary(AIProviderType::ClaudeCli, None).await;
     Ok(CliAvailableResponse {
-        available,
-        version,
-        path,
-        error: if available { None } else { Some("Claude CLI not found".to_string()) },
+        available: check.available,
+        version: check.version,
+        path: check.path,
+        error: check.error,
     })
+}
+
+/// Check if a specific CLI binary is available (inner)
+pub async fn check_cli_binary_inner(
+    provider_type: AIProviderType,
+    cli_path: Option<String>,
+) -> TauriResult<CliCheckResponse> {
+    Ok(CliProvider::check_binary(provider_type, cli_path.as_deref()).await)
+}
+
+/// List available models for a provider (inner)
+pub async fn list_models_inner(
+    state: &SharedAppState,
+    provider_type: AIProviderType,
+    provider_id: Option<String>,
+    cli_path: Option<String>,
+    api_key: Option<String>,
+) -> TauriResult<ModelsResponse> {
+    if provider_type.is_cli() {
+        Ok(CliProvider::list_models(provider_type, cli_path.as_deref()).await)
+    } else {
+        // For API providers, get the API key from provider_id or direct parameter
+        let key = if let Some(key) = api_key {
+            key
+        } else if let Some(pid) = provider_id {
+            let state_read = state.read().await;
+            state_read.credential_cache.get_ai_key(&pid)
+                .map_err(|e| TauriError::cache_error(e.to_string()))?
+                .ok_or_else(|| TauriError::ai_error("API key not found for this provider"))?
+        } else {
+            return Err(TauriError::ai_error("API key required to list models"));
+        };
+
+        Ok(CliProvider::list_api_models(provider_type, &key).await)
+    }
+}
+
+/// Validate a CLI path (inner)
+pub async fn validate_cli_path_inner(path: String) -> TauriResult<ValidateCliPathResponse> {
+    Ok(CliProvider::validate_path(&path).await)
 }
 
 /// Get suggestions for a specific MR (inner)
@@ -640,4 +703,31 @@ pub async fn ai_get_suggestions(
     mr_id: i64,
 ) -> TauriResult<Vec<AISuggestion>> {
     get_suggestions_inner(&state, mr_id).await
+}
+
+/// Check if a specific CLI binary is available
+#[tauri::command]
+pub async fn ai_check_cli_binary(
+    provider_type: AIProviderType,
+    cli_path: Option<String>,
+) -> TauriResult<CliCheckResponse> {
+    check_cli_binary_inner(provider_type, cli_path).await
+}
+
+/// List available models for a provider
+#[tauri::command]
+pub async fn ai_list_models(
+    state: State<'_, SharedAppState>,
+    provider_type: AIProviderType,
+    provider_id: Option<String>,
+    cli_path: Option<String>,
+    api_key: Option<String>,
+) -> TauriResult<ModelsResponse> {
+    list_models_inner(&state, provider_type, provider_id, cli_path, api_key).await
+}
+
+/// Validate a CLI executable path
+#[tauri::command]
+pub async fn ai_validate_cli_path(path: String) -> TauriResult<ValidateCliPathResponse> {
+    validate_cli_path_inner(path).await
 }

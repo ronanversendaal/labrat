@@ -255,6 +255,9 @@ pub fn run() {
             commands::ai::ai_update_suggestion_status,
             commands::ai::ai_check_cli_available,
             commands::ai::ai_get_suggestions,
+            commands::ai::ai_check_cli_binary,
+            commands::ai::ai_list_models,
+            commands::ai::ai_validate_cli_path,
             // Settings commands
             commands::settings::settings_get,
             commands::settings::settings_update,

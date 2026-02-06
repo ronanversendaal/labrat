@@ -7,6 +7,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import * as api from '../services/tauri';
 import type {
+  AIProviderType,
   AddProviderRequest,
   AnalyzeDiffRequest,
   AnalysisProgressEvent,
@@ -17,6 +18,10 @@ import type {
 export const aiQueryKeys = {
   providers: ['ai', 'providers'] as const,
   cliStatus: ['ai', 'cliStatus'] as const,
+  cliBinaryStatus: (providerType: AIProviderType, cliPath?: string) =>
+    ['ai', 'cliBinary', providerType, cliPath] as const,
+  availableModels: (providerType: AIProviderType, providerId?: string, cliPath?: string) =>
+    ['ai', 'models', providerType, providerId, cliPath] as const,
   suggestions: (mrId: number) => ['ai', 'suggestions', mrId] as const,
 };
 
@@ -80,6 +85,44 @@ export function useCliStatus() {
     queryKey: aiQueryKeys.cliStatus,
     queryFn: api.checkCliAvailable,
     staleTime: 60 * 1000, // Check every minute
+  });
+}
+
+/**
+ * Hook to check if a specific CLI binary is available
+ */
+export function useCliBinaryStatus(providerType: AIProviderType, cliPath?: string) {
+  return useQuery({
+    queryKey: aiQueryKeys.cliBinaryStatus(providerType, cliPath),
+    queryFn: () => api.checkCliBinary(providerType, cliPath),
+    staleTime: 60 * 1000,
+    enabled: !!providerType,
+  });
+}
+
+/**
+ * Hook to list available models for a provider
+ */
+export function useAvailableModels(
+  providerType: AIProviderType | undefined,
+  providerId?: string,
+  cliPath?: string,
+  apiKey?: string
+) {
+  return useQuery({
+    queryKey: aiQueryKeys.availableModels(providerType!, providerId, cliPath),
+    queryFn: () => api.listModels(providerType!, providerId, cliPath, apiKey),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    enabled: !!providerType,
+  });
+}
+
+/**
+ * Hook to validate a CLI path
+ */
+export function useValidateCliPath() {
+  return useMutation({
+    mutationFn: (path: string) => api.validateCliPath(path),
   });
 }
 

@@ -29,12 +29,16 @@ import type {
 } from '../types/gitlab';
 import type {
   AIProvider,
+  AIProviderType,
   AISuggestion,
   AddProviderRequest,
   AnalyzeDiffRequest,
   AnalyzeDiffResponse,
   UpdateSuggestionRequest,
   CliAvailableResponse,
+  CliCheckResponse,
+  ModelsResponse,
+  ValidateCliPathResponse,
 } from '../types/ai';
 import type {
   Settings,
@@ -301,6 +305,35 @@ export async function getSuggestions(mrId: number): Promise<AISuggestion[]> {
   return invokeCommand<AISuggestion[]>('ai_get_suggestions', { mrId });
 }
 
+/**
+ * Check if a specific CLI binary is available
+ */
+export async function checkCliBinary(
+  providerType: AIProviderType,
+  cliPath?: string
+): Promise<CliCheckResponse> {
+  return invokeCommand<CliCheckResponse>('ai_check_cli_binary', { providerType, cliPath });
+}
+
+/**
+ * List available models for a provider
+ */
+export async function listModels(
+  providerType: AIProviderType,
+  providerId?: string,
+  cliPath?: string,
+  apiKey?: string
+): Promise<ModelsResponse> {
+  return invokeCommand<ModelsResponse>('ai_list_models', { providerType, providerId, cliPath, apiKey });
+}
+
+/**
+ * Validate a CLI executable path
+ */
+export async function validateCliPath(path: string): Promise<ValidateCliPathResponse> {
+  return invokeCommand<ValidateCliPathResponse>('ai_validate_cli_path', { path });
+}
+
 // ============================================================================
 // Settings Commands
 // ============================================================================
@@ -415,6 +448,9 @@ export const ai = {
   updateSuggestionStatus,
   checkCliAvailable,
   getSuggestions,
+  checkCliBinary,
+  listModels,
+  validateCliPath,
 };
 
 /**

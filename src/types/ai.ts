@@ -6,7 +6,15 @@
  */
 
 /** AI provider type */
-export type AIProviderType = 'claude_cli' | 'anthropic_api' | 'openai_api';
+export type AIProviderType =
+  | 'claude_cli'
+  | 'opencode_cli'
+  | 'ollama_cli'
+  | 'llm_cli'
+  | 'gemini_cli'
+  | 'custom_cli'
+  | 'anthropic_api'
+  | 'openai_api';
 
 /** An AI provider configuration */
 export interface AIProvider {
@@ -14,6 +22,7 @@ export interface AIProvider {
   provider_type: AIProviderType;
   name: string;
   model: string | null;
+  cli_path: string | null;
   is_default: boolean;
   enabled: boolean;
   is_available: boolean;
@@ -95,5 +104,33 @@ export interface CliAvailableResponse {
   available: boolean;
   version: string | null;
   path: string | null;
+  error: string | null;
+}
+
+/** Response from checking a CLI binary */
+export interface CliCheckResponse {
+  provider_type: AIProviderType;
+  available: boolean;
+  version: string | null;
+  path: string | null;
+  error: string | null;
+}
+
+/** A model available from a provider */
+export interface AvailableModel {
+  id: string;
+  name: string | null;
+}
+
+/** Response from listing available models */
+export interface ModelsResponse {
+  provider_type: AIProviderType;
+  models: AvailableModel[];
+}
+
+/** Response from validating a CLI path */
+export interface ValidateCliPathResponse {
+  valid: boolean;
+  version: string | null;
   error: string | null;
 }

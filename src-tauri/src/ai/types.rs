@@ -10,14 +10,39 @@ use serde::{Deserialize, Serialize};
 #[serde(rename_all = "snake_case")]
 pub enum AIProviderType {
     ClaudeCli,
+    OpencodeCli,
+    OllamaCli,
+    LlmCli,
+    GeminiCli,
+    CustomCli,
     AnthropicApi,
     OpenaiApi,
+}
+
+impl AIProviderType {
+    /// Whether this provider type is a CLI binary (vs API-based)
+    pub fn is_cli(&self) -> bool {
+        matches!(
+            self,
+            AIProviderType::ClaudeCli
+                | AIProviderType::OpencodeCli
+                | AIProviderType::OllamaCli
+                | AIProviderType::LlmCli
+                | AIProviderType::GeminiCli
+                | AIProviderType::CustomCli
+        )
+    }
 }
 
 impl std::fmt::Display for AIProviderType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             AIProviderType::ClaudeCli => write!(f, "claude_cli"),
+            AIProviderType::OpencodeCli => write!(f, "opencode_cli"),
+            AIProviderType::OllamaCli => write!(f, "ollama_cli"),
+            AIProviderType::LlmCli => write!(f, "llm_cli"),
+            AIProviderType::GeminiCli => write!(f, "gemini_cli"),
+            AIProviderType::CustomCli => write!(f, "custom_cli"),
             AIProviderType::AnthropicApi => write!(f, "anthropic_api"),
             AIProviderType::OpenaiApi => write!(f, "openai_api"),
         }
@@ -32,6 +57,7 @@ pub struct AIProvider {
     pub provider_type: AIProviderType,
     pub name: String,
     pub model: Option<String>,
+    pub cli_path: Option<String>,
     pub is_default: bool,
     pub enabled: bool,
     #[serde(default)]
@@ -183,5 +209,37 @@ pub struct CliAvailableResponse {
     pub available: bool,
     pub version: Option<String>,
     pub path: Option<String>,
+    pub error: Option<String>,
+}
+
+/// Response from checking a CLI binary
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CliCheckResponse {
+    pub provider_type: AIProviderType,
+    pub available: bool,
+    pub version: Option<String>,
+    pub path: Option<String>,
+    pub error: Option<String>,
+}
+
+/// A model available from a provider
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AvailableModel {
+    pub id: String,
+    pub name: Option<String>,
+}
+
+/// Response from listing available models
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ModelsResponse {
+    pub provider_type: AIProviderType,
+    pub models: Vec<AvailableModel>,
+}
+
+/// Response from validating a CLI path
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ValidateCliPathResponse {
+    pub valid: bool,
+    pub version: Option<String>,
     pub error: Option<String>,
 }
