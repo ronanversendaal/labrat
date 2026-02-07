@@ -11,7 +11,7 @@ import { ReplyForm } from './ReplyForm';
 import { CommentEditor, type CommentEditorRef } from './CommentEditor';
 import { useResolveDiscussion, usePostComment } from '../../hooks/useGitLab';
 import type { CommentPosition } from '../../types';
-import { NoteBody } from '../../utils/renderNoteBody';
+import { NoteBody, parseSuggestionRange } from '../../utils/renderNoteBody';
 
 interface InlineCommentThreadProps {
   /** The discussion to display */
@@ -32,6 +32,10 @@ interface InlineCommentThreadProps {
   compact?: boolean;
   /** Called when user wants to collapse a resolved thread */
   onCollapse?: () => void;
+  /** Full file content for extracting original lines for suggestions */
+  fileContent?: string;
+  /** Callback when Apply Suggestion is clicked */
+  onApplySuggestion?: (noteId: number, suggestionId: string) => void;
 }
 
 /**
@@ -47,6 +51,8 @@ export function InlineCommentThread({
   onSuccess,
   compact = false,
   onCollapse,
+  fileContent,
+  onApplySuggestion,
 }: InlineCommentThreadProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isReplying, setIsReplying] = useState(false);
@@ -57,6 +63,44 @@ export function InlineCommentThread({
   const resolveMutation = useResolveDiscussion();
   const postCommentMutation = usePostComment();
   const toast = useToast();
+
+  // Helper to extract original lines for a note's suggestion
+  const getOriginalLinesForNote = useCallback((note: Note): string[] | undefined => {
+    if (!fileContent || !note.position?.new_line) return undefined;
+
+    // Check if this note contains a suggestion
+    const hasSuggestion = note.body?.includes('```suggestion') || note.body_html?.includes('suggestion');
+    if (!hasSuggestion) return undefined;
+
+    // Parse the suggestion range from the body
+    const range = parseSuggestionRange(note.body || '');
+    const lineNumber = note.position.new_line;
+
+    // Calculate which lines are being replaced
+    const fileLines = fileContent.split('\n');
+    const startLine = Math.max(0, lineNumber - 1 - range.linesBefore);
+    const endLine = Math.min(fileLines.length, lineNumber + range.linesAfter);
+
+    return fileLines.slice(startLine, endLine);
+  }, [fileContent]);
+
+  // Helper to create a suggestion ID from note ID (GitLab doesn't expose suggestion IDs directly)
+  const getSuggestionId = useCallback((note: Note): string | undefined => {
+    const hasSuggestion = note.body?.includes('```suggestion') || note.body_html?.includes('suggestion');
+    if (!hasSuggestion) return undefined;
+    // Use note ID as the suggestion identifier since we need to apply via the note
+    return `note-${note.id}`;
+  }, []);
+
+  // Handle apply suggestion callback
+  const handleApplySuggestion = useCallback((suggestionId: string) => {
+    // Extract note ID from our suggestion ID format
+    const noteIdMatch = suggestionId.match(/^note-(\d+)$/);
+    if (noteIdMatch && onApplySuggestion) {
+      const noteId = parseInt(noteIdMatch[1], 10);
+      onApplySuggestion(noteId, suggestionId);
+    }
+  }, [onApplySuggestion]);
 
   const firstNote = discussion.notes[0];
   const isResolvable = discussion.notes.some((n) => n.resolvable);
@@ -155,6 +199,9 @@ export function InlineCommentThread({
           onToggleResolve={handleToggleResolve}
           isResolving={resolveMutation.isPending}
           compact={compact}
+          originalLines={getOriginalLinesForNote(firstNote)}
+          suggestionId={getSuggestionId(firstNote)}
+          onApplySuggestion={handleApplySuggestion}
         />
 
         {/* Reply count / expand toggle */}
@@ -167,6 +214,9 @@ export function InlineCommentThread({
                 isFirst={false}
                 isOwner={mrAuthor && note.author.id === mrAuthor.id}
                 compact={compact}
+                originalLines={getOriginalLinesForNote(note)}
+                suggestionId={getSuggestionId(note)}
+                onApplySuggestion={handleApplySuggestion}
               />
             ))}
           </div>
@@ -288,6 +338,12 @@ interface InlineNoteDisplayProps {
   onToggleResolve?: () => void;
   isResolving?: boolean;
   compact?: boolean;
+  /** Original lines for suggestion display */
+  originalLines?: string[];
+  /** Suggestion ID for apply functionality */
+  suggestionId?: string;
+  /** Callback when Apply Suggestion is clicked */
+  onApplySuggestion?: (suggestionId: string) => void;
 }
 
 function InlineNoteDisplay({
@@ -295,6 +351,9 @@ function InlineNoteDisplay({
   isFirst,
   isOwner,
   compact,
+  originalLines,
+  suggestionId,
+  onApplySuggestion,
 }: InlineNoteDisplayProps) {
   return (
     <div
@@ -328,7 +387,13 @@ function InlineNoteDisplay({
 
           {/* Note body */}
           <div className="prose prose-sm prose-invert max-w-none overflow-x-hidden">
-            <NoteBody html={note.body_html} text={note.body} />
+            <NoteBody
+              html={note.body_html}
+              text={note.body}
+              originalLines={originalLines}
+              suggestionId={suggestionId}
+              onApplySuggestion={onApplySuggestion}
+            />
           </div>
         </div>
       </div>

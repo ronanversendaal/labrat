@@ -245,6 +245,23 @@ export async function resolveDiscussion(request: ResolveDiscussionRequest): Prom
   return invokeCommand<void>('gitlab_resolve_discussion', { request });
 }
 
+/**
+ * Apply a suggestion from a merge request note
+ */
+export async function applySuggestion(
+  projectId: number,
+  mrIid: number,
+  suggestionId: number,
+  commitMessage?: string
+): Promise<void> {
+  return invokeCommand<void>('gitlab_apply_suggestion', {
+    project_id: projectId,
+    mr_iid: mrIid,
+    suggestion_id: suggestionId,
+    commit_message: commitMessage,
+  });
+}
+
 // ============================================================================
 // AI Commands
 // ============================================================================
@@ -434,6 +451,7 @@ export const gitlab = {
   unapproveMR,
   replyToDiscussion,
   resolveDiscussion,
+  applySuggestion,
 };
 
 /**

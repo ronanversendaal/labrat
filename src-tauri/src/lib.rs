@@ -246,6 +246,7 @@ pub fn run() {
             commands::gitlab::gitlab_fetch_avatar,
             commands::gitlab::gitlab_reply_to_discussion,
             commands::gitlab::gitlab_resolve_discussion,
+            commands::gitlab::gitlab_apply_suggestion,
             // AI commands
             commands::ai::ai_list_providers,
             commands::ai::ai_add_provider,

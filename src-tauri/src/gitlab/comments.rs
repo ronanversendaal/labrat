@@ -287,6 +287,34 @@ impl GitLabClient {
 
         Ok(())
     }
+
+    /// Apply a suggestion from a note
+    ///
+    /// PUT /projects/{id}/merge_requests/{merge_request_iid}/suggestions/{suggestion_id}/apply
+    pub async fn apply_suggestion(
+        &self,
+        project_id: i64,
+        mr_iid: i64,
+        suggestion_id: i64,
+        commit_message: Option<&str>,
+    ) -> Result<(), GitLabClientError> {
+        let path = format!(
+            "/projects/{}/merge_requests/{}/suggestions/{}/apply",
+            project_id, mr_iid, suggestion_id
+        );
+        debug!("Applying suggestion: {}", path);
+
+        #[derive(Serialize)]
+        struct ApplySuggestionRequest<'a> {
+            #[serde(skip_serializing_if = "Option::is_none")]
+            commit_message: Option<&'a str>,
+        }
+
+        let request = ApplySuggestionRequest { commit_message };
+        let _: serde_json::Value = self.put(&path, &request).await?;
+
+        Ok(())
+    }
 }
 
 /// Position data for creating a line comment

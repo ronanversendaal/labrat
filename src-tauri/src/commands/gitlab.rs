@@ -1072,3 +1072,42 @@ pub async fn gitlab_resolve_discussion(
 ) -> TauriResult<()> {
     resolve_discussion_inner(&state, request).await
 }
+
+/// Apply a suggestion from a merge request note (inner)
+pub async fn apply_suggestion_inner(
+    state: &SharedAppState,
+    project_id: i64,
+    mr_iid: i64,
+    suggestion_id: i64,
+    commit_message: Option<String>,
+) -> TauriResult<()> {
+    let (_account, client) = get_active_client(state).await?;
+
+    client
+        .apply_suggestion(
+            project_id,
+            mr_iid,
+            suggestion_id,
+            commit_message.as_deref(),
+        )
+        .await
+        .map_err(|e| TauriError::api_error(e.to_string()))?;
+
+    info!(
+        "Applied suggestion {} on MR {} in project {}",
+        suggestion_id, mr_iid, project_id
+    );
+    Ok(())
+}
+
+/// Apply a suggestion from a merge request note
+#[tauri::command]
+pub async fn gitlab_apply_suggestion(
+    state: State<'_, SharedAppState>,
+    project_id: i64,
+    mr_iid: i64,
+    suggestion_id: i64,
+    commit_message: Option<String>,
+) -> TauriResult<()> {
+    apply_suggestion_inner(&state, project_id, mr_iid, suggestion_id, commit_message).await
+}

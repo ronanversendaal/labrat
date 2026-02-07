@@ -358,3 +358,28 @@ export function useResolveDiscussion() {
     },
   });
 }
+
+/**
+ * Hook to apply a suggestion from a merge request note
+ */
+export function useApplySuggestion() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (params: {
+      project_id: number;
+      mr_iid: number;
+      suggestion_id: number;
+      commit_message?: string;
+    }) => api.applySuggestion(params.project_id, params.mr_iid, params.suggestion_id, params.commit_message),
+    onSuccess: (_, variables) => {
+      // Invalidate discussions and diff for this MR since applying a suggestion creates a new commit
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.discussions(variables.project_id, variables.mr_iid),
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.diff(variables.project_id, variables.mr_iid),
+      });
+    },
+  });
+}

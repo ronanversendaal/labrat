@@ -62,9 +62,9 @@ tower-http = { version = "0.6", features = ["cors"], optional = true }
 default = []
 web-server = ["axum", "tower-http"]
 
-[[bin]]
+[[example]]
 name = "labrat-web"
-path = "src/bin/web_server.rs"
+path = "examples/web_server.rs"
 required-features = ["web-server"]
 
 [target.'cfg(target_os = "macos")'.dependencies]

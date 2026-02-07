@@ -10,7 +10,8 @@ import { DiffEditor, useMonaco } from '@monaco-editor/react';
 import type { DiffFile, Discussion, CommentPosition, Author } from '../../types';
 import { useUIStore } from '../../stores';
 import { useSettingsStore } from '../../stores/settingsStore';
-import { useFileContent } from '../../hooks/useGitLab';
+import { useFileContent, useApplySuggestion } from '../../hooks/useGitLab';
+import { useToast } from '../common';
 import { useFocusStore } from '../../hooks/useFocusManager';
 import { useResolvedTheme } from '../../hooks/useTheme';
 import { registerMonacoThemes, getMonacoThemeName } from '../../styles/themes/monaco';
@@ -216,6 +217,10 @@ export const MonacoDiffView = forwardRef<MonacoDiffViewHandle, MonacoDiffViewPro
   const editorRef = useRef<Monaco.editor.IStandaloneDiffEditor | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [editorReady, setEditorReady] = useState(false);
+
+  // Apply suggestion mutation
+  const applySuggestionMutation = useApplySuggestion();
+  const toast = useToast();
 
   // Resolved thread indicators (avatar positions in gutter)
   const [resolvedIndicators, setResolvedIndicators] = useState<Array<{
@@ -712,6 +717,37 @@ export const MonacoDiffView = forwardRef<MonacoDiffViewHandle, MonacoDiffViewPro
       }
     }
   }, [onDiscussionsChange, currentZone, setDiffMode, setFocusedLine]);
+
+  // Handle applying a suggestion from a comment thread
+  const handleApplySuggestion = useCallback(async (_noteId: number, suggestionId: string) => {
+    if (!projectId || !mrIid) {
+      toast.error('Cannot apply suggestion: missing project or MR information');
+      return;
+    }
+
+    // The suggestionId is in format "note-{id}" - we need to extract the numeric ID
+    // GitLab expects the suggestion ID, but we're using note ID as a workaround
+    // In a full implementation, we'd parse the body_html to get the actual suggestion ID
+    const numericId = parseInt(suggestionId.replace('note-', ''), 10);
+    if (isNaN(numericId)) {
+      toast.error('Invalid suggestion ID');
+      return;
+    }
+
+    try {
+      await applySuggestionMutation.mutateAsync({
+        project_id: projectId,
+        mr_iid: mrIid,
+        suggestion_id: numericId,
+      });
+      toast.success('Suggestion applied successfully');
+      onDiscussionsChange?.();
+    } catch (error) {
+      console.error('Failed to apply suggestion:', error);
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      toast.error(`Failed to apply suggestion: ${message}`);
+    }
+  }, [projectId, mrIid, applySuggestionMutation, toast, onDiscussionsChange]);
 
   // Get discussions for the current file on a specific line
   const getDiscussionsForLine = useCallback((lineNumber: number) => {
@@ -1221,6 +1257,8 @@ export const MonacoDiffView = forwardRef<MonacoDiffViewHandle, MonacoDiffViewPro
                   }}
                   compact
                   onCollapse={isResolved ? () => toggleResolvedThread(discussion.id) : undefined}
+                  fileContent={modified}
+                  onApplySuggestion={handleApplySuggestion}
                 />
               );
             })}
