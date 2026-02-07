@@ -209,6 +209,9 @@ body {
 }
 
 .suggestion-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   padding: 0.375rem 0.75rem;
   font-size: 0.6875rem;
   font-weight: 600;
@@ -220,6 +223,29 @@ body {
   font-family: var(--th-font-ui);
 }
 
+.suggestion-apply-btn {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.625rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+  color: white;
+  background-color: var(--th-primary);
+  border: none;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.suggestion-apply-btn:hover {
+  background-color: var(--th-primary-hover);
+}
+
+.suggestion-apply-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .suggestion-content {
   padding: 0;
 }
@@ -227,10 +253,18 @@ body {
 .suggestion-line {
   display: flex;
   align-items: flex-start;
-  background-color: var(--th-diff-add-bg);
-  border-left: 3px solid var(--th-positive);
   padding: 0;
   min-height: 1.5rem;
+}
+
+.suggestion-line--addition {
+  background-color: var(--th-diff-add-bg);
+  border-left: 3px solid var(--th-positive);
+}
+
+.suggestion-line--deletion {
+  background-color: var(--th-diff-del-bg);
+  border-left: 3px solid var(--th-negative);
 }
 
 .suggestion-plus {
@@ -241,6 +275,17 @@ body {
   color: var(--th-positive-text);
   font-weight: 500;
   background-color: var(--th-positive-muted);
+  user-select: none;
+}
+
+.suggestion-minus {
+  flex-shrink: 0;
+  width: 2rem;
+  padding: 0.125rem 0;
+  text-align: center;
+  color: var(--th-negative-text);
+  font-weight: 500;
+  background-color: var(--th-negative-muted);
   user-select: none;
 }
 
@@ -390,6 +435,31 @@ pre.suggestion code::before {
   border: 1px solid var(--th-info-text);
   border-radius: 3px;
   letter-spacing: 0.5px;
+}
+
+/* Override prose colors to use theme-aware variables */
+.inline-note .prose,
+.inline-note .prose-invert {
+  --tw-prose-body: var(--th-content);
+  --tw-prose-headings: var(--th-content);
+  --tw-prose-bold: var(--th-content);
+  --tw-prose-links: var(--th-primary-text);
+  --tw-prose-code: var(--th-content);
+  --tw-prose-quotes: var(--th-content-secondary);
+  color: var(--th-content);
+}
+
+.inline-note .prose p,
+.inline-note .prose-invert p,
+.inline-note .prose strong,
+.inline-note .prose-invert strong {
+  color: var(--th-content);
+}
+
+.inline-note .prose code,
+.inline-note .prose-invert code {
+  color: var(--th-content);
+  background-color: var(--th-surface-alt);
 }
 
 /* ============================================

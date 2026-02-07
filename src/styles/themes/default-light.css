@@ -12,9 +12,9 @@
 
   /* Text */
   --th-content: #1e293b;
-  --th-content-secondary: #64748b;
-  --th-content-tertiary: #94a3b8;
-  --th-content-muted: #475569;
+  --th-content-secondary: #475569;
+  --th-content-tertiary: #64748b;
+  --th-content-muted: #334155;
 
   /* Borders */
   --th-edge: #e2e8f0;
