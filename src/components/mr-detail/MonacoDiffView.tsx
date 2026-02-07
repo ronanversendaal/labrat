@@ -326,15 +326,14 @@ export const MonacoDiffView = forwardRef<MonacoDiffViewHandle, MonacoDiffViewPro
 
       // Observe content size changes - use parent height hack (same as thread view zones)
       // Do NOT mutate heightInPx + layoutZone as that creates a feedback loop
-      resizeObserver = new ResizeObserver((entries) => {
-        for (const entry of entries) {
-          const newHeight = Math.ceil(entry.contentRect.height) + 16;
-          if (newHeight > 50) {
-            modifiedEditor.changeViewZones((acc) => {
-              acc.layoutZone(zoneId);
-            });
-            (domNode.parentElement as HTMLElement | null)?.style.setProperty('height', `${newHeight}px`);
-          }
+      resizeObserver = new ResizeObserver(() => {
+        // Use scrollHeight to capture full content height including overflow
+        const newHeight = Math.ceil(domNode.scrollHeight) + 16;
+        if (newHeight > 50) {
+          modifiedEditor.changeViewZones((acc) => {
+            acc.layoutZone(zoneId);
+          });
+          (domNode.parentElement as HTMLElement | null)?.style.setProperty('height', `${newHeight}px`);
         }
       });
       resizeObserver.observe(domNode);
@@ -401,15 +400,14 @@ export const MonacoDiffView = forwardRef<MonacoDiffViewHandle, MonacoDiffViewPro
 
       // Observe content size changes - use parent height hack (same as thread view zones)
       // Do NOT mutate heightInPx + layoutZone as that creates a feedback loop
-      resizeObserver = new ResizeObserver((entries) => {
-        for (const entry of entries) {
-          const newHeight = Math.ceil(entry.contentRect.height) + 16;
-          if (newHeight > 50) {
-            modifiedEditor.changeViewZones((acc) => {
-              acc.layoutZone(zoneId);
-            });
-            (domNode.parentElement as HTMLElement | null)?.style.setProperty('height', `${newHeight}px`);
-          }
+      resizeObserver = new ResizeObserver(() => {
+        // Use scrollHeight to capture full content height including overflow
+        const newHeight = Math.ceil(domNode.scrollHeight) + 16;
+        if (newHeight > 50) {
+          modifiedEditor.changeViewZones((acc) => {
+            acc.layoutZone(zoneId);
+          });
+          (domNode.parentElement as HTMLElement | null)?.style.setProperty('height', `${newHeight}px`);
         }
       });
       resizeObserver.observe(domNode);
@@ -763,6 +761,7 @@ export const MonacoDiffView = forwardRef<MonacoDiffViewHandle, MonacoDiffViewPro
     // Clear existing view zones and create new ones
     const newContainers: typeof viewZoneContainers = [];
     const resizeObservers: ResizeObserver[] = [];
+    const mutationObservers: MutationObserver[] = [];
 
     modifiedEditor.changeViewZones((accessor) => {
       // Remove old view zones
@@ -773,42 +772,81 @@ export const MonacoDiffView = forwardRef<MonacoDiffViewHandle, MonacoDiffViewPro
       visibleThreads.forEach(({ lineNumber, discussions }) => {
         const domNode = document.createElement('div');
         domNode.className = 'monaco-view-zone-thread';
-        domNode.style.paddingLeft = '50px';
-        domNode.style.paddingRight = '20px';
         domNode.style.boxSizing = 'border-box';
 
-        const zoneId = accessor.addZone({
+        // Track current zone ID and height for recreation
+        let currentZoneId = accessor.addZone({
           afterLineNumber: lineNumber,
-          heightInPx: 200, // Initial height
+          heightInPx: 200, // Initial height, will be updated
           domNode,
           suppressMouseDown: false,
-          onDomNodeTop: () => {},
-          onComputedHeight: () => {},
         });
+        let currentHeight = 200;
 
-        // Observe content size changes to update view zone height
-        const resizeObserver = new ResizeObserver((entries) => {
-          for (const entry of entries) {
-            const height = entry.contentRect.height + 16; // Add padding
-            if (height > 50) {
-              modifiedEditor.changeViewZones((acc) => {
-                // Update the zone height
-                acc.layoutZone(zoneId);
-              });
-              // Directly update the zone's height
-              (domNode.parentElement as HTMLElement | null)?.style.setProperty('height', `${height}px`);
-            }
+        // Function to recreate zone with new height
+        const updateZoneHeight = (newHeight: number) => {
+          if (Math.abs(newHeight - currentHeight) < 10) return; // Skip small changes
+
+          modifiedEditor.changeViewZones((acc) => {
+            acc.removeZone(currentZoneId);
+            currentZoneId = acc.addZone({
+              afterLineNumber: lineNumber,
+              heightInPx: newHeight,
+              domNode,
+              suppressMouseDown: false,
+            });
+            currentHeight = newHeight;
+          });
+
+          // Update the stored zoneId
+          const idx = viewZoneIdsRef.current.indexOf(currentZoneId);
+          if (idx === -1) {
+            viewZoneIdsRef.current.push(currentZoneId);
           }
-        });
-        resizeObserver.observe(domNode);
+        };
+
+        // Measure content and update zone height
+        const measureAndUpdate = () => {
+          const wrapper = domNode.firstElementChild as HTMLElement | null;
+          if (!wrapper) return;
+
+          const height = Math.ceil(wrapper.offsetHeight) + 20;
+          if (height > 50) {
+            updateZoneHeight(height);
+          }
+        };
+
+        // Use ResizeObserver to detect content size changes
+        const resizeObserver = new ResizeObserver(measureAndUpdate);
         resizeObservers.push(resizeObserver);
 
-        viewZoneIdsRef.current.push(zoneId);
+        // Use MutationObserver to detect when portal content is added
+        const mutationObserver = new MutationObserver(() => {
+          // Start observing the wrapper once it exists
+          if (domNode.firstElementChild && !resizeObserver.observe) {
+            resizeObserver.observe(domNode.firstElementChild);
+          }
+          setTimeout(measureAndUpdate, 10);
+        });
+        mutationObserver.observe(domNode, { childList: true, subtree: true });
+        mutationObservers.push(mutationObserver);
+
+        // Initial measurement after React portal renders
+        requestAnimationFrame(() => {
+          if (domNode.firstElementChild) {
+            resizeObserver.observe(domNode.firstElementChild);
+          }
+          measureAndUpdate();
+          setTimeout(measureAndUpdate, 50);
+          setTimeout(measureAndUpdate, 200);
+        });
+
+        viewZoneIdsRef.current.push(currentZoneId);
         newContainers.push({
           lineNumber,
           discussions,
           domNode,
-          zoneId,
+          zoneId: currentZoneId,
         });
       });
     });
@@ -818,6 +856,7 @@ export const MonacoDiffView = forwardRef<MonacoDiffViewHandle, MonacoDiffViewPro
     // Cleanup on unmount
     return () => {
       resizeObservers.forEach((observer) => observer.disconnect());
+      mutationObservers.forEach((observer) => observer.disconnect());
       modifiedEditor.changeViewZones((accessor) => {
         viewZoneIdsRef.current.forEach((id) => accessor.removeZone(id));
       });

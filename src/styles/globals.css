@@ -205,6 +205,7 @@ body {
   background-color: var(--th-canvas);
   overflow: hidden;
   font-family: var(--th-font-code);
+  max-width: 100%;
 }
 
 .suggestion-header {
@@ -245,6 +246,7 @@ body {
 
 .suggestion-code {
   flex: 1;
+  min-width: 0;
   padding: 0.125rem 0.75rem 0.125rem 0.5rem;
   font-size: 0.8125rem;
   line-height: 1.5;
@@ -319,7 +321,8 @@ pre.suggestion code::before {
   border: 1px solid var(--th-editor-border);
   border-radius: 6px;
   margin: 8px 0;
-  overflow: hidden;
+  overflow-x: hidden;
+  max-width: 100%;
 }
 
 .inline-comment-thread--resolved {
@@ -363,6 +366,7 @@ pre.suggestion code::before {
 
 .inline-note {
   padding: 12px;
+  overflow-x: hidden;
 }
 
 .inline-note--reply {
@@ -424,6 +428,8 @@ pre.suggestion code::before {
   position: relative;
   z-index: 1;
   box-sizing: border-box;
+  overflow-x: hidden;
+  width: 100%;
 }
 
 .monaco-view-zone-comment {

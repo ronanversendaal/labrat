@@ -30,8 +30,6 @@ interface InlineCommentThreadProps {
   onSuccess?: () => void;
   /** Compact mode for inline display */
   compact?: boolean;
-  /** Maximum height of the thread container */
-  maxHeight?: number;
   /** Called when user wants to collapse a resolved thread */
   onCollapse?: () => void;
 }
@@ -48,7 +46,6 @@ export function InlineCommentThread({
   onHeightChange,
   onSuccess,
   compact = false,
-  maxHeight = 350,
   onCollapse,
 }: InlineCommentThreadProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -141,14 +138,13 @@ export function InlineCommentThread({
     <div
       ref={containerRef}
       className={clsx(
-        'inline-comment-thread flex flex-col',
+        'inline-comment-thread',
         isResolved && 'inline-comment-thread--resolved',
         compact && 'inline-comment-thread--compact'
       )}
-      style={{ maxHeight: `${maxHeight}px` }}
     >
-      {/* Thread notes - scrollable area */}
-      <div className="inline-comment-thread__notes flex-1 overflow-y-auto min-h-0">
+      {/* Thread notes */}
+      <div className="inline-comment-thread__notes">
         {/* First note (main comment) */}
         <InlineNoteDisplay
           note={firstNote}
@@ -331,7 +327,7 @@ function InlineNoteDisplay({
           </div>
 
           {/* Note body */}
-          <div className="prose prose-sm prose-invert max-w-none">
+          <div className="prose prose-sm prose-invert max-w-none overflow-x-hidden">
             <NoteBody html={note.body_html} text={note.body} />
           </div>
         </div>
