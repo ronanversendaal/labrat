@@ -2,36 +2,57 @@ import { useEffect, useRef } from 'react';
 import type { ListMergeRequestsResponse } from '../types/gitlab';
 import { isMergeReady } from '../utils/mergeReadiness';
 
+let permissionGranted: boolean | null = null;
+
+/**
+ * Request notification permission once at startup so it's already granted
+ * by the time a notification needs to fire.
+ *
+ * Note: On macOS, the notification icon is always the app's bundle icon.
+ * In dev mode this shows as Terminal; in production builds it shows the
+ * LabRat icon automatically.
+ */
+export function useNotificationPermission() {
+  useEffect(() => {
+    if (permissionGranted !== null) return;
+    permissionGranted = false; // mark as in-progress to avoid duplicate requests
+
+    (async () => {
+      try {
+        const { isPermissionGranted, requestPermission } = await import(
+          '@tauri-apps/plugin-notification'
+        );
+        const granted = await isPermissionGranted();
+        if (granted) {
+          permissionGranted = true;
+        } else {
+          const result = await requestPermission();
+          permissionGranted = result === 'granted';
+        }
+      } catch {
+        // Not in Tauri context
+      }
+    })();
+  }, []);
+}
+
 /**
  * Sends OS notifications when MRs become merge-ready.
  * Tracks which MRs have already been notified to avoid duplicates.
  */
 export function useMergeReadyNotifications(data: ListMergeRequestsResponse | undefined) {
   const notifiedMRs = useRef<Set<number>>(new Set());
-  const permissionChecked = useRef(false);
 
   useEffect(() => {
-    if (!data?.merge_requests) return;
+    if (!data?.merge_requests || !permissionGranted) return;
 
     const checkAndNotify = async () => {
-      // Lazy-import to avoid issues outside Tauri
       let notify: typeof import('@tauri-apps/plugin-notification') | null = null;
 
       try {
         notify = await import('@tauri-apps/plugin-notification');
       } catch {
-        // Not in Tauri context
         return;
-      }
-
-      // Request permission once
-      if (!permissionChecked.current) {
-        permissionChecked.current = true;
-        const granted = await notify.isPermissionGranted();
-        if (!granted) {
-          const result = await notify.requestPermission();
-          if (result !== 'granted') return;
-        }
       }
 
       // Track current MR IDs to clean up old entries
@@ -63,3 +84,4 @@ export function useMergeReadyNotifications(data: ListMergeRequestsResponse | und
     checkAndNotify();
   }, [data]);
 }
+

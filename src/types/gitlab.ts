@@ -96,6 +96,8 @@ export interface MergeRequest {
   merged_at: string | null;
   has_conflicts: boolean;
   head_pipeline: Pipeline | null;
+  /** HEAD SHA of the source branch */
+  sha: string | null;
   draft: boolean;
   blocking_discussions_resolved: boolean;
   user_notes_count: number;

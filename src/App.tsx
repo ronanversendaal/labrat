@@ -9,7 +9,10 @@ import { useUIStore, useMRStore } from './stores';
 import { useKeyboardShortcut } from './hooks/useKeyboardShortcuts';
 import { useAccounts, useMyMergeRequests } from './hooks/useGitLab';
 import { useThemeSync } from './hooks/useTheme';
-import { useMergeReadyNotifications } from './hooks/useNotifications';
+import {
+  useNotificationPermission,
+  useMergeReadyNotifications,
+} from './hooks/useNotifications';
 
 // Create a client
 const queryClient = new QueryClient({
@@ -32,6 +35,9 @@ function AppContent() {
 
   // Synchronize theme with document class
   useThemeSync();
+
+  // Request notification permission eagerly at startup
+  useNotificationPermission();
 
   // OS notifications when MRs become merge-ready
   const { data: myMRsData } = useMyMergeRequests();

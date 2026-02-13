@@ -6,7 +6,8 @@ import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 // open() is dynamically imported only in Tauri mode
 import type { MergeRequest, Discussion, MRChangeSnapshot } from '../../types';
-import { useDiff, useDiscussions, useMergeRequest, useAccounts, useApproveMR, useApprovalState } from '../../hooks/useGitLab';
+import { useDiff, useDiscussions, useMergeRequest, useAccounts, useApproveMR, useApprovalState, useMergeMR, useRebaseMR } from '../../hooks/useGitLab';
+import { isMergeReady } from '../../utils/mergeReadiness';
 import { useMRStore, isFileViewedSelector } from '../../stores/mrStore';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { useAISuggestions } from '../../hooks/useAI';
@@ -86,7 +87,7 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
   if (currentMR && !snapshotInitialized.current) {
     snapshotInitialized.current = true;
     initialSnapshot.current = {
-      sha: currentMR.head_pipeline?.id?.toString() || null,
+      sha: currentMR.sha || null,
       state: currentMR.state,
       user_notes_count: currentMR.user_notes_count,
       has_conflicts: currentMR.has_conflicts,
@@ -97,7 +98,7 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
   const hasRealUpdates = useMemo(() => {
     if (!currentMR || !initialSnapshot.current || dismissedUpdate) return false;
     const snapshot = initialSnapshot.current;
-    const newSha = currentMR.head_pipeline?.id?.toString() || null;
+    const newSha = currentMR.sha || null;
 
     return (
       // Code was pushed (pipeline changed)
@@ -117,7 +118,7 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
   const handleRefresh = () => {
     if (currentMR) {
       initialSnapshot.current = {
-        sha: currentMR.head_pipeline?.id?.toString() || null,
+        sha: currentMR.sha || null,
         state: currentMR.state,
         user_notes_count: currentMR.user_notes_count,
         has_conflicts: currentMR.has_conflicts,
@@ -133,8 +134,8 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
   const { data: aiSuggestions } = useAISuggestions(mr.iid);
   const pendingAISuggestions = aiSuggestions?.filter((s) => s.status === 'pending').length || 0;
 
-  // Current SHA for file viewed tracking (use head_commit_sha from diff or pipeline id)
-  const currentSha = diff?.head_commit_sha || mr.head_pipeline?.id?.toString() || '';
+  // Current SHA for file viewed tracking (use head_commit_sha from diff or MR sha)
+  const currentSha = diff?.head_commit_sha || mr.sha || '';
 
   // Auto-refresh on update detection
   useEffect(() => {
@@ -277,7 +278,7 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
       {
         projectId: mr.project_id,
         mrIid: mr.iid,
-        sha: mr.head_pipeline?.id?.toString(),
+        sha: mr.sha ?? undefined,
       },
       {
         onSuccess: () => {
@@ -293,7 +294,7 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
 
     // Close immediately — optimistic cache update already happened in onMutate
     onClose?.();
-  }, [isAuthor, userHasApproved, approveMutation, mr.project_id, mr.iid, mr.head_pipeline?.id, toast, queryClient, onClose]);
+  }, [isAuthor, userHasApproved, approveMutation, mr.project_id, mr.iid, mr.sha, toast, queryClient, onClose]);
 
   // Toggle viewed status for current file
   const toggleFileViewed = useCallback(() => {
@@ -313,11 +314,11 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
   // Clear viewed files when SHA changes (MR was updated with new code)
   useEffect(() => {
     const prevSha = initialSnapshot.current?.sha ?? null;
-    const newSha = currentMR?.head_pipeline?.id?.toString() || null;
+    const newSha = currentMR?.sha || null;
     if (prevSha && newSha && prevSha !== newSha) {
       clearViewedFiles(mr.iid);
     }
-  }, [currentMR?.head_pipeline?.id, mr.iid, clearViewedFiles]);
+  }, [currentMR?.sha, mr.iid, clearViewedFiles]);
 
   // Reset diff mode when file changes (back to file-nav)
   useEffect(() => {
@@ -505,7 +506,7 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
               mrIid={mr.iid}
               authorId={mr.author.id}
               currentUserId={currentUserId}
-              sha={mr.head_pipeline?.id?.toString()}
+              sha={mr.sha ?? undefined}
             />
 
             <button
