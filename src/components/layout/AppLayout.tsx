@@ -17,7 +17,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   const { data: accounts } = useAccounts();
   const setActiveAccount = useSetActiveAccount();
   const { openModal, activeView, setActiveView } = useUIStore();
-  const { negatedFilters, specialFilters, setNegatedFilters, setSpecialFilters, clearFilters } = useMRStore();
+  const { negatedFilters, specialFilters, setNegatedFilters, setSpecialFilters, clearFilters, closeDetail, setSelectedMr } = useMRStore();
 
   const activeAccount = accounts?.find((a) => a.is_active);
   const defaultsApplied = useRef(false);
@@ -130,6 +130,8 @@ export function AppLayout({ children }: AppLayoutProps) {
               collapsed={sidebarCollapsed}
               onClick={() => {
                 setActiveView('my-reviews');
+                closeDetail();
+                setSelectedMr(null);
                 applyMyReviewsDefaults();
               }}
             />
@@ -149,7 +151,11 @@ export function AppLayout({ children }: AppLayoutProps) {
               label="My Merge Requests"
               active={activeView === 'my-mrs'}
               collapsed={sidebarCollapsed}
-              onClick={() => setActiveView('my-mrs')}
+              onClick={() => {
+                setActiveView('my-mrs');
+                closeDetail();
+                setSelectedMr(null);
+              }}
               badge={readyCount}
             />
           </SidebarSection>

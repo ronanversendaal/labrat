@@ -1,3 +1,4 @@
+import React from 'react';
 import type { MergeRequest, ApprovalState } from '../../types';
 import { Avatar } from '../common';
 import { useToast } from '../common/Toast';
@@ -8,10 +9,11 @@ import { isMergeReady } from '../../utils/mergeReadiness';
 interface MyMRCardProps {
   mr: MergeRequest;
   approvalState?: ApprovalState;
+  selected?: boolean;
   onClick?: () => void;
 }
 
-export function MyMRCard({ mr, approvalState, onClick }: MyMRCardProps) {
+export const MyMRCard = React.forwardRef<HTMLDivElement, MyMRCardProps>(function MyMRCard({ mr, approvalState, selected, onClick }, ref) {
   const toast = useToast();
   const mergeMR = useMergeMR();
   const rebaseMR = useRebaseMR();
@@ -66,7 +68,10 @@ export function MyMRCard({ mr, approvalState, onClick }: MyMRCardProps) {
           onClick();
         }
       }}
-      className="p-4 border rounded-lg cursor-pointer transition-colors duration-150 border-edge hover:border-edge-strong focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+      ref={ref}
+      className={`p-4 border rounded-lg cursor-pointer transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 ${
+        selected ? 'border-primary bg-primary/5' : 'border-edge hover:border-edge-strong'
+      }`}
     >
       {/* Header: Project and time */}
       <div className="flex items-center justify-between text-sm text-content-secondary mb-2">
@@ -165,7 +170,7 @@ export function MyMRCard({ mr, approvalState, onClick }: MyMRCardProps) {
       </div>
     </div>
   );
-}
+});
 
 function getTimeAgo(date: Date): string {
   const now = new Date();

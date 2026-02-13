@@ -1,6 +1,7 @@
-import { useMemo } from 'react';
+import { useMemo, useCallback, useEffect, useRef } from 'react';
 import { useMyMergeRequests } from '../../hooks/useGitLab';
 import { useMRStore } from '../../stores';
+import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 import { MRDetailView } from '../mr-detail';
 import { MyMRCard } from './MyMRCard';
 import type { ApprovalState } from '../../types';
@@ -18,6 +19,78 @@ export function MyMRsPage() {
       return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
     });
   }, [mergeRequests]);
+
+  // Get current index for keyboard navigation
+  const currentIndex = useMemo(() => {
+    if (!selectedMr) return -1;
+    return sortedMRs.findIndex((mr) => mr.id === selectedMr.id);
+  }, [sortedMRs, selectedMr]);
+
+  // Navigation handlers
+  const selectNext = useCallback(() => {
+    if (sortedMRs.length === 0) return;
+    const nextIndex = currentIndex < sortedMRs.length - 1 ? currentIndex + 1 : 0;
+    setSelectedMr(sortedMRs[nextIndex]);
+  }, [sortedMRs, currentIndex, setSelectedMr]);
+
+  const selectPrev = useCallback(() => {
+    if (sortedMRs.length === 0) return;
+    const prevIndex = currentIndex > 0 ? currentIndex - 1 : sortedMRs.length - 1;
+    setSelectedMr(sortedMRs[prevIndex]);
+  }, [sortedMRs, currentIndex, setSelectedMr]);
+
+  const openSelectedMR = useCallback(() => {
+    if (selectedMr) {
+      openDetail();
+    } else if (sortedMRs.length > 0) {
+      setSelectedMr(sortedMRs[0]);
+      openDetail();
+    }
+  }, [selectedMr, sortedMRs, setSelectedMr, openDetail]);
+
+  // Refs for cards to enable scroll into view
+  const cardRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+
+  // Scroll selected MR into view when selection changes via keyboard
+  useEffect(() => {
+    if (selectedMr) {
+      const element = cardRefs.current.get(selectedMr.id);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }
+  }, [selectedMr]);
+
+  // Register keyboard shortcuts
+  useKeyboardShortcuts([
+    {
+      id: 'next-mr',
+      label: 'Next MR',
+      description: 'Select next merge request',
+      keys: ['j', 'arrowdown'],
+      category: 'mr-list',
+      handler: selectNext,
+      preventDefault: true,
+    },
+    {
+      id: 'prev-mr',
+      label: 'Previous MR',
+      description: 'Select previous merge request',
+      keys: ['k', 'arrowup'],
+      category: 'mr-list',
+      handler: selectPrev,
+      preventDefault: true,
+    },
+    {
+      id: 'open-mr',
+      label: 'Open MR',
+      description: 'Open selected merge request',
+      keys: ['enter', 'o'],
+      category: 'mr-list',
+      handler: openSelectedMR,
+      preventDefault: true,
+    },
+  ], { scope: 'my-mrs' });
 
   // Show detail view when open and MR is selected
   if (isDetailOpen && selectedMr) {
@@ -106,8 +179,16 @@ export function MyMRsPage() {
             {sortedMRs.map((mr) => (
               <MyMRCard
                 key={mr.id}
+                ref={(el) => {
+                  if (el) {
+                    cardRefs.current.set(mr.id, el);
+                  } else {
+                    cardRefs.current.delete(mr.id);
+                  }
+                }}
                 mr={mr}
                 approvalState={approvalStates[mr.id]}
+                selected={selectedMr?.id === mr.id}
                 onClick={() => {
                   setSelectedMr(mr);
                   openDetail();
