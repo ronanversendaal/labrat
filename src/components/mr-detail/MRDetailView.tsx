@@ -262,6 +262,31 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
   ) ?? false;
   const isAuthor = mr.author.id === currentUserId;
 
+  // Merge/Rebase for own MRs
+  const mergeMR = useMergeMR();
+  const rebaseMR = useRebaseMR();
+  const mergeReady = isMergeReady(mr, approvalState ?? undefined);
+
+  const handleMerge = useCallback(() => {
+    mergeMR.mutate(
+      { project_id: mr.project_id, mr_iid: mr.iid, merge_when_pipeline_succeeds: false },
+      {
+        onSuccess: () => toast.success(`Merged !${mr.iid}`),
+        onError: (err) => toast.error(`Merge failed: ${err instanceof Error ? err.message : 'Unknown error'}`),
+      }
+    );
+  }, [mergeMR, mr.project_id, mr.iid, toast]);
+
+  const handleRebase = useCallback(() => {
+    rebaseMR.mutate(
+      { projectId: mr.project_id, mrIid: mr.iid },
+      {
+        onSuccess: () => toast.success(`Rebase started for !${mr.iid}`),
+        onError: (err) => toast.error(`Rebase failed: ${err instanceof Error ? err.message : 'Unknown error'}`),
+      }
+    );
+  }, [rebaseMR, mr.project_id, mr.iid, toast]);
+
   const handleApproveMR = useCallback(() => {
     if (isAuthor) {
       toast.error('You cannot approve your own merge request');
@@ -500,14 +525,39 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
             {/* Approval status display */}
             <ApprovalStatus projectId={mr.project_id} mrIid={mr.iid} />
 
-            {/* Approval button */}
-            <ApprovalButton
-              projectId={mr.project_id}
-              mrIid={mr.iid}
-              authorId={mr.author.id}
-              currentUserId={currentUserId}
-              sha={mr.sha ?? undefined}
-            />
+            {/* Approval / Merge+Rebase buttons */}
+            {isAuthor ? (
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={handleMerge}
+                  disabled={!mergeReady || mergeMR.isPending}
+                  loading={mergeMR.isPending}
+                  title={mergeReady ? 'Merge this merge request' : 'Not ready to merge — check pipeline, approvals, conflicts, and discussions'}
+                >
+                  {mergeMR.isPending ? 'Merging...' : 'Merge'}
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleRebase}
+                  disabled={!mr.has_conflicts || rebaseMR.isPending}
+                  loading={rebaseMR.isPending}
+                  title={mr.has_conflicts ? 'Rebase to resolve conflicts' : 'No conflicts to resolve'}
+                >
+                  {rebaseMR.isPending ? 'Rebasing...' : 'Rebase'}
+                </Button>
+              </div>
+            ) : (
+              <ApprovalButton
+                projectId={mr.project_id}
+                mrIid={mr.iid}
+                authorId={mr.author.id}
+                currentUserId={currentUserId}
+                sha={mr.sha ?? undefined}
+              />
+            )}
 
             <button
               onClick={handleOpenInGitLab}
