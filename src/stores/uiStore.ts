@@ -2,7 +2,12 @@ import { create } from 'zustand';
 
 type ModalType = 'addAccount' | 'settings' | 'aiProvider' | 'postComment' | 'saveFilterPreset' | null;
 
+export type ActiveView = 'my-reviews' | 'my-mrs';
+
 interface UIState {
+  // Active view
+  activeView: ActiveView;
+  setActiveView: (view: ActiveView) => void;
   // Modals
   activeModal: ModalType;
   modalData: Record<string, unknown>;
@@ -29,6 +34,8 @@ interface UIState {
 
 export const useUIStore = create<UIState>((set) => ({
   // Initial state
+  activeView: 'my-reviews' as ActiveView,
+  setActiveView: (activeView) => set({ activeView }),
   activeModal: null,
   modalData: {},
   wordWrap: false,

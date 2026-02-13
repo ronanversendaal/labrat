@@ -3,11 +3,13 @@ import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/reac
 import { AppLayout } from './components/layout';
 import { ToastProvider, KeyboardHelpModal, useKeyboardHelpModal } from './components/common';
 import { MRListPage } from './components/mr-list';
+import { MyMRsPage } from './components/my-mrs';
 import { AddAccountModal, SettingsModal } from './components/settings';
 import { useUIStore, useMRStore } from './stores';
 import { useKeyboardShortcut } from './hooks/useKeyboardShortcuts';
-import { useAccounts } from './hooks/useGitLab';
+import { useAccounts, useMyMergeRequests } from './hooks/useGitLab';
 import { useThemeSync } from './hooks/useTheme';
+import { useMergeReadyNotifications } from './hooks/useNotifications';
 
 // Create a client
 const queryClient = new QueryClient({
@@ -22,7 +24,7 @@ const queryClient = new QueryClient({
 
 function AppContent() {
   const keyboardHelp = useKeyboardHelpModal();
-  const { openModal } = useUIStore();
+  const { openModal, activeView, setActiveView } = useUIStore();
   const { closeDetail, clearFilters, setNegatedFilters, setSpecialFilters } = useMRStore();
   const { data: accounts } = useAccounts();
   const activeAccount = accounts?.find((a) => a.is_active);
@@ -30,6 +32,10 @@ function AppContent() {
 
   // Synchronize theme with document class
   useThemeSync();
+
+  // OS notifications when MRs become merge-ready
+  const { data: myMRsData } = useMyMergeRequests();
+  useMergeReadyNotifications(myMRsData);
 
   // Register settings shortcut (Cmd+, on Mac, Ctrl+, on Windows/Linux)
   const handleOpenSettings = useCallback(() => {
@@ -44,6 +50,7 @@ function AppContent() {
 
   // Register "My Reviews" shortcut (Shift+R)
   const handleGoToMyReviews = useCallback(() => {
+    setActiveView('my-reviews');
     // Close detail view if open
     closeDetail();
     // Clear existing filters
@@ -58,11 +65,22 @@ function AppContent() {
         reviewerIsMe: true,
       });
     }
-  }, [closeDetail, clearFilters, setNegatedFilters, setSpecialFilters, activeAccount?.username]);
+  }, [setActiveView, closeDetail, clearFilters, setNegatedFilters, setSpecialFilters, activeAccount?.username]);
 
   useKeyboardShortcut(['shift+r'], handleGoToMyReviews, {
     label: 'My Reviews',
     description: 'Go to your review requests',
+    category: 'global',
+  });
+
+  // Register "My Merge Requests" shortcut (Shift+M)
+  const handleGoToMyMRs = useCallback(() => {
+    setActiveView('my-mrs');
+  }, [setActiveView]);
+
+  useKeyboardShortcut(['shift+m'], handleGoToMyMRs, {
+    label: 'My Merge Requests',
+    description: 'Go to your merge requests',
     category: 'global',
   });
 
@@ -80,7 +98,7 @@ function AppContent() {
   return (
     <>
       <AppLayout>
-        <MRListPage />
+        {activeView === 'my-reviews' ? <MRListPage /> : <MyMRsPage />}
       </AppLayout>
       <KeyboardHelpModal isOpen={keyboardHelp.isOpen} onClose={keyboardHelp.close} />
       <AddAccountModal />

@@ -5,3 +5,4 @@ export { useSettingsStore } from './settingsStore';
 
 // Type exports
 export type { NegatedFilter, SpecialFilters } from './mrStore';
+export type { ActiveView } from './uiStore';

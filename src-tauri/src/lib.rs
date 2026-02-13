@@ -173,6 +173,7 @@ pub fn run() {
 
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_notification::init())
         .setup(|app| {
             // Position window: full height, aligned to the right of the screen
             if let Some(window) = app.get_webview_window("main") {
@@ -247,6 +248,8 @@ pub fn run() {
             commands::gitlab::gitlab_reply_to_discussion,
             commands::gitlab::gitlab_resolve_discussion,
             commands::gitlab::gitlab_apply_suggestion,
+            commands::gitlab::gitlab_merge_mr,
+            commands::gitlab::gitlab_rebase_mr,
             // AI commands
             commands::ai::ai_list_providers,
             commands::ai::ai_add_provider,

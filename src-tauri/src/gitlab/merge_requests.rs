@@ -3,7 +3,7 @@
 //! This module provides wrappers for merge request-related GitLab API endpoints.
 
 use super::client::{GitLabClient, GitLabClientError};
-use super::types::{ApprovalState, ApproveResponse, MergeRequest, MergeRequestFilter, MergeRequestState};
+use super::types::{ApprovalState, ApproveResponse, MergeRequest, MergeRequestFilter, MergeRequestState, RebaseMrResponse};
 use tracing::debug;
 
 /// Default number of items per page for pagination
@@ -303,6 +303,56 @@ impl GitLabClient {
 
         let body = serde_json::json!({});
         self.post(&path, &body).await
+    }
+
+    /// Merge a merge request
+    ///
+    /// PUT /projects/:id/merge_requests/:iid/merge
+    pub async fn merge_mr(
+        &self,
+        project_id: i64,
+        mr_iid: i64,
+        merge_when_pipeline_succeeds: Option<bool>,
+        should_remove_source_branch: Option<bool>,
+        squash: Option<bool>,
+        sha: Option<String>,
+        auto_merge_strategy: Option<String>,
+    ) -> Result<MergeRequest, GitLabClientError> {
+        let path = format!("/projects/{}/merge_requests/{}/merge", project_id, mr_iid);
+        debug!("Merging MR: {}", path);
+
+        let mut body = serde_json::json!({});
+        if let Some(strategy) = &auto_merge_strategy {
+            body["auto_merge_strategy"] = serde_json::json!(strategy);
+        } else if let Some(mwps) = merge_when_pipeline_succeeds {
+            body["merge_when_pipeline_succeeds"] = serde_json::json!(mwps);
+        }
+        if let Some(remove) = should_remove_source_branch {
+            body["should_remove_source_branch"] = serde_json::json!(remove);
+        }
+        if let Some(squash) = squash {
+            body["squash"] = serde_json::json!(squash);
+        }
+        if let Some(sha) = sha {
+            body["sha"] = serde_json::json!(sha);
+        }
+
+        self.put(&path, &body).await
+    }
+
+    /// Rebase a merge request
+    ///
+    /// PUT /projects/:id/merge_requests/:iid/rebase
+    pub async fn rebase_mr(
+        &self,
+        project_id: i64,
+        mr_iid: i64,
+    ) -> Result<RebaseMrResponse, GitLabClientError> {
+        let path = format!("/projects/{}/merge_requests/{}/rebase", project_id, mr_iid);
+        debug!("Rebasing MR: {}", path);
+
+        let body = serde_json::json!({});
+        self.put(&path, &body).await
     }
 }
 

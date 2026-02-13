@@ -9,8 +9,9 @@ use crate::gitlab::comments::PositionData;
 use crate::gitlab::types::{
     AddAccountRequest, ApprovalState, ApproveResponse, ConnectionStatus, ConnectionStatusEvent,
     Diff, Discussion, GetDiffRequest, GitLabAccount, ListMergeRequestsRequest,
-    ListMergeRequestsResponse, MergeRequest, Note, PostCommentRequest, PostCommentResponse,
-    RefreshRequest, ReplyToDiscussionRequest, ResolveDiscussionRequest, ValidateTokenRequest,
+    ListMergeRequestsResponse, MergeMrRequest, MergeRequest, MergeRequestScope, Note,
+    PostCommentRequest, PostCommentResponse, RebaseMrResponse, RefreshRequest,
+    ReplyToDiscussionRequest, ResolveDiscussionRequest, ValidateTokenRequest,
     ValidateTokenResponse,
 };
 use crate::{SharedAppState, TauriError, TauriResult};
@@ -245,13 +246,66 @@ pub async fn list_merge_requests_inner(
 ) -> TauriResult<ListMergeRequestsResponse> {
     let (account, client) = get_active_client(state).await?;
 
-    // Fetch MRs from GitLab API
-    let merge_requests = client
-        .get_assigned_merge_requests()
-        .await
-        .map_err(|e| TauriError::api_error(e.to_string()))?;
+    // Fetch MRs from GitLab API based on scope
+    let merge_requests: Vec<MergeRequest> = match request.scope {
+        Some(MergeRequestScope::AuthoredByMe) => {
+            client.list_authored_merge_requests(&account.username)
+                .await
+                .map_err(|e| TauriError::api_error(e.to_string()))?
+                .into_iter()
+                .map(|mr| mr.with_extracted_project_path())
+                .collect()
+        }
+        _ => {
+            // Default: assigned to me (reviewer or assignee)
+            client.get_assigned_merge_requests()
+                .await
+                .map_err(|e| TauriError::api_error(e.to_string()))?
+        }
+    };
 
     debug!("Fetched {} merge requests", merge_requests.len());
+
+    // Enrich MRs that are missing head_pipeline by fetching individual MR details.
+    // The global /merge_requests endpoint may not include pipeline data on some GitLab instances.
+    let mrs_needing_pipeline: Vec<(usize, i64, i64)> = merge_requests
+        .iter()
+        .enumerate()
+        .filter(|(_, mr)| mr.head_pipeline.is_none())
+        .map(|(i, mr)| (i, mr.project_id, mr.iid))
+        .collect();
+
+    let merge_requests = if !mrs_needing_pipeline.is_empty() {
+        debug!(
+            "Enriching {} MRs with missing pipeline data",
+            mrs_needing_pipeline.len()
+        );
+        let mut merge_requests = merge_requests;
+        let batch_size = 10;
+
+        for chunk in mrs_needing_pipeline.chunks(batch_size) {
+            let mut join_set = tokio::task::JoinSet::new();
+
+            for &(idx, project_id, mr_iid) in chunk {
+                let client_clone = client.clone();
+                join_set.spawn(async move {
+                    let result = client_clone.get_merge_request(project_id, mr_iid).await;
+                    (idx, result)
+                });
+            }
+
+            while let Some(result) = join_set.join_next().await {
+                if let Ok((idx, Ok(detailed_mr))) = result {
+                    // Only update the pipeline field, keep the rest from the list response
+                    merge_requests[idx].head_pipeline = detailed_mr.head_pipeline;
+                }
+            }
+        }
+
+        merge_requests
+    } else {
+        merge_requests
+    };
 
     // Cache MRs to the database (ensure projects exist first for FK constraint)
     {
@@ -1073,6 +1127,47 @@ pub async fn gitlab_resolve_discussion(
     resolve_discussion_inner(&state, request).await
 }
 
+/// Merge a merge request (inner)
+pub async fn merge_mr_inner(
+    state: &SharedAppState,
+    request: MergeMrRequest,
+) -> TauriResult<MergeRequest> {
+    let (_account, client) = get_active_client(state).await?;
+
+    let mr = client
+        .merge_mr(
+            request.project_id,
+            request.mr_iid,
+            request.merge_when_pipeline_succeeds,
+            request.should_remove_source_branch,
+            request.squash,
+            request.sha,
+            request.auto_merge_strategy,
+        )
+        .await
+        .map_err(|e| TauriError::api_error(e.to_string()))?;
+
+    info!("Merged MR {} in project {}", request.mr_iid, request.project_id);
+    Ok(mr)
+}
+
+/// Rebase a merge request (inner)
+pub async fn rebase_mr_inner(
+    state: &SharedAppState,
+    project_id: i64,
+    mr_iid: i64,
+) -> TauriResult<RebaseMrResponse> {
+    let (_account, client) = get_active_client(state).await?;
+
+    let response = client
+        .rebase_mr(project_id, mr_iid)
+        .await
+        .map_err(|e| TauriError::api_error(e.to_string()))?;
+
+    info!("Rebase initiated for MR {} in project {}", mr_iid, project_id);
+    Ok(response)
+}
+
 /// Apply a suggestion from a merge request note (inner)
 pub async fn apply_suggestion_inner(
     state: &SharedAppState,
@@ -1110,4 +1205,23 @@ pub async fn gitlab_apply_suggestion(
     commit_message: Option<String>,
 ) -> TauriResult<()> {
     apply_suggestion_inner(&state, project_id, mr_iid, suggestion_id, commit_message).await
+}
+
+/// Merge a merge request
+#[tauri::command]
+pub async fn gitlab_merge_mr(
+    state: State<'_, SharedAppState>,
+    request: MergeMrRequest,
+) -> TauriResult<MergeRequest> {
+    merge_mr_inner(&state, request).await
+}
+
+/// Rebase a merge request
+#[tauri::command]
+pub async fn gitlab_rebase_mr(
+    state: State<'_, SharedAppState>,
+    project_id: i64,
+    mr_iid: i64,
+) -> TauriResult<RebaseMrResponse> {
+    rebase_mr_inner(&state, project_id, mr_iid).await
 }

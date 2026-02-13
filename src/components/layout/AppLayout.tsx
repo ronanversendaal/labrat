@@ -1,10 +1,11 @@
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useRef, useMemo, type ReactNode } from 'react';
 import { Sidebar, SidebarItem, SidebarSection } from './Sidebar';
 import { MainContent } from './MainContent';
 import { Avatar } from '../common';
-import { useAccounts, useSetActiveAccount } from '../../hooks/useGitLab';
+import { useAccounts, useSetActiveAccount, useMyMergeRequests } from '../../hooks/useGitLab';
 import { useUIStore, useMRStore } from '../../stores';
 import { useSettingsStore } from '../../stores/settingsStore';
+import { isMergeReady } from '../../utils/mergeReadiness';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -15,11 +16,20 @@ export function AppLayout({ children }: AppLayoutProps) {
   const toggleSidebarCollapsed = useSettingsStore((s) => s.toggleSidebarCollapsed);
   const { data: accounts } = useAccounts();
   const setActiveAccount = useSetActiveAccount();
-  const { openModal } = useUIStore();
+  const { openModal, activeView, setActiveView } = useUIStore();
   const { negatedFilters, specialFilters, setNegatedFilters, setSpecialFilters, clearFilters } = useMRStore();
 
   const activeAccount = accounts?.find((a) => a.is_active);
   const defaultsApplied = useRef(false);
+
+  // Keep My MRs data fresh for sidebar badge regardless of active view
+  const { data: myMRsData } = useMyMergeRequests();
+  const readyCount = useMemo(() => {
+    if (!myMRsData?.merge_requests) return 0;
+    return myMRsData.merge_requests.filter((mr) =>
+      isMergeReady(mr, myMRsData.approval_states?.[mr.id])
+    ).length;
+  }, [myMRsData]);
 
   // Apply default "My Reviews" filters:
   // - NOT authored by current user
@@ -116,9 +126,31 @@ export function AppLayout({ children }: AppLayoutProps) {
                 </svg>
               }
               label="My Reviews"
-              active={true}
+              active={activeView === 'my-reviews'}
               collapsed={sidebarCollapsed}
-              onClick={applyMyReviewsDefaults}
+              onClick={() => {
+                setActiveView('my-reviews');
+                applyMyReviewsDefaults();
+              }}
+            />
+            <SidebarItem
+              icon={
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <circle cx="18" cy="18" r="3" strokeWidth={2} />
+                  <circle cx="6" cy="6" r="3" strokeWidth={2} />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 21V9a9 9 0 0 0 9 9"
+                  />
+                </svg>
+              }
+              label="My Merge Requests"
+              active={activeView === 'my-mrs'}
+              collapsed={sidebarCollapsed}
+              onClick={() => setActiveView('my-mrs')}
+              badge={readyCount}
             />
           </SidebarSection>
 

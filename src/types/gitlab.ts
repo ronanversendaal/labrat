@@ -58,7 +58,10 @@ export type PipelineStatus =
   | 'skipped'
   | 'manual'
   | 'scheduled'
-  | 'created';
+  | 'created'
+  | 'waiting_for_resource'
+  | 'preparing'
+  | 'other';
 
 /** Merge request state */
 export type MergeRequestState = 'opened' | 'closed' | 'merged';
@@ -225,6 +228,7 @@ export interface ListMergeRequestsRequest {
   use_cache?: boolean;
   /** When true, fetch approval states for all returned MRs in parallel on the backend */
   include_approvals?: boolean;
+  scope?: MergeRequestScope;
 }
 
 /** Response from listing merge requests */
@@ -402,4 +406,23 @@ export interface ResolveDiscussionRequest {
   mr_iid: number;
   discussion_id: string;
   resolved: boolean;
+}
+
+/** Scope for listing merge requests */
+export type MergeRequestScope = 'assigned_to_me' | 'authored_by_me';
+
+/** Request to merge a merge request */
+export interface MergeMrRequest {
+  project_id: number;
+  mr_iid: number;
+  merge_when_pipeline_succeeds?: boolean;
+  should_remove_source_branch?: boolean;
+  squash?: boolean;
+  sha?: string;
+  auto_merge_strategy?: string;
+}
+
+/** Response from rebase action */
+export interface RebaseMrResponse {
+  rebase_in_progress: boolean;
 }

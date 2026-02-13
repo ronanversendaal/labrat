@@ -91,6 +91,11 @@ impl GitLabClient {
         &self.base_url
     }
 
+    /// Get the access token
+    pub fn access_token(&self) -> &str {
+        &self.access_token
+    }
+
     /// Make a GET request to the GitLab API
     pub async fn get<T: DeserializeOwned>(&self, path: &str) -> Result<T, GitLabClientError> {
         self.get_with_cancel(path, None).await
@@ -516,6 +521,7 @@ impl GitLabClient {
     pub fn instance_url(&self) -> &str {
         self.base_url.trim_end_matches("/api/v4")
     }
+
 }
 
 /// Request manager for tracking and cancelling in-flight requests

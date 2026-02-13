@@ -56,7 +56,7 @@ pub struct Milestone {
 
 /// Pipeline status values
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "snake_case")]
 pub enum PipelineStatus {
     Pending,
     Running,
@@ -67,6 +67,11 @@ pub enum PipelineStatus {
     Manual,
     Scheduled,
     Created,
+    WaitingForResource,
+    Preparing,
+    /// Catch-all for any unknown status GitLab may introduce
+    #[serde(other)]
+    Other,
 }
 
 impl std::fmt::Display for PipelineStatus {
@@ -81,6 +86,9 @@ impl std::fmt::Display for PipelineStatus {
             PipelineStatus::Manual => write!(f, "manual"),
             PipelineStatus::Scheduled => write!(f, "scheduled"),
             PipelineStatus::Created => write!(f, "created"),
+            PipelineStatus::WaitingForResource => write!(f, "waiting_for_resource"),
+            PipelineStatus::Preparing => write!(f, "preparing"),
+            PipelineStatus::Other => write!(f, "other"),
         }
     }
 }
@@ -135,6 +143,9 @@ pub struct MergeRequest {
     pub merged_at: Option<DateTime<Utc>>,
     pub has_conflicts: bool,
     pub head_pipeline: Option<Pipeline>,
+    /// HEAD SHA of the source branch
+    #[serde(default)]
+    pub sha: Option<String>,
     pub draft: bool,
     pub blocking_discussions_resolved: bool,
     pub user_notes_count: i32,
@@ -361,9 +372,19 @@ pub enum SortDirection {
     Desc,
 }
 
+/// Scope for listing merge requests
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum MergeRequestScope {
+    AssignedToMe,
+    AuthoredByMe,
+}
+
 /// Request to list merge requests
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct ListMergeRequestsRequest {
+    #[serde(default)]
+    pub scope: Option<MergeRequestScope>,
     pub filter: Option<MergeRequestFilter>,
     pub sort: Option<MergeRequestSort>,
     pub search: Option<String>,
@@ -535,4 +556,23 @@ pub struct ResolveDiscussionRequest {
     pub mr_iid: i64,
     pub discussion_id: String,
     pub resolved: bool,
+}
+
+/// Request to merge a merge request
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MergeMrRequest {
+    pub project_id: i64,
+    pub mr_iid: i64,
+    pub merge_when_pipeline_succeeds: Option<bool>,
+    pub should_remove_source_branch: Option<bool>,
+    pub squash: Option<bool>,
+    pub sha: Option<String>,
+    /// Auto-merge strategy: "merge_when_checks_pass", "merge_when_pipeline_succeeds", etc.
+    pub auto_merge_strategy: Option<String>,
+}
+
+/// Response from rebasing a merge request
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RebaseMrResponse {
+    pub rebase_in_progress: bool,
 }

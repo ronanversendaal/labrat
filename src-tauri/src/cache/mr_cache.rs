@@ -310,7 +310,9 @@ impl MrRow {
                 "manual" => crate::gitlab::types::PipelineStatus::Manual,
                 "scheduled" => crate::gitlab::types::PipelineStatus::Scheduled,
                 "created" => crate::gitlab::types::PipelineStatus::Created,
-                _ => return None,
+                "waiting_for_resource" => crate::gitlab::types::PipelineStatus::WaitingForResource,
+                "preparing" => crate::gitlab::types::PipelineStatus::Preparing,
+                _ => crate::gitlab::types::PipelineStatus::Other,
             };
             Some(Pipeline {
                 id: 0, // We don't store the pipeline ID
@@ -341,6 +343,7 @@ impl MrRow {
             merged_at,
             has_conflicts: self.has_conflicts,
             head_pipeline,
+            sha: None,
             draft: self.draft,
             blocking_discussions_resolved: self.blocking_discussions_resolved,
             user_notes_count: self.user_notes_count,

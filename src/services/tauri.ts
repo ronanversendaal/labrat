@@ -26,6 +26,8 @@ import type {
   ApproveResponse,
   ReplyToDiscussionRequest,
   ResolveDiscussionRequest,
+  MergeMrRequest,
+  RebaseMrResponse,
 } from '../types/gitlab';
 import type {
   AIProvider,
@@ -262,6 +264,20 @@ export async function applySuggestion(
   });
 }
 
+/**
+ * Merge a merge request
+ */
+export async function mergeMR(request: MergeMrRequest): Promise<MergeRequest> {
+  return invokeCommand<MergeRequest>('gitlab_merge_mr', { request });
+}
+
+/**
+ * Rebase a merge request
+ */
+export async function rebaseMR(projectId: number, mrIid: number): Promise<RebaseMrResponse> {
+  return invokeCommand<RebaseMrResponse>('gitlab_rebase_mr', { projectId, mrIid });
+}
+
 // ============================================================================
 // AI Commands
 // ============================================================================
@@ -452,6 +468,8 @@ export const gitlab = {
   replyToDiscussion,
   resolveDiscussion,
   applySuggestion,
+  mergeMR,
+  rebaseMR,
 };
 
 /**

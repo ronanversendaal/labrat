@@ -35,6 +35,15 @@ export function ImpedimentBadge({ mr }: ImpedimentBadgeProps) {
     );
   }
 
+  // Pipeline pending/created badge
+  if (mr.head_pipeline?.status === 'pending' || mr.head_pipeline?.status === 'created') {
+    impediments.push(
+      <Badge key="pipeline-pending" type="neutral" icon={<PipelineRunningIcon />}>
+        Pending
+      </Badge>
+    );
+  }
+
   // Unresolved discussions badge
   if (!mr.blocking_discussions_resolved && mr.user_notes_count > 0) {
     impediments.push(

@@ -16,6 +16,7 @@ import type {
   ReplyToDiscussionRequest,
   ResolveDiscussionRequest,
   ApprovalState,
+  MergeMrRequest,
 } from '../types';
 import { useMRStore } from '../stores';
 import { useSettingsStore } from '../stores/settingsStore';
@@ -29,6 +30,7 @@ export const queryKeys = {
   discussions: (projectId: number, mrIid: number) => ['discussions', projectId, mrIid] as const,
   approvalState: (projectId: number, mrIid: number) => ['approvalState', projectId, mrIid] as const,
   fileContent: (projectId: number, filePath: string, refSha: string) => ['fileContent', projectId, filePath, refSha] as const,
+  myMergeRequests: ['myMergeRequests'] as const,
 };
 
 /**
@@ -419,3 +421,70 @@ export function useApplySuggestion() {
     },
   });
 }
+
+/**
+ * Hook to list merge requests authored by the current user
+ */
+export function useMyMergeRequests() {
+  const mrRefreshInterval = useSettingsStore((s) => s.mrRefreshInterval);
+  const queryClient = useQueryClient();
+
+  return useQuery({
+    queryKey: queryKeys.myMergeRequests,
+    queryFn: async () => {
+      const data = await api.listMergeRequests({
+        scope: 'authored_by_me',
+        include_approvals: true,
+      });
+
+      // Seed individual approval state caches from batch response
+      if (data.approval_states) {
+        for (const mr of data.merge_requests) {
+          const state = data.approval_states[mr.id];
+          if (state) {
+            queryClient.setQueryData(
+              queryKeys.approvalState(mr.project_id, mr.iid),
+              state
+            );
+          }
+        }
+      }
+
+      return data;
+    },
+    refetchInterval: mrRefreshInterval > 0 ? mrRefreshInterval * 1000 : false,
+    refetchIntervalInBackground: false,
+  });
+}
+
+/**
+ * Hook to merge a merge request
+ */
+export function useMergeMR() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (request: MergeMrRequest) => api.mergeMR(request),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['mergeRequests'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.myMergeRequests });
+    },
+  });
+}
+
+/**
+ * Hook to rebase a merge request
+ */
+export function useRebaseMR() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ projectId, mrIid }: { projectId: number; mrIid: number }) =>
+      api.rebaseMR(projectId, mrIid),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['mergeRequests'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.myMergeRequests });
+    },
+  });
+}
+
