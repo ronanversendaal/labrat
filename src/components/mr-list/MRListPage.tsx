@@ -3,8 +3,8 @@
  * Wires MRList to Tauri backend via useGitLab hooks
  */
 
-import { useMemo, useState, useEffect, useCallback } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useMemo, useCallback } from 'react';
+import { useQueries } from '@tanstack/react-query';
 import { useMergeRequests, useRefresh, useAccounts, queryKeys } from '../../hooks/useGitLab';
 import { MRList } from './MRList';
 import { MRFilters } from './MRFilters';
@@ -122,10 +122,8 @@ export function MRListPage() {
   const mrQueryRequest = useMemo(() => (
     specialFilters.excludeApprovedByMe ? { include_approvals: true } : undefined
   ), [specialFilters.excludeApprovedByMe]);
-  const { data: mergeRequests, isLoading, isError, error, refetch } = useMergeRequests(mrQueryRequest);
+  const { data: mergeRequests, isLoading, isFetching, isError, error, refetch } = useMergeRequests(mrQueryRequest);
   const refreshMutation = useRefresh();
-  const queryClient = useQueryClient();
-  const [approvalStates, setApprovalStates] = useState<Map<number, ApprovalState>>(new Map());
 
   const activeAccount = accounts?.find((a) => a.is_active);
 
@@ -136,67 +134,33 @@ export function MRListPage() {
 
   const hasActiveAccount = accounts?.some((a) => a.is_active);
 
-  // Build approval states map from React Query cache (seeded by batch response)
-  // or fetch individually as a fallback.
-  useEffect(() => {
+  // Reactive approval state subscriptions — each MR gets its own query subscription
+  // so that optimistic updates via setQueryData trigger immediate re-renders.
+  // Data is already seeded in cache by the batch response, so no extra network calls.
+  const approvalQueries = useQueries({
+    queries: (specialFilters.excludeApprovedByMe && mergeRequests?.length)
+      ? mergeRequests.map((mr) => ({
+          queryKey: queryKeys.approvalState(mr.project_id, mr.iid),
+          queryFn: () => getApprovalState(mr.project_id, mr.iid),
+          // Don't refetch if already seeded — the batch response handles freshness
+          staleTime: 5 * 60 * 1000,
+        }))
+      : [],
+  });
+
+  const approvalStates = useMemo(() => {
     if (!specialFilters.excludeApprovedByMe || !mergeRequests?.length) {
-      return;
+      return new Map<number, ApprovalState>();
     }
-
-    let cancelled = false;
-
-    const buildApprovalStates = async () => {
-      const newStates = new Map<number, ApprovalState>();
-      const uncachedMRs: MergeRequest[] = [];
-
-      // First pass: read from cache (batch response seeds these)
-      for (const mr of mergeRequests) {
-        const cached = queryClient.getQueryData<ApprovalState>(
-          queryKeys.approvalState(mr.project_id, mr.iid)
-        );
-        if (cached) {
-          newStates.set(mr.id, cached);
-        } else {
-          uncachedMRs.push(mr);
-        }
+    const map = new Map<number, ApprovalState>();
+    mergeRequests.forEach((mr, i) => {
+      const data = approvalQueries[i]?.data;
+      if (data) {
+        map.set(mr.id, data);
       }
-
-      // If all MRs were cached (typical with batch response), we're done
-      if (uncachedMRs.length === 0) {
-        if (!cancelled) setApprovalStates(newStates);
-        return;
-      }
-
-      // Fallback: fetch uncached approval states individually
-      const batchSize = 5;
-      for (let i = 0; i < uncachedMRs.length; i += batchSize) {
-        if (cancelled) return;
-        const batch = uncachedMRs.slice(i, i + batchSize);
-        const results = await Promise.allSettled(
-          batch.map(mr =>
-            queryClient.fetchQuery({
-              queryKey: queryKeys.approvalState(mr.project_id, mr.iid),
-              queryFn: () => getApprovalState(mr.project_id, mr.iid),
-            })
-          )
-        );
-
-        results.forEach((result, index) => {
-          if (result.status === 'fulfilled') {
-            newStates.set(batch[index].id, result.value);
-          }
-        });
-      }
-
-      if (!cancelled) {
-        setApprovalStates(newStates);
-      }
-    };
-
-    buildApprovalStates();
-
-    return () => { cancelled = true; };
-  }, [mergeRequests, specialFilters.excludeApprovedByMe, queryClient]);
+    });
+    return map;
+  }, [specialFilters.excludeApprovedByMe, mergeRequests, approvalQueries]);
 
   // Apply negated filters client-side
   const negatedFilteredMRs = useMemo(() => {
@@ -206,7 +170,7 @@ export function MRListPage() {
 
   // Synchronous check: are we still waiting for approval data?
   const awaitingApprovalData = specialFilters.excludeApprovedByMe &&
-    negatedFilteredMRs.length > 0 && approvalStates.size === 0;
+    negatedFilteredMRs.length > 0 && approvalQueries.some((q) => q.isLoading);
 
   // Apply special filters (requires approval states).
   // Return empty while waiting for approval data — prevents flash of unfiltered MRs.
@@ -274,8 +238,14 @@ export function MRListPage() {
     <div className="h-full overflow-y-auto">
       <div className="p-4">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-content">
+          <h2 className="text-lg font-semibold text-content flex items-center gap-2">
             Review Requests
+            {isFetching && !isLoading && (
+              <svg className="w-4 h-4 animate-spin text-content-tertiary" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+            )}
           </h2>
           <button
             onClick={handleRefresh}

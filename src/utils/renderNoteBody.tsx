@@ -1,5 +1,6 @@
 /**
  * Utility to process and render GitLab note body with proper suggestion styling
+ * and AI comment formatting with labels, color swatches, and structured layout
  */
 
 import { useMemo, useCallback } from 'react';
@@ -207,6 +208,249 @@ function escapeHtml(text: string): string {
 }
 
 /**
+ * Severity/type to CSS class mapping for badges
+ */
+const SEVERITY_CLASSES: Record<string, string> = {
+  'error': 'ai-badge--error',
+  'warning': 'ai-badge--warning',
+  'info': 'ai-badge--info',
+  'suggestion': 'ai-badge--info',
+  'style': 'ai-badge--style',
+  'performance': 'ai-badge--performance',
+  'security': 'ai-badge--security',
+};
+
+/**
+ * Parse AI-structured comment format
+ * Format example:
+ * **Code Quality** | warning
+ * **Hardcoded hex color instead of variable**
+ * The value `#dedede` is used directly...
+ */
+interface ParsedAIComment {
+  category?: string;
+  severity?: string;
+  title?: string;
+  content: string;
+  isAIFormat: boolean;
+}
+
+function parseAICommentStructure(text: string): ParsedAIComment {
+  // Try to match the AI comment format: **Category** | severity
+  const headerMatch = text.match(/^\s*\*\*([^*]+)\*\*\s*\|\s*(\w+)\s*\n/);
+
+  if (!headerMatch) {
+    return { content: text, isAIFormat: false };
+  }
+
+  const category = headerMatch[1].trim();
+  const severity = headerMatch[2].trim().toLowerCase();
+  let remaining = text.substring(headerMatch[0].length);
+
+  // Try to match the title: **Title text**
+  const titleMatch = remaining.match(/^\s*\*\*([^*]+)\*\*\s*\n/);
+  let title: string | undefined;
+
+  if (titleMatch) {
+    title = titleMatch[1].trim();
+    remaining = remaining.substring(titleMatch[0].length);
+  }
+
+  return {
+    category,
+    severity,
+    title,
+    content: remaining.trim(),
+    isAIFormat: true,
+  };
+}
+
+/**
+ * Add color swatches to hex color codes in text
+ * Converts #dedede or `#dedede` to include a visual color swatch
+ */
+function addColorSwatches(html: string): string {
+  // Match hex colors in various formats
+  // Pattern: optional backtick, #, 3 or 6 hex chars, optional backtick
+  return html.replace(
+    /(`?)#([0-9A-Fa-f]{6}|[0-9A-Fa-f]{3})(`?)/g,
+    (_match, openTick, hex, closeTick) => {
+      const fullHex = hex.length === 3
+        ? hex.split('').map((c: string) => c + c).join('')
+        : hex;
+      const colorValue = `#${fullHex}`;
+      const swatch = `<span class="color-swatch" style="background-color: ${colorValue};" title="${colorValue}"></span>`;
+      const code = openTick || closeTick
+        ? `<code class="color-code">${colorValue}</code>`
+        : `<span class="color-code">${colorValue}</span>`;
+      return `${swatch}${code}`;
+    }
+  );
+}
+
+/**
+ * Format AI-structured comment into styled HTML
+ */
+function formatAIComment(parsed: ParsedAIComment): string {
+  if (!parsed.isAIFormat) {
+    // Just add color swatches to regular content
+    return addColorSwatches(parsed.content);
+  }
+
+  const severityClass = SEVERITY_CLASSES[parsed.severity || ''] || 'ai-badge--info';
+
+  let html = '<div class="ai-comment">';
+
+  // Header with badges
+  html += '<div class="ai-comment__header">';
+  if (parsed.category) {
+    html += `<span class="ai-badge ai-badge--category">${escapeHtml(parsed.category)}</span>`;
+  }
+  if (parsed.severity) {
+    html += `<span class="ai-badge ${severityClass}">${escapeHtml(parsed.severity)}</span>`;
+  }
+  html += '</div>';
+
+  // Title
+  if (parsed.title) {
+    html += `<div class="ai-comment__title">${escapeHtml(parsed.title)}</div>`;
+  }
+
+  // Content with color swatches and monospace for code
+  if (parsed.content) {
+    const processedContent = addColorSwatches(escapeHtml(parsed.content));
+    html += `<div class="ai-comment__content">${processedContent}</div>`;
+  }
+
+  html += '</div>';
+
+  return html;
+}
+
+/**
+ * Check if content looks like an AI-structured comment
+ * Supports both markdown (**text**) and HTML (<strong>text</strong>) formats
+ */
+function isAIStructuredComment(text: string): boolean {
+  // Check for markdown pattern: **Something** | word
+  if (/^\s*\*\*[^*]+\*\*\s*\|\s*\w+/.test(text)) {
+    return true;
+  }
+  // Check for HTML pattern: <strong>Something</strong> | word or <p><strong>...
+  if (/^\s*(?:<p[^>]*>)?\s*<strong>([^<]+)<\/strong>\s*\|\s*(\w+)/i.test(text)) {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Parse AI-structured comment from HTML format
+ * Format: <p><strong>Code Quality</strong> | warning</p>
+ *         <p><strong>Title here</strong></p>
+ *         <p>Content...</p>
+ */
+function parseAICommentFromHtml(html: string): ParsedAIComment {
+  // Match header: <strong>Category</strong> | severity
+  const headerMatch = html.match(/^\s*(?:<p[^>]*>)?\s*<strong>([^<]+)<\/strong>\s*\|\s*(\w+)\s*(?:<\/p>)?/i);
+
+  if (!headerMatch) {
+    return { content: html, isAIFormat: false };
+  }
+
+  const category = headerMatch[1].trim();
+  const severity = headerMatch[2].trim().toLowerCase();
+  let remaining = html.substring(headerMatch[0].length).trim();
+
+  // Try to match the title: <p><strong>Title</strong></p> or <strong>Title</strong>
+  const titleMatch = remaining.match(/^\s*(?:<p[^>]*>)?\s*<strong>([^<]+)<\/strong>\s*(?:<\/p>)?/i);
+  let title: string | undefined;
+
+  if (titleMatch) {
+    title = titleMatch[1].trim();
+    remaining = remaining.substring(titleMatch[0].length).trim();
+  }
+
+  // Clean up remaining content - strip outer <p> tags but keep inner formatting
+  remaining = remaining
+    .replace(/^<p[^>]*>/gi, '')
+    .replace(/<\/p>\s*$/gi, '')
+    .replace(/<\/p>\s*<p[^>]*>/gi, '\n\n')
+    .trim();
+
+  return {
+    category,
+    severity,
+    title,
+    content: remaining,
+    isAIFormat: true,
+  };
+}
+
+/**
+ * Format AI comment from HTML source (preserves some HTML formatting in content)
+ */
+function formatAICommentFromHtml(parsed: ParsedAIComment): string {
+  if (!parsed.isAIFormat) {
+    return parsed.content;
+  }
+
+  const severityClass = SEVERITY_CLASSES[parsed.severity || ''] || 'ai-badge--info';
+
+  let html = '<div class="ai-comment">';
+
+  // Header with badges
+  html += '<div class="ai-comment__header">';
+  if (parsed.category) {
+    html += `<span class="ai-badge ai-badge--category">${escapeHtml(parsed.category)}</span>`;
+  }
+  if (parsed.severity) {
+    html += `<span class="ai-badge ${severityClass}">${escapeHtml(parsed.severity)}</span>`;
+  }
+  html += '</div>';
+
+  // Title
+  if (parsed.title) {
+    html += `<div class="ai-comment__title">${escapeHtml(parsed.title)}</div>`;
+  }
+
+  // Content - already HTML, just add color swatches
+  if (parsed.content) {
+    const processedContent = addColorSwatchesToHtml(parsed.content);
+    html += `<div class="ai-comment__content">${processedContent}</div>`;
+  }
+
+  html += '</div>';
+
+  return html;
+}
+
+/**
+ * Add color swatches to hex colors in HTML content
+ * More careful version that avoids breaking HTML attributes
+ */
+function addColorSwatchesToHtml(html: string): string {
+  // Split by HTML tags to only process text content
+  const parts = html.split(/(<[^>]+>)/);
+  return parts.map(part => {
+    // If it's an HTML tag, don't modify it
+    if (part.startsWith('<')) {
+      return part;
+    }
+    // Process text content for hex colors
+    return part.replace(
+      /#([0-9A-Fa-f]{6}|[0-9A-Fa-f]{3})(?![0-9A-Fa-f])/g,
+      (_match, hex) => {
+        const fullHex = hex.length === 3
+          ? hex.split('').map((c: string) => c + c).join('')
+          : hex;
+        const colorValue = `#${fullHex}`;
+        return `<span class="color-swatch" style="background-color: ${colorValue};" title="${colorValue}"></span><span class="color-code">${colorValue}</span>`;
+      }
+    );
+  }).join('');
+}
+
+/**
  * Hook to process note body HTML
  */
 export function useProcessedNoteHtml(
@@ -256,6 +500,35 @@ export function NoteBody({ html, text, className = '', originalLines, suggestion
 
   // If we have processed HTML, use it
   if (processedHtml) {
+    // Check if this looks like an AI-structured comment in the source text (markdown format)
+    const sourceText = text || '';
+    if (isAIStructuredComment(sourceText)) {
+      const parsed = parseAICommentStructure(sourceText);
+      const aiHtml = formatAIComment(parsed);
+      return (
+        <div
+          className={className}
+          dangerouslySetInnerHTML={{ __html: aiHtml }}
+          onClick={handleClick}
+        />
+      );
+    }
+
+    // Check if the HTML itself contains AI-structured comment (HTML format from GitLab)
+    if (html && isAIStructuredComment(html)) {
+      const parsed = parseAICommentFromHtml(html);
+      const aiHtml = formatAICommentFromHtml(parsed);
+      return (
+        <div
+          className={className}
+          dangerouslySetInnerHTML={{ __html: aiHtml }}
+          onClick={handleClick}
+        />
+      );
+    }
+
+    // Don't modify suggestion blocks - return as-is
+    // Color swatches can break HTML structure in suggestion content
     return (
       <div
         className={className}
@@ -267,6 +540,19 @@ export function NoteBody({ html, text, className = '', originalLines, suggestion
 
   // If we have plain text, check for suggestion syntax and process it
   if (text) {
+    // Check if this is an AI-structured comment
+    if (isAIStructuredComment(text)) {
+      const parsed = parseAICommentStructure(text);
+      const aiHtml = formatAIComment(parsed);
+      return (
+        <div
+          className={className}
+          dangerouslySetInnerHTML={{ __html: aiHtml }}
+          onClick={handleClick}
+        />
+      );
+    }
+
     // Check if plain text contains suggestion markdown
     const suggestionMatch = text.match(/```suggestion[^\n]*\n([\s\S]*?)```/);
     if (suggestionMatch) {
@@ -289,10 +575,13 @@ export function NoteBody({ html, text, className = '', originalLines, suggestion
       );
     }
 
+    // Regular text - add color swatches
+    const textWithSwatches = addColorSwatches(escapeHtml(text));
     return (
-      <p className={`whitespace-pre-wrap text-gray-300 text-sm ${className}`}>
-        {text}
-      </p>
+      <div
+        className={`whitespace-pre-wrap text-sm ${className}`}
+        dangerouslySetInnerHTML={{ __html: textWithSwatches }}
+      />
     );
   }
 

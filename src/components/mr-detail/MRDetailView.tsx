@@ -261,7 +261,7 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
   ) ?? false;
   const isAuthor = mr.author.id === currentUserId;
 
-  const handleApproveMR = useCallback(async () => {
+  const handleApproveMR = useCallback(() => {
     if (isAuthor) {
       toast.error('You cannot approve your own merge request');
       return;
@@ -271,19 +271,28 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
       return;
     }
     if (approveMutation.isPending) return;
-    try {
-      await approveMutation.mutateAsync({
+
+    // Fire-and-forget: onMutate optimistically updates the cache before the network call
+    approveMutation.mutate(
+      {
         projectId: mr.project_id,
         mrIid: mr.iid,
         sha: mr.head_pipeline?.id?.toString(),
-      });
-      toast.success('MR approved successfully');
-      queryClient.invalidateQueries({ queryKey: ['mergeRequests'] });
-      onClose?.();
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to approve MR';
-      toast.error(message);
-    }
+      },
+      {
+        onSuccess: () => {
+          toast.success('MR approved successfully');
+          queryClient.invalidateQueries({ queryKey: ['mergeRequests'] });
+        },
+        onError: (err) => {
+          const message = err instanceof Error ? err.message : 'Failed to approve MR';
+          toast.error(message);
+        },
+      }
+    );
+
+    // Close immediately — optimistic cache update already happened in onMutate
+    onClose?.();
   }, [isAuthor, userHasApproved, approveMutation, mr.project_id, mr.iid, mr.head_pipeline?.id, toast, queryClient, onClose]);
 
   // Toggle viewed status for current file
@@ -583,6 +592,7 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
                 </div>
               ) : selectedFile ? (
                 <MonacoDiffView
+                  key={selectedFile.new_path}
                   ref={diffViewRef}
                   file={selectedFile}
                   onNextFile={handleNextFile}

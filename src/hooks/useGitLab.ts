@@ -15,6 +15,7 @@ import type {
   ConnectionStatusEvent,
   ReplyToDiscussionRequest,
   ResolveDiscussionRequest,
+  ApprovalState,
 } from '../types';
 import { useMRStore } from '../stores';
 import { useSettingsStore } from '../stores/settingsStore';
@@ -298,6 +299,41 @@ export function useApproveMR() {
   return useMutation({
     mutationFn: ({ projectId, mrIid, sha }: { projectId: number; mrIid: number; sha?: string }) =>
       api.approveMR(projectId, mrIid, sha),
+    onMutate: async (variables) => {
+      // Cancel in-flight approval state queries so they don't overwrite our optimistic update
+      await queryClient.cancelQueries({
+        queryKey: queryKeys.approvalState(variables.projectId, variables.mrIid),
+      });
+
+      // Snapshot previous state for rollback
+      const previousState = queryClient.getQueryData<ApprovalState>(
+        queryKeys.approvalState(variables.projectId, variables.mrIid)
+      );
+
+      // Optimistically update approval state
+      if (previousState) {
+        queryClient.setQueryData(
+          queryKeys.approvalState(variables.projectId, variables.mrIid),
+          {
+            ...previousState,
+            user_has_approved: true,
+            user_can_approve: false,
+            approvals_left: Math.max(0, previousState.approvals_left - 1),
+          }
+        );
+      }
+
+      return { previousState };
+    },
+    onError: (_error, variables, context) => {
+      // Roll back to previous state on failure
+      if (context?.previousState) {
+        queryClient.setQueryData(
+          queryKeys.approvalState(variables.projectId, variables.mrIid),
+          context.previousState
+        );
+      }
+    },
     onSuccess: (_, variables) => {
       // Invalidate approval state for this MR
       queryClient.invalidateQueries({
