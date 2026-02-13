@@ -81,10 +81,10 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
   const snapshotInitialized = useRef(false);
 
   // Poll for MR updates every 30 seconds
-  const { data: currentMR, refetch: refetchMR } = useMergeRequest(mr.project_id, mr.iid, 30000);
+  const { data: currentMR, refetch: refetchMR, fetchStatus } = useMergeRequest(mr.project_id, mr.iid, 30000);
 
   // Initialize snapshot from first poll response
-  if (currentMR && !snapshotInitialized.current) {
+  if (currentMR && !snapshotInitialized.current && fetchStatus === 'idle') {
     snapshotInitialized.current = true;
     initialSnapshot.current = {
       sha: currentMR.sha || null,
