@@ -24,6 +24,11 @@ interface SettingsState {
   // AI
   defaultAiProviderId: string | null;
 
+  // Notifications
+  notifyMergeReady: boolean;
+  notifyMrUpdatedBanner: boolean;
+  toastNotifications: boolean;
+
   // Actions
   setTheme: (theme: Theme) => void;
   setFontSize: (size: number) => void;
@@ -40,6 +45,9 @@ interface SettingsState {
   toggleShowWhitespace: () => void;
   setFileViewMode: (mode: FileViewMode) => void;
   setDefaultAiProviderId: (id: string | null) => void;
+  setNotifyMergeReady: (enabled: boolean) => void;
+  setNotifyMrUpdatedBanner: (enabled: boolean) => void;
+  setToastNotifications: (enabled: boolean) => void;
   resetToDefaults: () => void;
 }
 
@@ -57,6 +65,9 @@ const defaultSettings = {
   showWhitespace: false,
   fileViewMode: 'tree' as FileViewMode,
   defaultAiProviderId: null,
+  notifyMergeReady: true,
+  notifyMrUpdatedBanner: true,
+  toastNotifications: true,
 };
 
 export const useSettingsStore = create<SettingsState>()(
@@ -84,11 +95,16 @@ export const useSettingsStore = create<SettingsState>()(
       setFileViewMode: (fileViewMode) => set({ fileViewMode }),
       setDefaultAiProviderId: (defaultAiProviderId) =>
         set({ defaultAiProviderId }),
+      setNotifyMergeReady: (notifyMergeReady) => set({ notifyMergeReady }),
+      setNotifyMrUpdatedBanner: (notifyMrUpdatedBanner) =>
+        set({ notifyMrUpdatedBanner }),
+      setToastNotifications: (toastNotifications) =>
+        set({ toastNotifications }),
       resetToDefaults: () => set(defaultSettings),
     }),
     {
       name: 'labrat-settings',
-      version: 2,
+      version: 3,
       migrate: (persisted, version) => {
         const state = persisted as Record<string, unknown>;
         if (version < 2) {
@@ -99,6 +115,11 @@ export const useSettingsStore = create<SettingsState>()(
           // Add new font fields
           if (!('fontFamilyUI' in state)) state.fontFamilyUI = null;
           if (!('fontFamilyCode' in state)) state.fontFamilyCode = null;
+        }
+        if (version < 3) {
+          if (!('notifyMergeReady' in state)) state.notifyMergeReady = true;
+          if (!('notifyMrUpdatedBanner' in state)) state.notifyMrUpdatedBanner = true;
+          if (!('toastNotifications' in state)) state.toastNotifications = true;
         }
         return state as unknown as SettingsState;
       },

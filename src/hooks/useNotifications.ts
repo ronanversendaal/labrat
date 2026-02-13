@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import type { ListMergeRequestsResponse } from '../types/gitlab';
 import { isMergeReady } from '../utils/mergeReadiness';
+import { useSettingsStore } from '../stores/settingsStore';
 
 let permissionGranted: boolean | null = null;
 
@@ -42,9 +43,10 @@ export function useNotificationPermission() {
  */
 export function useMergeReadyNotifications(data: ListMergeRequestsResponse | undefined) {
   const notifiedMRs = useRef<Set<number>>(new Set());
+  const notifyMergeReady = useSettingsStore((s) => s.notifyMergeReady);
 
   useEffect(() => {
-    if (!data?.merge_requests || !permissionGranted) return;
+    if (!notifyMergeReady || !data?.merge_requests || !permissionGranted) return;
 
     const checkAndNotify = async () => {
       let notify: typeof import('@tauri-apps/plugin-notification') | null = null;

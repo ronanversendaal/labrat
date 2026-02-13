@@ -1,4 +1,5 @@
 import { useState, useEffect, createContext, useContext, useCallback, type ReactNode } from 'react';
+import { useSettingsStore } from '../../stores/settingsStore';
 
 type ToastType = 'success' | 'error' | 'warning' | 'info';
 
@@ -93,6 +94,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   const addToast = useCallback((type: ToastType, message: string, duration?: number) => {
+    // Suppress non-error toasts when toast notifications are disabled
+    if (type !== 'error' && !useSettingsStore.getState().toastNotifications) return;
     const id = Math.random().toString(36).substring(2, 9);
     setToasts((prev) => [...prev, { id, type, message, duration }]);
   }, []);

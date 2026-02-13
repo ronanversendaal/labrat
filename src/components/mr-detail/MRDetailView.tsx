@@ -46,6 +46,7 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
   const viewedFiles = useMRStore((state) => state.viewedFiles);
   const clearViewedFiles = useMRStore((state) => state.clearViewedFiles);
   const fileViewMode = useSettingsStore((state) => state.fileViewMode);
+  const notifyMrUpdatedBanner = useSettingsStore((state) => state.notifyMrUpdatedBanner);
 
   // Focus store for mode-aware keyboard shortcuts
   const { currentZone, diffMode, setFocusZone, setDiffMode, setFocusedLine } = useFocusStore();
@@ -450,7 +451,7 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
   return (
     <div className="flex flex-col h-full">
       {/* Update notification banner */}
-      {hasRealUpdates && (
+      {notifyMrUpdatedBanner && hasRealUpdates && (
         <div
           role="status"
           aria-live="polite"
