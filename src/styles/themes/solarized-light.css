@@ -1,0 +1,76 @@
+[data-theme="solarized-light"] {
+  color-scheme: light;
+
+  /* Backgrounds — warm parchment cream */
+  --th-canvas: #fdf6e3;
+  --th-surface: #eee8d5;
+  --th-surface-alt: #e6dfca;
+  --th-surface-hover: #e6dfca;
+  --th-surface-active: #ddd5be;
+  --th-surface-raised: #fdf6e3;
+  --th-surface-inset: #eee8d5;
+
+  /* Text — warm grays */
+  --th-content: #657b83;
+  --th-content-secondary: #586e75;
+  --th-content-tertiary: #93a1a1;
+  --th-content-muted: #586e75;
+
+  /* Borders */
+  --th-edge: #d4cbb3;
+  --th-edge-strong: #93a1a1;
+  --th-edge-subtle: #eee8d5;
+
+  /* Primary — solarized blue */
+  --th-primary: #268bd2;
+  --th-primary-hover: #1a7cc0;
+  --th-primary-muted: rgba(38, 139, 210, 0.12);
+  --th-primary-text: #268bd2;
+
+  /* Positive — solarized green */
+  --th-positive: #859900;
+  --th-positive-muted: rgba(133, 153, 0, 0.12);
+  --th-positive-text: #6b7d00;
+
+  /* Negative — solarized red */
+  --th-negative: #dc322f;
+  --th-negative-muted: rgba(220, 50, 47, 0.12);
+  --th-negative-text: #c62825;
+
+  /* Caution — solarized yellow */
+  --th-caution: #b58900;
+  --th-caution-muted: rgba(181, 137, 0, 0.12);
+  --th-caution-text: #9c7600;
+
+  /* Info — solarized violet */
+  --th-info: #6c71c4;
+  --th-info-muted: rgba(108, 113, 196, 0.12);
+  --th-info-text: #6c71c4;
+
+  /* Diffs */
+  --th-diff-add-bg: rgba(133, 153, 0, 0.12);
+  --th-diff-add-text: #6b7d00;
+  --th-diff-del-bg: rgba(220, 50, 47, 0.12);
+  --th-diff-del-text: #c62825;
+
+  /* Editor */
+  --th-editor-bg: #fdf6e3;
+  --th-editor-toolbar: #eee8d5;
+  --th-editor-border: #d4cbb3;
+  --th-editor-text: #657b83;
+
+  /* Focus ring */
+  --th-ring: #268bd2;
+
+  /* Sidebar */
+  --th-sidebar: #eee8d5;
+  --th-sidebar-hover: #e6dfca;
+  --th-sidebar-active: #ddd5be;
+  --th-sidebar-text: #657b83;
+  --th-sidebar-muted: #93a1a1;
+  --th-sidebar-border: #d4cbb3;
+
+  /* Fonts — elegant serif + readable mono */
+  --th-font-ui: Georgia, 'Times New Roman', serif;
+  --th-font-code: 'Source Code Pro', 'JetBrains Mono', 'Fira Code', monospace;
+}

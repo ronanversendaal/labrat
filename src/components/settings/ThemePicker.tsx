@@ -125,16 +125,34 @@ export function ThemePicker() {
         </label>
       </div>
 
-      {/* Theme grid */}
-      <div className="grid grid-cols-3 gap-3">
-        {THEME_LIST.map((meta) => (
-          <ThemeCard
-            key={meta.id}
-            meta={meta}
-            selected={activeId === meta.id}
-            onClick={() => handleThemeSelect(meta.id)}
-          />
-        ))}
+      {/* Light themes */}
+      <div>
+        <p className="text-xs font-medium text-content-tertiary uppercase tracking-wider mb-2">Light</p>
+        <div className="grid grid-cols-4 gap-3">
+          {THEME_LIST.filter((t) => t.type === 'light').map((meta) => (
+            <ThemeCard
+              key={meta.id}
+              meta={meta}
+              selected={activeId === meta.id}
+              onClick={() => handleThemeSelect(meta.id)}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Dark themes */}
+      <div>
+        <p className="text-xs font-medium text-content-tertiary uppercase tracking-wider mb-2">Dark</p>
+        <div className="grid grid-cols-4 gap-3">
+          {THEME_LIST.filter((t) => t.type === 'dark').map((meta) => (
+            <ThemeCard
+              key={meta.id}
+              meta={meta}
+              selected={activeId === meta.id}
+              onClick={() => handleThemeSelect(meta.id)}
+            />
+          ))}
+        </div>
       </div>
 
       {isSystem && (

@@ -6,7 +6,24 @@
  */
 
 /** Theme identifier */
-export type ThemeId = 'system' | 'default-light' | 'default-dark' | 'kanagawa' | 'catppuccin-mocha' | 'rose-pine';
+export type ThemeId =
+  | 'system'
+  | 'default-light'
+  | 'default-dark'
+  | 'kanagawa'
+  | 'catppuccin-mocha'
+  | 'rose-pine'
+  | 'tokyo-night'
+  | 'nord'
+  | 'everforest-dark'
+  | 'dracula'
+  | 'github-light'
+  | 'solarized-light'
+  | 'gruvbox-light'
+  | 'everforest-light'
+  | 'catppuccin-latte'
+  | 'rose-pine-dawn'
+  | 'one-light';
 
 /** Application theme — alias for backward compat */
 export type Theme = ThemeId;
@@ -102,6 +119,83 @@ export const THEME_LIST: ThemeMeta[] = [
     type: 'dark',
     colors: { canvas: '#191724', surface: '#1f1d2e', primary: '#c4a7e7', content: '#e0def4', contentSecondary: '#908caa' },
     fonts: { ui: 'Inter', code: 'Victor Mono' },
+  },
+  {
+    id: 'tokyo-night',
+    label: 'Tokyo Night',
+    type: 'dark',
+    colors: { canvas: '#1a1b26', surface: '#24283b', primary: '#7aa2f7', content: '#a9b1d6', contentSecondary: '#565f89' },
+    fonts: { ui: 'Inter', code: 'JetBrains Mono' },
+  },
+  {
+    id: 'nord',
+    label: 'Nord',
+    type: 'dark',
+    colors: { canvas: '#2e3440', surface: '#3b4252', primary: '#88c0d0', content: '#d8dee9', contentSecondary: '#4c566a' },
+    fonts: { ui: 'Inter', code: 'Fira Code' },
+  },
+  {
+    id: 'everforest-dark',
+    label: 'Everforest Dark',
+    type: 'dark',
+    colors: { canvas: '#2d353b', surface: '#343f44', primary: '#a7c080', content: '#d3c6aa', contentSecondary: '#7a8478' },
+    fonts: { ui: 'System Sans', code: 'Source Code Pro' },
+  },
+  {
+    id: 'dracula',
+    label: 'Dracula',
+    type: 'dark',
+    colors: { canvas: '#282a36', surface: '#343746', primary: '#bd93f9', content: '#f8f8f2', contentSecondary: '#6272a4' },
+    fonts: { ui: 'System Sans', code: 'Fira Code' },
+  },
+  {
+    id: 'github-light',
+    label: 'GitHub Light',
+    type: 'light',
+    colors: { canvas: '#ffffff', surface: '#f6f8fa', primary: '#0969da', content: '#1f2328', contentSecondary: '#6a737d' },
+    fonts: { ui: 'System Sans', code: 'SF Mono' },
+  },
+  {
+    id: 'solarized-light',
+    label: 'Solarized Light',
+    type: 'light',
+    colors: { canvas: '#fdf6e3', surface: '#eee8d5', primary: '#268bd2', content: '#657b83', contentSecondary: '#93a1a1' },
+    fonts: { ui: 'Georgia', code: 'Source Code Pro' },
+  },
+  {
+    id: 'gruvbox-light',
+    label: 'Gruvbox Light',
+    type: 'light',
+    colors: { canvas: '#fbf1c7', surface: '#ebdbb2', primary: '#d65d0e', content: '#3c3836', contentSecondary: '#928374' },
+    fonts: { ui: 'System Sans', code: 'IBM Plex Mono' },
+  },
+  {
+    id: 'everforest-light',
+    label: 'Everforest Light',
+    type: 'light',
+    colors: { canvas: '#fdf6e3', surface: '#efebd4', primary: '#8da101', content: '#5c6a72', contentSecondary: '#939f91' },
+    fonts: { ui: 'System Sans', code: 'Source Code Pro' },
+  },
+  {
+    id: 'catppuccin-latte',
+    label: 'Catppuccin Latte',
+    type: 'light',
+    colors: { canvas: '#eff1f5', surface: '#e6e9ef', primary: '#1e66f5', content: '#4c4f69', contentSecondary: '#8c8fa1' },
+    fonts: { ui: 'Inter', code: 'Cascadia Code' },
+  },
+  {
+    id: 'rose-pine-dawn',
+    label: 'Ros\u00e9 Pine Dawn',
+    type: 'light',
+    colors: { canvas: '#faf4ed', surface: '#f2e9e1', primary: '#907aa9', content: '#575279', contentSecondary: '#9893a5' },
+    fonts: { ui: 'Inter', code: 'Victor Mono' },
+  },
+  {
+    id: 'one-light',
+    label: 'One Light',
+    type: 'light',
+    colors: { canvas: '#fafafa', surface: '#f0f0f0', primary: '#4078f2', content: '#383a42', contentSecondary: '#a0a1a7' },
+    fonts: { ui: 'System Sans', code: 'JetBrains Mono' },
   },
 ];
 

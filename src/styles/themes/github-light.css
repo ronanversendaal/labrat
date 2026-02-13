@@ -1,0 +1,76 @@
+[data-theme="github-light"] {
+  color-scheme: light;
+
+  /* Backgrounds — clean white canvas */
+  --th-canvas: #ffffff;
+  --th-surface: #f6f8fa;
+  --th-surface-alt: #eef1f4;
+  --th-surface-hover: #eef1f4;
+  --th-surface-active: #d8dee4;
+  --th-surface-raised: #ffffff;
+  --th-surface-inset: #f6f8fa;
+
+  /* Text — ink blacks */
+  --th-content: #1f2328;
+  --th-content-secondary: #59636e;
+  --th-content-tertiary: #6a737d;
+  --th-content-muted: #59636e;
+
+  /* Borders */
+  --th-edge: #d1d9e0;
+  --th-edge-strong: #b4bcc6;
+  --th-edge-subtle: #eef1f4;
+
+  /* Primary — GitHub blue */
+  --th-primary: #0969da;
+  --th-primary-hover: #0550ae;
+  --th-primary-muted: #ddf4ff;
+  --th-primary-text: #0969da;
+
+  /* Positive — GitHub green */
+  --th-positive: #1a7f37;
+  --th-positive-muted: #dafbe1;
+  --th-positive-text: #116329;
+
+  /* Negative — GitHub red */
+  --th-negative: #cf222e;
+  --th-negative-muted: #ffebe9;
+  --th-negative-text: #a40e26;
+
+  /* Caution — GitHub yellow */
+  --th-caution: #9a6700;
+  --th-caution-muted: #fff8c5;
+  --th-caution-text: #7d4e00;
+
+  /* Info — GitHub purple */
+  --th-info: #8250df;
+  --th-info-muted: #fbefff;
+  --th-info-text: #6639ba;
+
+  /* Diffs */
+  --th-diff-add-bg: #dafbe1;
+  --th-diff-add-text: #116329;
+  --th-diff-del-bg: #ffebe9;
+  --th-diff-del-text: #a40e26;
+
+  /* Editor */
+  --th-editor-bg: #ffffff;
+  --th-editor-toolbar: #f6f8fa;
+  --th-editor-border: #d1d9e0;
+  --th-editor-text: #1f2328;
+
+  /* Focus ring */
+  --th-ring: #0969da;
+
+  /* Sidebar */
+  --th-sidebar: #f6f8fa;
+  --th-sidebar-hover: #eef1f4;
+  --th-sidebar-active: #d8dee4;
+  --th-sidebar-text: #1f2328;
+  --th-sidebar-muted: #6a737d;
+  --th-sidebar-border: #d1d9e0;
+
+  /* Fonts — system sans + Apple mono */
+  --th-font-ui: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  --th-font-code: 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+}

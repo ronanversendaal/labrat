@@ -1,0 +1,76 @@
+[data-theme="everforest-dark"] {
+  color-scheme: dark;
+
+  /* Backgrounds — deep woodland */
+  --th-canvas: #2d353b;
+  --th-surface: #343f44;
+  --th-surface-alt: #3d484d;
+  --th-surface-hover: #3d484d;
+  --th-surface-active: #475258;
+  --th-surface-raised: #343f44;
+  --th-surface-inset: #272e33;
+
+  /* Text — warm parchment tones */
+  --th-content: #d3c6aa;
+  --th-content-secondary: #9da9a0;
+  --th-content-tertiary: #7a8478;
+  --th-content-muted: #9da9a0;
+
+  /* Borders */
+  --th-edge: #475258;
+  --th-edge-strong: #7a8478;
+  --th-edge-subtle: #343f44;
+
+  /* Primary — foliage green */
+  --th-primary: #a7c080;
+  --th-primary-hover: #b5cf94;
+  --th-primary-muted: rgba(167, 192, 128, 0.15);
+  --th-primary-text: #a7c080;
+
+  /* Positive — moss green */
+  --th-positive: #83c092;
+  --th-positive-muted: rgba(131, 192, 146, 0.15);
+  --th-positive-text: #83c092;
+
+  /* Negative — autumn red */
+  --th-negative: #e67e80;
+  --th-negative-muted: rgba(230, 126, 128, 0.15);
+  --th-negative-text: #e67e80;
+
+  /* Caution — amber gold */
+  --th-caution: #dbbc7f;
+  --th-caution-muted: rgba(219, 188, 127, 0.15);
+  --th-caution-text: #dbbc7f;
+
+  /* Info — berry purple */
+  --th-info: #d699b6;
+  --th-info-muted: rgba(214, 153, 182, 0.15);
+  --th-info-text: #d699b6;
+
+  /* Diffs */
+  --th-diff-add-bg: rgba(131, 192, 146, 0.15);
+  --th-diff-add-text: #83c092;
+  --th-diff-del-bg: rgba(230, 126, 128, 0.15);
+  --th-diff-del-text: #e67e80;
+
+  /* Editor */
+  --th-editor-bg: #2d353b;
+  --th-editor-toolbar: #343f44;
+  --th-editor-border: #475258;
+  --th-editor-text: #d3c6aa;
+
+  /* Focus ring */
+  --th-ring: #a7c080;
+
+  /* Sidebar */
+  --th-sidebar: #272e33;
+  --th-sidebar-hover: #343f44;
+  --th-sidebar-active: #3d484d;
+  --th-sidebar-text: #d3c6aa;
+  --th-sidebar-muted: #7a8478;
+  --th-sidebar-border: #475258;
+
+  /* Fonts — system sans + readable mono */
+  --th-font-ui: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  --th-font-code: 'Source Code Pro', 'JetBrains Mono', 'Fira Code', monospace;
+}

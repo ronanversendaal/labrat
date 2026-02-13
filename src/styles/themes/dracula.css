@@ -1,0 +1,76 @@
+[data-theme="dracula"] {
+  color-scheme: dark;
+
+  /* Backgrounds — gothic twilight */
+  --th-canvas: #282a36;
+  --th-surface: #343746;
+  --th-surface-alt: #3e4254;
+  --th-surface-hover: #3e4254;
+  --th-surface-active: #44475a;
+  --th-surface-raised: #343746;
+  --th-surface-inset: #21222c;
+
+  /* Text — moonlit whites */
+  --th-content: #f8f8f2;
+  --th-content-secondary: #bfc5d4;
+  --th-content-tertiary: #6272a4;
+  --th-content-muted: #bfc5d4;
+
+  /* Borders */
+  --th-edge: #44475a;
+  --th-edge-strong: #6272a4;
+  --th-edge-subtle: #343746;
+
+  /* Primary — phantom purple */
+  --th-primary: #bd93f9;
+  --th-primary-hover: #caa4ff;
+  --th-primary-muted: rgba(189, 147, 249, 0.15);
+  --th-primary-text: #bd93f9;
+
+  /* Positive — ghoul green */
+  --th-positive: #50fa7b;
+  --th-positive-muted: rgba(80, 250, 123, 0.15);
+  --th-positive-text: #50fa7b;
+
+  /* Negative — blood red */
+  --th-negative: #ff5555;
+  --th-negative-muted: rgba(255, 85, 85, 0.15);
+  --th-negative-text: #ff5555;
+
+  /* Caution — pumpkin orange */
+  --th-caution: #ffb86c;
+  --th-caution-muted: rgba(255, 184, 108, 0.15);
+  --th-caution-text: #f1fa8c;
+
+  /* Info — fang cyan */
+  --th-info: #8be9fd;
+  --th-info-muted: rgba(139, 233, 253, 0.15);
+  --th-info-text: #8be9fd;
+
+  /* Diffs */
+  --th-diff-add-bg: rgba(80, 250, 123, 0.15);
+  --th-diff-add-text: #50fa7b;
+  --th-diff-del-bg: rgba(255, 85, 85, 0.15);
+  --th-diff-del-text: #ff5555;
+
+  /* Editor */
+  --th-editor-bg: #282a36;
+  --th-editor-toolbar: #343746;
+  --th-editor-border: #44475a;
+  --th-editor-text: #f8f8f2;
+
+  /* Focus ring */
+  --th-ring: #bd93f9;
+
+  /* Sidebar */
+  --th-sidebar: #21222c;
+  --th-sidebar-hover: #343746;
+  --th-sidebar-active: #3e4254;
+  --th-sidebar-text: #f8f8f2;
+  --th-sidebar-muted: #6272a4;
+  --th-sidebar-border: #44475a;
+
+  /* Fonts — clean sans + ligature mono */
+  --th-font-ui: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  --th-font-code: 'Fira Code', 'JetBrains Mono', monospace;
+}

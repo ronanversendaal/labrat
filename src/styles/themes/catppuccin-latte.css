@@ -1,0 +1,76 @@
+[data-theme="catppuccin-latte"] {
+  color-scheme: light;
+
+  /* Backgrounds — pastel lavender base */
+  --th-canvas: #eff1f5;
+  --th-surface: #e6e9ef;
+  --th-surface-alt: #dce0e8;
+  --th-surface-hover: #dce0e8;
+  --th-surface-active: #ccd0da;
+  --th-surface-raised: #eff1f5;
+  --th-surface-inset: #e6e9ef;
+
+  /* Text — muted ink */
+  --th-content: #4c4f69;
+  --th-content-secondary: #5c5f77;
+  --th-content-tertiary: #8c8fa1;
+  --th-content-muted: #5c5f77;
+
+  /* Borders */
+  --th-edge: #ccd0da;
+  --th-edge-strong: #9ca0b0;
+  --th-edge-subtle: #e6e9ef;
+
+  /* Primary — Catppuccin blue */
+  --th-primary: #1e66f5;
+  --th-primary-hover: #1759d6;
+  --th-primary-muted: rgba(30, 102, 245, 0.10);
+  --th-primary-text: #1e66f5;
+
+  /* Positive — Catppuccin green */
+  --th-positive: #40a02b;
+  --th-positive-muted: rgba(64, 160, 43, 0.10);
+  --th-positive-text: #358821;
+
+  /* Negative — Catppuccin red */
+  --th-negative: #d20f39;
+  --th-negative-muted: rgba(210, 15, 57, 0.10);
+  --th-negative-text: #b50d30;
+
+  /* Caution — Catppuccin yellow */
+  --th-caution: #df8e1d;
+  --th-caution-muted: rgba(223, 142, 29, 0.10);
+  --th-caution-text: #c47d17;
+
+  /* Info — Catppuccin mauve */
+  --th-info: #8839ef;
+  --th-info-muted: rgba(136, 57, 239, 0.10);
+  --th-info-text: #7530d1;
+
+  /* Diffs */
+  --th-diff-add-bg: rgba(64, 160, 43, 0.12);
+  --th-diff-add-text: #358821;
+  --th-diff-del-bg: rgba(210, 15, 57, 0.12);
+  --th-diff-del-text: #b50d30;
+
+  /* Editor */
+  --th-editor-bg: #eff1f5;
+  --th-editor-toolbar: #e6e9ef;
+  --th-editor-border: #ccd0da;
+  --th-editor-text: #4c4f69;
+
+  /* Focus ring */
+  --th-ring: #1e66f5;
+
+  /* Sidebar */
+  --th-sidebar: #e6e9ef;
+  --th-sidebar-hover: #dce0e8;
+  --th-sidebar-active: #ccd0da;
+  --th-sidebar-text: #4c4f69;
+  --th-sidebar-muted: #8c8fa1;
+  --th-sidebar-border: #ccd0da;
+
+  /* Fonts — same family as Catppuccin Mocha */
+  --th-font-ui: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --th-font-code: 'Cascadia Code', 'JetBrains Mono', 'Fira Code', monospace;
+}

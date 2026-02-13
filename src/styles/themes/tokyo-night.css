@@ -1,0 +1,76 @@
+[data-theme="tokyo-night"] {
+  color-scheme: dark;
+
+  /* Backgrounds — neon-lit cityscape */
+  --th-canvas: #1a1b26;
+  --th-surface: #24283b;
+  --th-surface-alt: #292e42;
+  --th-surface-hover: #292e42;
+  --th-surface-active: #3b4261;
+  --th-surface-raised: #24283b;
+  --th-surface-inset: #16161e;
+
+  /* Text — cool silver tones */
+  --th-content: #a9b1d6;
+  --th-content-secondary: #9aa5ce;
+  --th-content-tertiary: #565f89;
+  --th-content-muted: #9aa5ce;
+
+  /* Borders */
+  --th-edge: #3b4261;
+  --th-edge-strong: #565f89;
+  --th-edge-subtle: #24283b;
+
+  /* Primary — neon blue */
+  --th-primary: #7aa2f7;
+  --th-primary-hover: #89b4fa;
+  --th-primary-muted: rgba(122, 162, 247, 0.15);
+  --th-primary-text: #7aa2f7;
+
+  /* Positive — spring green */
+  --th-positive: #9ece6a;
+  --th-positive-muted: rgba(158, 206, 106, 0.15);
+  --th-positive-text: #9ece6a;
+
+  /* Negative — sakura red */
+  --th-negative: #f7768e;
+  --th-negative-muted: rgba(247, 118, 142, 0.15);
+  --th-negative-text: #f7768e;
+
+  /* Caution — sunset orange */
+  --th-caution: #ff9e64;
+  --th-caution-muted: rgba(255, 158, 100, 0.15);
+  --th-caution-text: #e0af68;
+
+  /* Info — wisteria purple */
+  --th-info: #bb9af7;
+  --th-info-muted: rgba(187, 154, 247, 0.15);
+  --th-info-text: #bb9af7;
+
+  /* Diffs */
+  --th-diff-add-bg: rgba(158, 206, 106, 0.15);
+  --th-diff-add-text: #9ece6a;
+  --th-diff-del-bg: rgba(247, 118, 142, 0.15);
+  --th-diff-del-text: #f7768e;
+
+  /* Editor */
+  --th-editor-bg: #1a1b26;
+  --th-editor-toolbar: #24283b;
+  --th-editor-border: #3b4261;
+  --th-editor-text: #a9b1d6;
+
+  /* Focus ring */
+  --th-ring: #7aa2f7;
+
+  /* Sidebar */
+  --th-sidebar: #16161e;
+  --th-sidebar-hover: #24283b;
+  --th-sidebar-active: #292e42;
+  --th-sidebar-text: #a9b1d6;
+  --th-sidebar-muted: #565f89;
+  --th-sidebar-border: #3b4261;
+
+  /* Fonts — modern sans + mono */
+  --th-font-ui: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --th-font-code: 'JetBrains Mono', 'Fira Code', monospace;
+}

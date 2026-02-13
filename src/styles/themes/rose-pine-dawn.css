@@ -1,0 +1,79 @@
+[data-theme="rose-pine-dawn"] {
+  color-scheme: light;
+
+  /* Backgrounds — warm petal white
+     Dawn's official Surface (#fffaf3) is lighter than Base (#faf4ed),
+     so we map Overlay (#f2e9e1) to our recessed "surface" and use
+     Surface for "raised" to match our app's hierarchy. */
+  --th-canvas: #faf4ed;
+  --th-surface: #f2e9e1;
+  --th-surface-alt: #e8e0d6;
+  --th-surface-hover: #e8e0d6;
+  --th-surface-active: #dfdad9;
+  --th-surface-raised: #fffaf3;
+  --th-surface-inset: #f2e9e1;
+
+  /* Text — muted plum */
+  --th-content: #575279;
+  --th-content-secondary: #6e6a86;
+  --th-content-tertiary: #9893a5;
+  --th-content-muted: #6e6a86;
+
+  /* Borders */
+  --th-edge: #dfdad9;
+  --th-edge-strong: #9893a5;
+  --th-edge-subtle: #f2e9e1;
+
+  /* Primary — iris purple */
+  --th-primary: #907aa9;
+  --th-primary-hover: #7f6a98;
+  --th-primary-muted: rgba(144, 122, 169, 0.12);
+  --th-primary-text: #907aa9;
+
+  /* Positive — pine teal */
+  --th-positive: #286983;
+  --th-positive-muted: rgba(40, 105, 131, 0.12);
+  --th-positive-text: #286983;
+
+  /* Negative — love red */
+  --th-negative: #b4637a;
+  --th-negative-muted: rgba(180, 99, 122, 0.12);
+  --th-negative-text: #9e5168;
+
+  /* Caution — gold */
+  --th-caution: #ea9d34;
+  --th-caution-muted: rgba(234, 157, 52, 0.12);
+  --th-caution-text: #d08b28;
+
+  /* Info — foam cyan */
+  --th-info: #56949f;
+  --th-info-muted: rgba(86, 148, 159, 0.12);
+  --th-info-text: #56949f;
+
+  /* Diffs */
+  --th-diff-add-bg: rgba(40, 105, 131, 0.14);
+  --th-diff-add-text: #286983;
+  --th-diff-del-bg: rgba(180, 99, 122, 0.14);
+  --th-diff-del-text: #9e5168;
+
+  /* Editor */
+  --th-editor-bg: #faf4ed;
+  --th-editor-toolbar: #f2e9e1;
+  --th-editor-border: #dfdad9;
+  --th-editor-text: #575279;
+
+  /* Focus ring */
+  --th-ring: #907aa9;
+
+  /* Sidebar */
+  --th-sidebar: #f2e9e1;
+  --th-sidebar-hover: #e8e0d6;
+  --th-sidebar-active: #dfdad9;
+  --th-sidebar-text: #575279;
+  --th-sidebar-muted: #9893a5;
+  --th-sidebar-border: #dfdad9;
+
+  /* Fonts — same family as Rosé Pine */
+  --th-font-ui: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --th-font-code: 'Victor Mono', 'JetBrains Mono', 'Fira Code', monospace;
+}

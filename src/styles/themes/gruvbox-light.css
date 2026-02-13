@@ -1,0 +1,76 @@
+[data-theme="gruvbox-light"] {
+  color-scheme: light;
+
+  /* Backgrounds — warm retro paper */
+  --th-canvas: #fbf1c7;
+  --th-surface: #ebdbb2;
+  --th-surface-alt: #e3d5a4;
+  --th-surface-hover: #e3d5a4;
+  --th-surface-active: #d5c4a1;
+  --th-surface-raised: #fbf1c7;
+  --th-surface-inset: #ebdbb2;
+
+  /* Text — earthy darks */
+  --th-content: #3c3836;
+  --th-content-secondary: #504945;
+  --th-content-tertiary: #928374;
+  --th-content-muted: #504945;
+
+  /* Borders */
+  --th-edge: #d5c4a1;
+  --th-edge-strong: #928374;
+  --th-edge-subtle: #ebdbb2;
+
+  /* Primary — gruvbox orange */
+  --th-primary: #d65d0e;
+  --th-primary-hover: #c04e06;
+  --th-primary-muted: rgba(214, 93, 14, 0.12);
+  --th-primary-text: #af3a03;
+
+  /* Positive — gruvbox green */
+  --th-positive: #79740e;
+  --th-positive-muted: rgba(121, 116, 14, 0.12);
+  --th-positive-text: #79740e;
+
+  /* Negative — gruvbox red */
+  --th-negative: #9d0006;
+  --th-negative-muted: rgba(157, 0, 6, 0.12);
+  --th-negative-text: #9d0006;
+
+  /* Caution — gruvbox yellow */
+  --th-caution: #b57614;
+  --th-caution-muted: rgba(181, 118, 20, 0.12);
+  --th-caution-text: #b57614;
+
+  /* Info — gruvbox purple */
+  --th-info: #8f3f71;
+  --th-info-muted: rgba(143, 63, 113, 0.12);
+  --th-info-text: #8f3f71;
+
+  /* Diffs */
+  --th-diff-add-bg: rgba(121, 116, 14, 0.12);
+  --th-diff-add-text: #79740e;
+  --th-diff-del-bg: rgba(157, 0, 6, 0.12);
+  --th-diff-del-text: #9d0006;
+
+  /* Editor */
+  --th-editor-bg: #fbf1c7;
+  --th-editor-toolbar: #ebdbb2;
+  --th-editor-border: #d5c4a1;
+  --th-editor-text: #3c3836;
+
+  /* Focus ring */
+  --th-ring: #d65d0e;
+
+  /* Sidebar */
+  --th-sidebar: #ebdbb2;
+  --th-sidebar-hover: #e3d5a4;
+  --th-sidebar-active: #d5c4a1;
+  --th-sidebar-text: #3c3836;
+  --th-sidebar-muted: #928374;
+  --th-sidebar-border: #d5c4a1;
+
+  /* Fonts — system sans + IBM mono */
+  --th-font-ui: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  --th-font-code: 'IBM Plex Mono', 'JetBrains Mono', 'Fira Code', monospace;
+}

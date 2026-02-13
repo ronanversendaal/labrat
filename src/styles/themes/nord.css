@@ -1,0 +1,76 @@
+[data-theme="nord"] {
+  color-scheme: dark;
+
+  /* Backgrounds — arctic polar night */
+  --th-canvas: #2e3440;
+  --th-surface: #3b4252;
+  --th-surface-alt: #434c5e;
+  --th-surface-hover: #434c5e;
+  --th-surface-active: #4c566a;
+  --th-surface-raised: #3b4252;
+  --th-surface-inset: #272c36;
+
+  /* Text — snow storm */
+  --th-content: #d8dee9;
+  --th-content-secondary: #e5e9f0;
+  --th-content-tertiary: #4c566a;
+  --th-content-muted: #e5e9f0;
+
+  /* Borders */
+  --th-edge: #4c566a;
+  --th-edge-strong: #616e88;
+  --th-edge-subtle: #3b4252;
+
+  /* Primary — frost cyan */
+  --th-primary: #88c0d0;
+  --th-primary-hover: #8fbcbb;
+  --th-primary-muted: rgba(136, 192, 208, 0.15);
+  --th-primary-text: #88c0d0;
+
+  /* Positive — aurora green */
+  --th-positive: #a3be8c;
+  --th-positive-muted: rgba(163, 190, 140, 0.15);
+  --th-positive-text: #a3be8c;
+
+  /* Negative — aurora red */
+  --th-negative: #bf616a;
+  --th-negative-muted: rgba(191, 97, 106, 0.15);
+  --th-negative-text: #bf616a;
+
+  /* Caution — aurora yellow */
+  --th-caution: #ebcb8b;
+  --th-caution-muted: rgba(235, 203, 139, 0.15);
+  --th-caution-text: #ebcb8b;
+
+  /* Info — aurora purple */
+  --th-info: #b48ead;
+  --th-info-muted: rgba(180, 142, 173, 0.15);
+  --th-info-text: #b48ead;
+
+  /* Diffs */
+  --th-diff-add-bg: rgba(163, 190, 140, 0.15);
+  --th-diff-add-text: #a3be8c;
+  --th-diff-del-bg: rgba(191, 97, 106, 0.15);
+  --th-diff-del-text: #bf616a;
+
+  /* Editor */
+  --th-editor-bg: #2e3440;
+  --th-editor-toolbar: #3b4252;
+  --th-editor-border: #4c566a;
+  --th-editor-text: #d8dee9;
+
+  /* Focus ring */
+  --th-ring: #88c0d0;
+
+  /* Sidebar */
+  --th-sidebar: #272c36;
+  --th-sidebar-hover: #3b4252;
+  --th-sidebar-active: #434c5e;
+  --th-sidebar-text: #d8dee9;
+  --th-sidebar-muted: #4c566a;
+  --th-sidebar-border: #4c566a;
+
+  /* Fonts — clean sans + ligature mono */
+  --th-font-ui: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --th-font-code: 'Fira Code', 'JetBrains Mono', monospace;
+}

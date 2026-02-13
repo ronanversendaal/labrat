@@ -20,6 +20,28 @@ pub enum Theme {
     CatppuccinMocha,
     #[serde(rename = "rose-pine")]
     RosePine,
+    #[serde(rename = "tokyo-night")]
+    TokyoNight,
+    #[serde(rename = "nord")]
+    Nord,
+    #[serde(rename = "everforest-dark")]
+    EverforestDark,
+    #[serde(rename = "dracula")]
+    Dracula,
+    #[serde(rename = "github-light")]
+    GithubLight,
+    #[serde(rename = "solarized-light")]
+    SolarizedLight,
+    #[serde(rename = "gruvbox-light")]
+    GruvboxLight,
+    #[serde(rename = "everforest-light")]
+    EverforestLight,
+    #[serde(rename = "catppuccin-latte")]
+    CatppuccinLatte,
+    #[serde(rename = "rose-pine-dawn")]
+    RosePineDawn,
+    #[serde(rename = "one-light")]
+    OneLight,
 }
 
 impl std::fmt::Display for Theme {
@@ -31,6 +53,17 @@ impl std::fmt::Display for Theme {
             Theme::Kanagawa => write!(f, "kanagawa"),
             Theme::CatppuccinMocha => write!(f, "catppuccin-mocha"),
             Theme::RosePine => write!(f, "rose-pine"),
+            Theme::TokyoNight => write!(f, "tokyo-night"),
+            Theme::Nord => write!(f, "nord"),
+            Theme::EverforestDark => write!(f, "everforest-dark"),
+            Theme::Dracula => write!(f, "dracula"),
+            Theme::GithubLight => write!(f, "github-light"),
+            Theme::SolarizedLight => write!(f, "solarized-light"),
+            Theme::GruvboxLight => write!(f, "gruvbox-light"),
+            Theme::EverforestLight => write!(f, "everforest-light"),
+            Theme::CatppuccinLatte => write!(f, "catppuccin-latte"),
+            Theme::RosePineDawn => write!(f, "rose-pine-dawn"),
+            Theme::OneLight => write!(f, "one-light"),
         }
     }
 }
@@ -44,6 +77,17 @@ impl Theme {
             "kanagawa" => Theme::Kanagawa,
             "catppuccin-mocha" => Theme::CatppuccinMocha,
             "rose-pine" => Theme::RosePine,
+            "tokyo-night" => Theme::TokyoNight,
+            "nord" => Theme::Nord,
+            "everforest-dark" => Theme::EverforestDark,
+            "dracula" => Theme::Dracula,
+            "github-light" => Theme::GithubLight,
+            "solarized-light" => Theme::SolarizedLight,
+            "gruvbox-light" => Theme::GruvboxLight,
+            "everforest-light" => Theme::EverforestLight,
+            "catppuccin-latte" => Theme::CatppuccinLatte,
+            "rose-pine-dawn" => Theme::RosePineDawn,
+            "one-light" => Theme::OneLight,
             _ => Theme::System,
         }
     }
@@ -253,6 +297,17 @@ mod tests {
         assert_eq!(Theme::from_db_str("kanagawa"), Theme::Kanagawa);
         assert_eq!(Theme::from_db_str("catppuccin-mocha"), Theme::CatppuccinMocha);
         assert_eq!(Theme::from_db_str("rose-pine"), Theme::RosePine);
+        assert_eq!(Theme::from_db_str("tokyo-night"), Theme::TokyoNight);
+        assert_eq!(Theme::from_db_str("nord"), Theme::Nord);
+        assert_eq!(Theme::from_db_str("everforest-dark"), Theme::EverforestDark);
+        assert_eq!(Theme::from_db_str("dracula"), Theme::Dracula);
+        assert_eq!(Theme::from_db_str("github-light"), Theme::GithubLight);
+        assert_eq!(Theme::from_db_str("solarized-light"), Theme::SolarizedLight);
+        assert_eq!(Theme::from_db_str("gruvbox-light"), Theme::GruvboxLight);
+        assert_eq!(Theme::from_db_str("everforest-light"), Theme::EverforestLight);
+        assert_eq!(Theme::from_db_str("catppuccin-latte"), Theme::CatppuccinLatte);
+        assert_eq!(Theme::from_db_str("rose-pine-dawn"), Theme::RosePineDawn);
+        assert_eq!(Theme::from_db_str("one-light"), Theme::OneLight);
         assert_eq!(Theme::from_db_str("system"), Theme::System);
         assert_eq!(Theme::from_db_str("unknown"), Theme::System);
     }
@@ -265,6 +320,17 @@ mod tests {
         assert_eq!(Theme::Kanagawa.to_string(), "kanagawa");
         assert_eq!(Theme::CatppuccinMocha.to_string(), "catppuccin-mocha");
         assert_eq!(Theme::RosePine.to_string(), "rose-pine");
+        assert_eq!(Theme::TokyoNight.to_string(), "tokyo-night");
+        assert_eq!(Theme::Nord.to_string(), "nord");
+        assert_eq!(Theme::EverforestDark.to_string(), "everforest-dark");
+        assert_eq!(Theme::Dracula.to_string(), "dracula");
+        assert_eq!(Theme::GithubLight.to_string(), "github-light");
+        assert_eq!(Theme::SolarizedLight.to_string(), "solarized-light");
+        assert_eq!(Theme::GruvboxLight.to_string(), "gruvbox-light");
+        assert_eq!(Theme::EverforestLight.to_string(), "everforest-light");
+        assert_eq!(Theme::CatppuccinLatte.to_string(), "catppuccin-latte");
+        assert_eq!(Theme::RosePineDawn.to_string(), "rose-pine-dawn");
+        assert_eq!(Theme::OneLight.to_string(), "one-light");
     }
 
     #[test]
@@ -273,6 +339,11 @@ mod tests {
         assert_eq!(json, "\"catppuccin-mocha\"");
         let parsed: Theme = serde_json::from_str(&json).unwrap();
         assert_eq!(parsed, Theme::CatppuccinMocha);
+
+        let json = serde_json::to_string(&Theme::TokyoNight).unwrap();
+        assert_eq!(json, "\"tokyo-night\"");
+        let parsed: Theme = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed, Theme::TokyoNight);
     }
 
     #[test]
