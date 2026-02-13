@@ -3,7 +3,7 @@
  * Provides easy registration and management of keyboard shortcuts in components
  */
 
-import { useEffect, useCallback, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import {
   keyboardRegistry,
   type KeyboardShortcut,
@@ -20,6 +20,9 @@ export interface UseKeyboardShortcutsOptions {
 /**
  * Hook for registering keyboard shortcuts in a component
  * Automatically cleans up shortcuts when component unmounts
+ *
+ * Uses a ref for handlers so the registered callback always invokes the
+ * latest handler without needing the effect to re-run on every render.
  */
 export function useKeyboardShortcuts(
   shortcuts: Array<{
@@ -35,16 +38,27 @@ export function useKeyboardShortcuts(
 ) {
   const { enabled = true, scope = '' } = options;
 
+  // Keep handlers in a ref so the registered callback always calls the latest version
+  const handlersRef = useRef(shortcuts);
+  handlersRef.current = shortcuts;
+
+  // Stable serialization of shortcut metadata (ids + keys) to detect structural changes
+  const shortcutKeys = shortcuts.map((s) => `${s.id}:${s.keys.join(',')}`).join('|');
+
   useEffect(() => {
     if (!enabled) return;
 
     const registeredIds: string[] = [];
 
-    shortcuts.forEach((shortcut) => {
+    handlersRef.current.forEach((shortcut) => {
       const id = scope ? `${scope}:${shortcut.id}` : shortcut.id;
       keyboardRegistry.register(id, {
         keys: shortcut.keys,
-        handler: shortcut.handler,
+        // Indirect through ref so the handler is never stale
+        handler: (e: KeyboardEvent) => {
+          const current = handlersRef.current.find((s) => s.id === shortcut.id);
+          current?.handler(e);
+        },
         label: shortcut.label,
         description: shortcut.description,
         category: shortcut.category,
@@ -57,7 +71,7 @@ export function useKeyboardShortcuts(
     return () => {
       registeredIds.forEach((id) => keyboardRegistry.unregister(id));
     };
-  }, [shortcuts, enabled, scope]);
+  }, [shortcutKeys, enabled, scope]); // eslint-disable-line react-hooks/exhaustive-deps
 }
 
 /**
@@ -82,14 +96,19 @@ export function useKeyboardShortcut(
     preventDefault = true,
   } = options;
 
+  const handlerRef = useRef(handler);
+  handlerRef.current = handler;
+
+  const keysKey = keys.join(',');
+
   useEffect(() => {
     if (!enabled) return;
 
-    const id = `shortcut-${keys.join('-')}-${Math.random().toString(36).slice(2, 9)}`;
+    const id = `shortcut-${keysKey}-${Math.random().toString(36).slice(2, 9)}`;
 
     keyboardRegistry.register(id, {
       keys,
-      handler,
+      handler: (e: KeyboardEvent) => handlerRef.current(e),
       label,
       description,
       category,
@@ -100,7 +119,7 @@ export function useKeyboardShortcut(
     return () => {
       keyboardRegistry.unregister(id);
     };
-  }, [keys, handler, enabled, label, description, category, preventDefault]);
+  }, [keysKey, enabled, label, description, category, preventDefault]); // eslint-disable-line react-hooks/exhaustive-deps
 }
 
 /**
@@ -171,16 +190,10 @@ export function useArrowNavigation(
   onDown: () => void,
   enabled = true
 ) {
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      if (e.key === 'ArrowUp' || e.key === 'k') {
-        onUp();
-      } else if (e.key === 'ArrowDown' || e.key === 'j') {
-        onDown();
-      }
-    },
-    [onUp, onDown]
-  );
+  const onUpRef = useRef(onUp);
+  onUpRef.current = onUp;
+  const onDownRef = useRef(onDown);
+  onDownRef.current = onDown;
 
   useEffect(() => {
     if (!enabled) return;
@@ -189,7 +202,13 @@ export function useArrowNavigation(
 
     keyboardRegistry.register(id, {
       keys: ['arrowup', 'arrowdown', 'j', 'k'],
-      handler: handleKeyDown,
+      handler: (e: KeyboardEvent) => {
+        if (e.key === 'ArrowUp' || e.key === 'k') {
+          onUpRef.current();
+        } else if (e.key === 'ArrowDown' || e.key === 'j') {
+          onDownRef.current();
+        }
+      },
       label: 'Navigate',
       description: 'Move selection up/down',
       category: 'navigation',
@@ -199,7 +218,7 @@ export function useArrowNavigation(
     return () => {
       keyboardRegistry.unregister(id);
     };
-  }, [handleKeyDown, enabled]);
+  }, [enabled]);
 }
 
 /**
