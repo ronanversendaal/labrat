@@ -10,6 +10,7 @@ import { useDiff, useDiscussions, useMergeRequest, useAccounts, useApproveMR, us
 import { isMergeReady } from '../../utils/mergeReadiness';
 import { useMRStore, isFileViewedSelector } from '../../stores/mrStore';
 import { useSettingsStore } from '../../stores/settingsStore';
+import { partitionFiles } from '../../utils/generatedFiles';
 import { useAISuggestions } from '../../hooks/useAI';
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 import { useFocusStore } from '../../hooks/useFocusManager';
@@ -47,6 +48,8 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
   const clearViewedFiles = useMRStore((state) => state.clearViewedFiles);
   const fileViewMode = useSettingsStore((state) => state.fileViewMode);
   const notifyMrUpdatedBanner = useSettingsStore((state) => state.notifyMrUpdatedBanner);
+  const hideGeneratedFiles = useSettingsStore((state) => state.hideGeneratedFiles);
+  const generatedFilePatterns = useSettingsStore((state) => state.generatedFilePatterns);
 
   // Focus store for mode-aware keyboard shortcuts
   const { currentZone, diffMode, setFocusZone, setDiffMode, setFocusedLine } = useFocusStore();
@@ -146,15 +149,26 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
     }
   }, [hasRealUpdates, dismissedUpdate]);
 
+  // Partition files into visible and generated
+  const { visible: visibleFiles, generated: generatedFiles } = useMemo(
+    () => partitionFiles(diff?.files || [], generatedFilePatterns),
+    [diff?.files, generatedFilePatterns]
+  );
+  const displayFiles = useMemo(
+    () => hideGeneratedFiles ? visibleFiles : (diff?.files || []),
+    [hideGeneratedFiles, visibleFiles, diff?.files]
+  );
+  const hiddenCount = hideGeneratedFiles ? generatedFiles.length : 0;
+
   // Sort files alphabetically for flat view (same order as FileTree displays)
   const sortedFiles = useMemo(() => {
-    if (!diff?.files.length) return [];
+    if (!displayFiles.length) return [];
     if (fileViewMode === 'flat') {
-      return [...diff.files].sort((a, b) => a.new_path.localeCompare(b.new_path));
+      return [...displayFiles].sort((a, b) => a.new_path.localeCompare(b.new_path));
     }
     // For tree view, use original order (matches FileTree's tree traversal)
-    return diff.files;
-  }, [diff?.files, fileViewMode]);
+    return displayFiles;
+  }, [displayFiles, fileViewMode]);
 
   // Auto-select first file when diff loads
   const selectedFile = useMemo(() => {
@@ -235,10 +249,10 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
 
   // Keyboard shortcut to open quick file picker
   const openQuickPicker = useCallback(() => {
-    if (diff?.files.length) {
+    if (displayFiles.length) {
       setIsQuickPickerOpen(true);
     }
-  }, [diff?.files.length]);
+  }, [displayFiles.length]);
 
   // Handle opening MR in GitLab using Tauri shell
   const handleOpenInGitLab = useCallback(async () => {
@@ -583,7 +597,7 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
           <TabButton
             active={activeTab === 'changes'}
             onClick={() => setActiveTab('changes')}
-            badge={diff?.files.length}
+            badge={displayFiles.length || undefined}
           >
             Changes
           </TabButton>
@@ -620,15 +634,17 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
                   <Skeleton variant="text" width="60%" />
                   <Skeleton variant="text" width="70%" />
                 </div>
-              ) : diff?.files.length ? (
+              ) : displayFiles.length ? (
                 <FileTree
-                  files={diff.files}
+                  files={displayFiles}
                   selectedFile={selectedFile?.new_path || null}
                   onSelectFile={setSelectedFilePath}
                   expandedFolders={expandedFolders}
                   onToggleFolder={handleToggleFolder}
                   mrId={mr.iid}
                   currentSha={currentSha}
+                  generatedFiles={hideGeneratedFiles ? generatedFiles : undefined}
+                  hiddenCount={hiddenCount}
                 />
               ) : (
                 <div className="p-4 text-sm text-gray-500">No changes</div>
@@ -690,7 +706,7 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
       <QuickFilePicker
         isOpen={isQuickPickerOpen}
         onClose={() => setIsQuickPickerOpen(false)}
-        files={diff?.files || []}
+        files={displayFiles}
         onSelectFile={(filePath) => {
           setSelectedFilePath(filePath);
           setActiveTab('changes');

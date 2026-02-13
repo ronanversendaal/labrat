@@ -2,11 +2,13 @@
  * GeneralSettings - General application settings panel
  */
 
+import { useState } from 'react';
 import { useSettings, useUpdateSettings, useCacheStats, useClearCache, useEvictCache } from '../../hooks/useSettings';
 import { Button, Skeleton } from '../common';
 import { ThemePicker } from './ThemePicker';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { UI_FONT_OPTIONS, CODE_FONT_OPTIONS } from '../../types/settings';
+import { DEFAULT_GENERATED_PATTERNS } from '../../utils/generatedFiles';
 import type { DiffViewMode } from '../../types';
 
 export function GeneralSettings() {
@@ -33,6 +35,13 @@ export function GeneralSettings() {
   const setMrRefreshInterval = useSettingsStore((s) => s.setMrRefreshInterval);
   const cacheSizeMb = useSettingsStore((s) => s.cacheSizeMb);
   const setCacheSizeMb = useSettingsStore((s) => s.setCacheSizeMb);
+  const hideGeneratedFiles = useSettingsStore((s) => s.hideGeneratedFiles);
+  const setHideGeneratedFiles = useSettingsStore((s) => s.setHideGeneratedFiles);
+  const generatedFilePatterns = useSettingsStore((s) => s.generatedFilePatterns);
+  const setGeneratedFilePatterns = useSettingsStore((s) => s.setGeneratedFilePatterns);
+
+  // Local state for the patterns textarea (committed on blur)
+  const [patternsText, setPatternsText] = useState(generatedFilePatterns.join('\n'));
 
   const handleDiffModeChange = (mode: DiffViewMode) => {
     setDiffViewMode(mode);
@@ -196,6 +205,63 @@ export function GeneralSettings() {
               />
               <div className="w-11 h-6 bg-surface-alt peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-ring rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-edge-strong after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
             </label>
+          </div>
+        </div>
+      </section>
+
+      {/* Generated Files */}
+      <section>
+        <h2 className="text-lg font-medium text-content mb-4">Generated Files</h2>
+        <div className="space-y-4">
+          {/* Toggle */}
+          <div className="flex items-center justify-between p-4 border border-edge rounded-lg">
+            <div>
+              <p className="font-medium text-content">Hide Generated Files</p>
+              <p className="text-sm text-content-secondary">Hide auto-generated files (lock files, minified bundles, etc.) from the diff view</p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={hideGeneratedFiles}
+                onChange={(e) => setHideGeneratedFiles(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-surface-alt peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-ring rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-edge-strong after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+            </label>
+          </div>
+
+          {/* Patterns textarea */}
+          <div className="p-4 border border-edge rounded-lg">
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <p className="font-medium text-content">File Patterns</p>
+                <p className="text-sm text-content-secondary">Glob patterns to match generated files (one per line)</p>
+              </div>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  setGeneratedFilePatterns(DEFAULT_GENERATED_PATTERNS);
+                  setPatternsText(DEFAULT_GENERATED_PATTERNS.join('\n'));
+                }}
+              >
+                Reset to Defaults
+              </Button>
+            </div>
+            <textarea
+              value={patternsText}
+              onChange={(e) => setPatternsText(e.target.value)}
+              onBlur={() => {
+                const patterns = patternsText
+                  .split('\n')
+                  .map((p) => p.trim())
+                  .filter(Boolean);
+                setGeneratedFilePatterns(patterns);
+              }}
+              rows={8}
+              className="w-full px-3 py-2 text-sm font-mono bg-surface border border-edge-strong rounded-md text-content resize-y"
+              placeholder="*.lock&#10;*.min.js&#10;dist/**"
+            />
           </div>
         </div>
       </section>

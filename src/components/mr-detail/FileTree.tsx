@@ -16,6 +16,8 @@ interface FileTreeProps {
   onToggleFolder?: (folder: string) => void;
   mrId: number;
   currentSha: string;
+  generatedFiles?: DiffFile[];
+  hiddenCount?: number;
 }
 
 export function FileTree({
@@ -26,8 +28,11 @@ export function FileTree({
   onToggleFolder,
   mrId,
   currentSha,
+  generatedFiles,
+  hiddenCount = 0,
 }: FileTreeProps) {
   const [localExpanded, setLocalExpanded] = useState<Set<string>>(new Set());
+  const [showGenerated, setShowGenerated] = useState(false);
   const fileViewMode = useSettingsStore((state) => state.fileViewMode);
   const setFileViewMode = useSettingsStore((state) => state.setFileViewMode);
   const viewedFiles = useMRStore((state) => state.viewedFiles);
@@ -125,6 +130,32 @@ export function FileTree({
           ))
         )}
       </div>
+
+      {/* Generated files section */}
+      {hiddenCount > 0 && (
+        <div className="border-t border-edge">
+          <button
+            onClick={() => setShowGenerated(!showGenerated)}
+            className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-content-tertiary hover:bg-surface-hover"
+          >
+            <ChevronIcon expanded={showGenerated} />
+            <span>{hiddenCount} generated {hiddenCount === 1 ? 'file' : 'files'} hidden</span>
+          </button>
+          {showGenerated && generatedFiles && (
+            <div className="opacity-50">
+              {generatedFiles.map((file) => (
+                <div
+                  key={file.new_path}
+                  className="flex items-center gap-2 px-3 py-1 text-xs text-content-tertiary pl-7"
+                >
+                  <FileIcon file={file} />
+                  <span className="truncate">{file.new_path}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Summary */}
       <div className="px-3 py-2 border-t border-edge bg-surface">

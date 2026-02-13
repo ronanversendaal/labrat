@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { Theme, DiffViewMode, FileViewMode } from '../types/settings';
+import { DEFAULT_GENERATED_PATTERNS } from '../utils/generatedFiles';
 
 interface SettingsState {
   // Appearance
@@ -29,6 +30,10 @@ interface SettingsState {
   notifyMrUpdatedBanner: boolean;
   toastNotifications: boolean;
 
+  // Generated files
+  hideGeneratedFiles: boolean;
+  generatedFilePatterns: string[];
+
   // Actions
   setTheme: (theme: Theme) => void;
   setFontSize: (size: number) => void;
@@ -48,6 +53,8 @@ interface SettingsState {
   setNotifyMergeReady: (enabled: boolean) => void;
   setNotifyMrUpdatedBanner: (enabled: boolean) => void;
   setToastNotifications: (enabled: boolean) => void;
+  setHideGeneratedFiles: (hide: boolean) => void;
+  setGeneratedFilePatterns: (patterns: string[]) => void;
   resetToDefaults: () => void;
 }
 
@@ -68,6 +75,8 @@ const defaultSettings = {
   notifyMergeReady: true,
   notifyMrUpdatedBanner: true,
   toastNotifications: true,
+  hideGeneratedFiles: true,
+  generatedFilePatterns: DEFAULT_GENERATED_PATTERNS,
 };
 
 export const useSettingsStore = create<SettingsState>()(
@@ -100,11 +109,15 @@ export const useSettingsStore = create<SettingsState>()(
         set({ notifyMrUpdatedBanner }),
       setToastNotifications: (toastNotifications) =>
         set({ toastNotifications }),
+      setHideGeneratedFiles: (hideGeneratedFiles) =>
+        set({ hideGeneratedFiles }),
+      setGeneratedFilePatterns: (generatedFilePatterns) =>
+        set({ generatedFilePatterns }),
       resetToDefaults: () => set(defaultSettings),
     }),
     {
       name: 'labrat-settings',
-      version: 3,
+      version: 4,
       migrate: (persisted, version) => {
         const state = persisted as Record<string, unknown>;
         if (version < 2) {
@@ -120,6 +133,10 @@ export const useSettingsStore = create<SettingsState>()(
           if (!('notifyMergeReady' in state)) state.notifyMergeReady = true;
           if (!('notifyMrUpdatedBanner' in state)) state.notifyMrUpdatedBanner = true;
           if (!('toastNotifications' in state)) state.toastNotifications = true;
+        }
+        if (version < 4) {
+          if (!('hideGeneratedFiles' in state)) state.hideGeneratedFiles = true;
+          if (!('generatedFilePatterns' in state)) state.generatedFilePatterns = DEFAULT_GENERATED_PATTERNS;
         }
         return state as unknown as SettingsState;
       },
