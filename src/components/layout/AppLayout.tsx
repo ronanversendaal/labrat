@@ -17,7 +17,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   const { data: accounts } = useAccounts();
   const setActiveAccount = useSetActiveAccount();
   const { openModal, activeView, setActiveView } = useUIStore();
-  const { negatedFilters, specialFilters, setNegatedFilters, setSpecialFilters, clearFilters, closeDetail, setSelectedMr } = useMRStore();
+  const { applyMyReviewsDefaults, closeDetail, setSelectedMr } = useMRStore();
 
   const activeAccount = accounts?.find((a) => a.is_active);
   const defaultsApplied = useRef(false);
@@ -31,42 +31,15 @@ export function AppLayout({ children }: AppLayoutProps) {
     ).length;
   }, [myMRsData]);
 
-  // Apply default "My Reviews" filters:
-  // - NOT authored by current user
-  // - NOT already approved by me
-  // - Reviewer is me
-  const applyMyReviewsDefaults = () => {
-    clearFilters();
-    if (activeAccount?.username) {
-      setNegatedFilters([
-        { type: 'author', value: activeAccount.username },
-      ]);
-      setSpecialFilters({
-        excludeApprovedByMe: true,
-        reviewerIsMe: true,
-      });
-    }
-  };
-
-  // Auto-apply "My Reviews" defaults only on first run (no persisted filters).
-  // Once the user has filters persisted from a previous session, respect those.
+  // Always apply "My Reviews" defaults on first run so new defaults
+  // (e.g. exclude drafts/conflicts) take effect even for returning users.
   useEffect(() => {
     if (defaultsApplied.current || !activeAccount?.username) return;
+    if (activeView !== 'my-reviews') return;
     defaultsApplied.current = true;
 
-    const hasPersistedFilters = negatedFilters.length > 0 ||
-      specialFilters.excludeApprovedByMe ||
-      specialFilters.reviewerIsMe;
-    if (hasPersistedFilters) return;
-
-    setNegatedFilters([
-      { type: 'author', value: activeAccount.username },
-    ]);
-    setSpecialFilters({
-      excludeApprovedByMe: true,
-      reviewerIsMe: true,
-    });
-  }, [activeAccount?.username, negatedFilters, specialFilters, setNegatedFilters, setSpecialFilters]);
+    applyMyReviewsDefaults(activeAccount.username);
+  }, [activeAccount?.username, activeView, applyMyReviewsDefaults]);
 
   const handleSelectAccount = (accountId: string) => {
     setActiveAccount.mutate(accountId);
@@ -132,7 +105,9 @@ export function AppLayout({ children }: AppLayoutProps) {
                 setActiveView('my-reviews');
                 closeDetail();
                 setSelectedMr(null);
-                applyMyReviewsDefaults();
+                if (activeAccount?.username) {
+                  applyMyReviewsDefaults(activeAccount.username);
+                }
               }}
             />
             <SidebarItem

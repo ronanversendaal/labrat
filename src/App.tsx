@@ -25,7 +25,7 @@ const queryClient = new QueryClient({
 function AppContent() {
   const keyboardHelp = useKeyboardHelpModal();
   const { openModal, activeView, setActiveView } = useUIStore();
-  const { closeDetail, clearFilters, setNegatedFilters, setSpecialFilters } = useMRStore();
+  const { closeDetail, applyMyReviewsDefaults } = useMRStore();
   const { data: accounts } = useAccounts();
   const activeAccount = accounts?.find((a) => a.is_active);
   const queryClientInstance = useQueryClient();
@@ -51,21 +51,11 @@ function AppContent() {
   // Register "My Reviews" shortcut (Shift+R)
   const handleGoToMyReviews = useCallback(() => {
     setActiveView('my-reviews');
-    // Close detail view if open
     closeDetail();
-    // Clear existing filters
-    clearFilters();
-    // Apply default "My Reviews" filters
     if (activeAccount?.username) {
-      setNegatedFilters([
-        { type: 'author', value: activeAccount.username },
-      ]);
-      setSpecialFilters({
-        excludeApprovedByMe: true,
-        reviewerIsMe: true,
-      });
+      applyMyReviewsDefaults(activeAccount.username);
     }
-  }, [setActiveView, closeDetail, clearFilters, setNegatedFilters, setSpecialFilters, activeAccount?.username]);
+  }, [setActiveView, closeDetail, applyMyReviewsDefaults, activeAccount?.username]);
 
   useKeyboardShortcut(['shift+r'], handleGoToMyReviews, {
     label: 'My Reviews',

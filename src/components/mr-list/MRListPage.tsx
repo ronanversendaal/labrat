@@ -162,11 +162,22 @@ export function MRListPage() {
     return map;
   }, [specialFilters.excludeApprovedByMe, mergeRequests, approvalQueries]);
 
+  // Baseline filters: always exclude own MRs, drafts, and MRs with conflicts from review list
+  const baselineFilteredMRs = useMemo(() => {
+    if (!mergeRequests?.length) return [];
+    const username = activeAccount?.username?.toLowerCase();
+    return mergeRequests.filter(mr =>
+      !mr.draft &&
+      !mr.has_conflicts &&
+      (!username || mr.author.username.toLowerCase() !== username)
+    );
+  }, [mergeRequests, activeAccount?.username]);
+
   // Apply negated filters client-side
   const negatedFilteredMRs = useMemo(() => {
-    if (!mergeRequests?.length) return [];
-    return applyNegatedFilters(mergeRequests, negatedFilters);
-  }, [mergeRequests, negatedFilters]);
+    if (!baselineFilteredMRs.length) return [];
+    return applyNegatedFilters(baselineFilteredMRs, negatedFilters);
+  }, [baselineFilteredMRs, negatedFilters]);
 
   // Synchronous check: are we still waiting for approval data?
   const awaitingApprovalData = specialFilters.excludeApprovedByMe &&

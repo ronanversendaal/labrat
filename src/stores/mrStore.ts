@@ -70,6 +70,7 @@ interface MRState {
   toggleToolbar: () => void;
   setSearchVisible: (visible: boolean) => void;
   clearFilters: () => void;
+  applyMyReviewsDefaults: (username: string) => void;
   toggleFileExpanded: (filePath: string) => void;
   setSelectedSuggestion: (suggestion: AISuggestion | null) => void;
 
@@ -90,13 +91,29 @@ const defaultSpecialFilters: SpecialFilters = {
   reviewerIsMe: false,
 };
 
+/** Migrate v6 → v7: add draft/conflicts negated status filters if missing */
+function migrateV6ToV7(state: Record<string, unknown>): Record<string, unknown> {
+  const negatedFilters = [...((state.negatedFilters as NegatedFilter[]) || [])];
+  if (!negatedFilters.some(f => f.type === 'status' && f.value === 'draft')) {
+    negatedFilters.push({ type: 'status', value: 'draft' });
+  }
+  if (!negatedFilters.some(f => f.type === 'status' && f.value === 'conflicts')) {
+    negatedFilters.push({ type: 'status', value: 'conflicts' });
+  }
+  return { ...state, negatedFilters };
+}
+
 /** Read persisted state synchronously so the very first render uses saved filters. */
 function loadPersistedState(): Record<string, unknown> | null {
   try {
     const raw = localStorage.getItem('labrat-filters');
     if (!raw) return null;
     const parsed = JSON.parse(raw);
-    if (parsed.version === 6 && parsed.state) return parsed.state;
+    if (parsed.version === 7 && parsed.state) return parsed.state;
+    // v6 → v7: add draft/conflicts negated filters
+    if (parsed.version === 6 && parsed.state) {
+      return migrateV6ToV7(parsed.state);
+    }
     // v5 → v6: add appliedFilters
     if (parsed.version === 5 && parsed.state) {
       return { ...parsed.state, appliedFilters: [] };
@@ -204,6 +221,27 @@ export const useMRStore = create<MRState>()(
           searchQuery: '',
         }),
 
+      applyMyReviewsDefaults: (username) =>
+        set((state) => {
+          const filters = [...state.appliedFilters];
+          const ensure = (type: FilterType, value: string) => {
+            if (!filters.some(f => f.type === type && f.negated && f.value.toLowerCase() === value.toLowerCase())) {
+              filters.push({ type, value, negated: true, raw: `${type}:!=${value}` });
+            }
+          };
+          ensure('author', username);
+          ensure('status', 'draft');
+          ensure('status', 'conflicts');
+          return {
+            appliedFilters: filters,
+            specialFilters: {
+              ...state.specialFilters,
+              excludeApprovedByMe: true,
+              reviewerIsMe: true,
+            },
+          };
+        }),
+
       toggleFileExpanded: (filePath) =>
         set((state) => {
           const newExpanded = new Set(state.expandedFiles);
@@ -253,7 +291,7 @@ export const useMRStore = create<MRState>()(
     }),
     {
       name: 'labrat-filters',
-      version: 6, // Bump version: add appliedFilters
+      version: 7, // Bump version: add draft/conflicts negated filters for My Reviews
       storage: createJSONStorage(() => localStorage),
       migrate: (persisted: unknown, version: number) => {
         let state = persisted as Record<string, unknown>;
@@ -271,6 +309,9 @@ export const useMRStore = create<MRState>()(
         }
         if (version < 6) {
           state = { ...state, appliedFilters: [] };
+        }
+        if (version < 7) {
+          state = migrateV6ToV7(state);
         }
         return state;
       },
