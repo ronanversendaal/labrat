@@ -1117,50 +1117,58 @@ export const MonacoDiffView = forwardRef<MonacoDiffViewHandle, MonacoDiffViewPro
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-edge bg-surface">
-        <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between px-4 py-2 border-b border-edge bg-surface gap-3">
+        <div className="flex items-center gap-3 min-w-0">
           <FileStatusBadge file={file} />
           <span className="font-mono text-sm text-content-muted truncate">
             {file.renamed_file ? `${file.old_path} → ${file.new_path}` : file.new_path}
           </span>
-          <span className="text-xs text-content-secondary px-2 py-0.5 bg-surface-alt rounded">
+          <span className="text-xs text-content-secondary px-2 py-0.5 bg-surface-alt rounded whitespace-nowrap">
             {language}
           </span>
           {/* Comment count indicator */}
           {fileDiscussions.length > 0 && (
-            <span className="flex items-center gap-1 text-xs text-amber-600 text-amber-400 px-2 py-0.5 bg-amber-100 bg-amber-900/30 rounded">
+            <span className="flex items-center gap-1 text-xs text-amber-600 text-amber-400 px-2 py-0.5 bg-amber-100 bg-amber-900/30 rounded whitespace-nowrap">
               <CommentIcon />
               {fileDiscussions.length}
             </span>
           )}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           {/* Stats */}
-          <span className="text-xs text-diff-add-text">+{file.additions}</span>
-          <span className="text-xs text-diff-del-text">-{file.deletions}</span>
+          <span className="text-xs text-diff-add-text whitespace-nowrap">+{file.additions}</span>
+          <span className="text-xs text-diff-del-text whitespace-nowrap">-{file.deletions}</span>
 
           {/* View mode toggle */}
           <div className="flex items-center ml-4 border border-edge-strong rounded overflow-hidden">
             <button
               onClick={() => setDiffViewMode('unified')}
-              className={`px-2 py-1 text-xs ${
+              className={`flex items-center gap-1.5 px-2 py-1 text-xs ${
                 diffViewMode === 'unified'
                   ? 'bg-surface-alt text-content'
                   : 'text-content-secondary hover:bg-surface-hover'
               }`}
+              title="Inline diff"
             >
-              Inline
+              <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M2 3h12v1.5H2V3zm0 4h12v1.5H2V7zm0 4h12v1.5H2V11z" />
+              </svg>
+              <span className="hidden xl:inline">Inline</span>
             </button>
             <button
               onClick={() => setDiffViewMode('split')}
-              className={`px-2 py-1 text-xs ${
+              className={`flex items-center gap-1.5 px-2 py-1 text-xs whitespace-nowrap ${
                 diffViewMode === 'split'
                   ? 'bg-surface-alt text-content'
                   : 'text-content-secondary hover:bg-surface-hover'
               }`}
+              title="Side-by-side diff"
             >
-              Side-by-Side
+              <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M7.25 2v12h1.5V2h-1.5zM2 3h4v1.5H2V3zm0 4h4v1.5H2V7zm0 4h4v1.5H2V11zm8-8h4v1.5h-4V3zm0 4h4v1.5h-4V7zm0 4h4v1.5h-4V11z" />
+              </svg>
+              <span className="hidden xl:inline">Side-by-Side</span>
             </button>
           </div>
 

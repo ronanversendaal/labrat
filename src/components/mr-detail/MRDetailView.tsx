@@ -510,33 +510,20 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
 
       {/* Header */}
       <div className="px-6 py-4 border-b border-edge">
-        <div className="flex items-start justify-between">
-          <div className="flex-1 min-w-0">
-            {/* Project path + branches */}
-            <div className="flex items-center gap-2 text-sm text-content-secondary mb-1">
-              <span>{mr.project_path || `Project #${mr.project_id}`}</span>
-              <span>•</span>
-              <span>!{mr.iid}</span>
-              <span>•</span>
-              <code className="px-1.5 py-0.5 text-xs bg-surface-alt rounded">{mr.source_branch}</code>
-              <span className="text-content-tertiary">&rarr;</span>
-              <code className="px-1.5 py-0.5 text-xs bg-surface-alt rounded">{mr.target_branch}</code>
-            </div>
-
-            {/* Title */}
-            <h1 className="text-xl font-semibold text-content mb-2">
-              {mr.draft && <span className="text-content-tertiary">Draft: </span>}
-              {mr.title}
-            </h1>
-
-            {/* Badges */}
-            <div className="flex flex-wrap items-center gap-2">
-              <ImpedimentBadge mr={mr} />
-            </div>
+        {/* Project path + branches + actions row */}
+        <div className="flex items-center justify-between gap-3 mb-1">
+          <div className="flex items-center gap-2 text-sm text-content-secondary min-w-0">
+            <span className="truncate">{mr.project_path || `Project #${mr.project_id}`}</span>
+            <span className="shrink-0">•</span>
+            <span className="shrink-0">!{mr.iid}</span>
+            <span className="shrink-0">•</span>
+            <code className="px-1.5 py-0.5 text-xs bg-surface-alt rounded truncate max-w-32">{mr.source_branch}</code>
+            <span className="text-content-tertiary shrink-0">&rarr;</span>
+            <code className="px-1.5 py-0.5 text-xs bg-surface-alt rounded truncate max-w-32">{mr.target_branch}</code>
           </div>
 
           {/* Approval Status & Actions */}
-          <div className="flex items-center gap-4 ml-4">
+          <div className="flex items-center gap-4 shrink-0">
             {/* Approval status display */}
             <ApprovalStatus projectId={mr.project_id} mrIid={mr.iid} />
 
@@ -576,7 +563,7 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
 
             <button
               onClick={handleOpenInGitLab}
-              className="px-3 py-1.5 text-sm bg-primary text-white rounded hover:bg-primary-hover transition-colors"
+              className="px-3 py-1.5 text-sm bg-primary text-white rounded hover:bg-primary-hover transition-colors whitespace-nowrap"
             >
               Open in GitLab
             </button>
@@ -590,6 +577,17 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
               </button>
             )}
           </div>
+        </div>
+
+        {/* Title */}
+        <h1 className="text-xl font-semibold text-content mb-2">
+          {mr.draft && <span className="text-content-tertiary">Draft: </span>}
+          {mr.title}
+        </h1>
+
+        {/* Badges */}
+        <div className="flex flex-wrap items-center gap-2">
+          <ImpedimentBadge mr={mr} />
         </div>
 
         {/* Tabs */}

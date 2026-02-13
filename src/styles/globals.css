@@ -117,6 +117,21 @@ body {
   outline-offset: 2px;
 }
 
+/* Cursor pointer on interactive elements */
+button,
+[role="button"],
+[role="tab"],
+[role="checkbox"],
+[role="radio"],
+[role="switch"],
+[role="menuitem"],
+[role="option"],
+select,
+label[for],
+summary {
+  cursor: pointer;
+}
+
 /* Prevent text selection during drag operations */
 .no-select {
   user-select: none;
