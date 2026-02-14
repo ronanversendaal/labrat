@@ -28,6 +28,13 @@ import type {
   ResolveDiscussionRequest,
   MergeMrRequest,
   RebaseMrResponse,
+  ProjectSearchResult,
+  PipelineDetail,
+  PipelineStage,
+  PipelineJob,
+  TestReport,
+  PinnedProject,
+  PipelineFilter,
 } from '../types/gitlab';
 import type {
   AIProvider,
@@ -432,6 +439,169 @@ export async function checkSecureStorage(): Promise<SecureStorageStatus> {
 }
 
 // ============================================================================
+// Pipeline Commands
+// ============================================================================
+
+/**
+ * Search for GitLab projects
+ */
+export async function searchProjects(query: string): Promise<ProjectSearchResult[]> {
+  return invokeCommand<ProjectSearchResult[]>('gitlab_search_projects', { query });
+}
+
+/**
+ * List pipelines for a project
+ */
+export async function listPipelines(
+  projectId: number,
+  filter?: PipelineFilter
+): Promise<PipelineDetail[]> {
+  return invokeCommand<PipelineDetail[]>('gitlab_list_pipelines', { projectId, filter });
+}
+
+/**
+ * Get detailed info for a single pipeline
+ */
+export async function getPipelineDetail(
+  projectId: number,
+  pipelineId: number
+): Promise<PipelineDetail> {
+  return invokeCommand<PipelineDetail>('gitlab_get_pipeline_detail', { projectId, pipelineId });
+}
+
+/**
+ * Get stages and jobs for a pipeline
+ */
+export async function getPipelineStages(
+  projectId: number,
+  pipelineId: number
+): Promise<PipelineStage[]> {
+  return invokeCommand<PipelineStage[]>('gitlab_get_pipeline_stages', { projectId, pipelineId });
+}
+
+/**
+ * Get log output for a job
+ */
+export async function getJobLog(projectId: number, jobId: number): Promise<string> {
+  return invokeCommand<string>('gitlab_get_job_log', { projectId, jobId });
+}
+
+/**
+ * Get test report for a pipeline
+ */
+export async function getTestReport(projectId: number, pipelineId: number): Promise<TestReport> {
+  return invokeCommand<TestReport>('gitlab_get_test_report', { projectId, pipelineId });
+}
+
+/**
+ * Retry a failed pipeline
+ */
+export async function retryPipeline(
+  projectId: number,
+  pipelineId: number
+): Promise<PipelineDetail> {
+  return invokeCommand<PipelineDetail>('gitlab_retry_pipeline', { projectId, pipelineId });
+}
+
+/**
+ * Cancel a running pipeline
+ */
+export async function cancelPipeline(
+  projectId: number,
+  pipelineId: number
+): Promise<PipelineDetail> {
+  return invokeCommand<PipelineDetail>('gitlab_cancel_pipeline', { projectId, pipelineId });
+}
+
+/**
+ * Retry a failed job
+ */
+export async function retryJob(projectId: number, jobId: number): Promise<PipelineJob> {
+  return invokeCommand<PipelineJob>('gitlab_retry_job', { projectId, jobId });
+}
+
+/**
+ * Cancel a running job
+ */
+export async function cancelJob(projectId: number, jobId: number): Promise<PipelineJob> {
+  return invokeCommand<PipelineJob>('gitlab_cancel_job', { projectId, jobId });
+}
+
+/**
+ * Download artifacts for a job
+ */
+export async function downloadArtifacts(projectId: number, jobId: number): Promise<string> {
+  return invokeCommand<string>('gitlab_download_artifacts', { projectId, jobId });
+}
+
+/**
+ * Pin a project for pipeline monitoring
+ */
+export async function pinProject(
+  projectId: number,
+  path: string,
+  name: string,
+  webUrl: string,
+  avatarUrl?: string
+): Promise<void> {
+  return invokeCommand<void>('gitlab_pin_project', { projectId, path, name, webUrl, avatarUrl });
+}
+
+/**
+ * Unpin a project
+ */
+export async function unpinProject(projectId: number): Promise<void> {
+  return invokeCommand<void>('gitlab_unpin_project', { projectId });
+}
+
+/**
+ * Get all pinned projects
+ */
+export async function getPinnedProjects(): Promise<PinnedProject[]> {
+  return invokeCommand<PinnedProject[]>('gitlab_get_pinned_projects');
+}
+
+/**
+ * Start polling for pipeline updates
+ */
+export async function startPipelinePolling(
+  projectId: number,
+  pipelineId: number
+): Promise<void> {
+  return invokeCommand<void>('gitlab_start_pipeline_polling', { projectId, pipelineId });
+}
+
+/**
+ * Stop polling for pipeline updates
+ */
+export async function stopPipelinePolling(
+  projectId: number,
+  pipelineId: number
+): Promise<void> {
+  return invokeCommand<void>('gitlab_stop_pipeline_polling', { projectId, pipelineId });
+}
+
+/**
+ * Start streaming job log output
+ */
+export async function startJobLogStreaming(
+  projectId: number,
+  jobId: number
+): Promise<void> {
+  return invokeCommand<void>('gitlab_start_job_log_streaming', { projectId, jobId });
+}
+
+/**
+ * Stop streaming job log output
+ */
+export async function stopJobLogStreaming(
+  projectId: number,
+  jobId: number
+): Promise<void> {
+  return invokeCommand<void>('gitlab_stop_job_log_streaming', { projectId, jobId });
+}
+
+// ============================================================================
 // Window commands
 // ============================================================================
 
@@ -496,6 +666,30 @@ export const settings = {
   get: getSettings,
   update: updateSettings,
   reset: resetSettings,
+};
+
+/**
+ * Pipeline API functions
+ */
+export const pipeline = {
+  searchProjects,
+  listPipelines,
+  getPipelineDetail,
+  getPipelineStages,
+  getJobLog,
+  getTestReport,
+  retryPipeline,
+  cancelPipeline,
+  retryJob,
+  cancelJob,
+  downloadArtifacts,
+  pinProject,
+  unpinProject,
+  getPinnedProjects,
+  startPipelinePolling,
+  stopPipelinePolling,
+  startJobLogStreaming,
+  stopJobLogStreaming,
 };
 
 /**

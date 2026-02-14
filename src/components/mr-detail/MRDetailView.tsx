@@ -22,13 +22,14 @@ import { ImpedimentBadge } from '../mr-list/ImpedimentBadge';
 import { Skeleton, Button, useToast, ApprovalButton, ApprovalStatus } from '../common';
 import { AISuggestionsPanel } from '../ai';
 import { CommentThread, CommentComposer } from '../comments';
+import { PipelinePanel, PipelineStatusIcon } from '../pipeline';
 
 interface MRDetailViewProps {
   mr: MergeRequest;
   onClose?: () => void;
 }
 
-type Tab = 'changes' | 'activity' | 'ai';
+type Tab = 'changes' | 'pipeline' | 'activity' | 'ai';
 
 export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
   const [activeTab, setActiveTab] = useState<Tab>('changes');
@@ -599,6 +600,17 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
           >
             Changes
           </TabButton>
+          {mr.head_pipeline && (
+            <TabButton
+              active={activeTab === 'pipeline'}
+              onClick={() => setActiveTab('pipeline')}
+            >
+              <span className="inline-flex items-center gap-1.5">
+                <PipelineStatusIcon status={mr.head_pipeline.status} size={14} />
+                Pipeline
+              </span>
+            </TabButton>
+          )}
           <TabButton
             active={activeTab === 'activity'}
             onClick={() => setActiveTab('activity')}
@@ -679,6 +691,12 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
               )}
             </div>
           </div>
+          </div>
+        )}
+
+        {activeTab === 'pipeline' && mr.head_pipeline && (
+          <div className="h-full overflow-auto">
+            <PipelinePanel projectId={mr.project_id} pipelineId={mr.head_pipeline.id} />
           </div>
         )}
 

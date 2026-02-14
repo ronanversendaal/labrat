@@ -115,7 +115,10 @@ impl GitLabClient {
                 || async {
                     self.client
                         .get(&url)
-                        .header(header::AUTHORIZATION, format!("Bearer {}", self.access_token))
+                        .header(
+                            header::AUTHORIZATION,
+                            format!("Bearer {}", self.access_token),
+                        )
                         .header(header::ACCEPT, "application/json")
                         .send()
                         .await
@@ -151,7 +154,10 @@ impl GitLabClient {
                 || async {
                     self.client
                         .post(&url)
-                        .header(header::AUTHORIZATION, format!("Bearer {}", self.access_token))
+                        .header(
+                            header::AUTHORIZATION,
+                            format!("Bearer {}", self.access_token),
+                        )
                         .header(header::ACCEPT, "application/json")
                         .header(header::CONTENT_TYPE, "application/json")
                         .json(body)
@@ -189,7 +195,10 @@ impl GitLabClient {
                 || async {
                     self.client
                         .put(&url)
-                        .header(header::AUTHORIZATION, format!("Bearer {}", self.access_token))
+                        .header(
+                            header::AUTHORIZATION,
+                            format!("Bearer {}", self.access_token),
+                        )
                         .header(header::ACCEPT, "application/json")
                         .header(header::CONTENT_TYPE, "application/json")
                         .json(body)
@@ -254,7 +263,10 @@ impl GitLabClient {
                         let delay = RETRY_BASE_DELAY_MS * 2u64.pow(attempt);
                         warn!(
                             "Server error ({}), retrying in {}ms (attempt {}/{})",
-                            status, delay, attempt + 1, MAX_RETRIES
+                            status,
+                            delay,
+                            attempt + 1,
+                            MAX_RETRIES
                         );
 
                         // Sleep with cancellation support
@@ -281,7 +293,10 @@ impl GitLabClient {
                             let delay = RETRY_BASE_DELAY_MS * 2u64.pow(attempt);
                             warn!(
                                 "Connection error: {}, retrying in {}ms (attempt {}/{})",
-                                e, delay, attempt + 1, MAX_RETRIES
+                                e,
+                                delay,
+                                attempt + 1,
+                                MAX_RETRIES
                             );
 
                             // Sleep with cancellation support
@@ -396,9 +411,12 @@ impl GitLabClient {
             }
 
             let separator = if path.contains('?') { '&' } else { '?' };
-            let paginated_path = format!("{}{}per_page={}&page={}", path, separator, per_page, page);
+            let paginated_path =
+                format!("{}{}per_page={}&page={}", path, separator, per_page, page);
 
-            let items: Vec<T> = self.get_with_cancel(&paginated_path, cancel_token.clone()).await?;
+            let items: Vec<T> = self
+                .get_with_cancel(&paginated_path, cancel_token.clone())
+                .await?;
 
             if items.is_empty() {
                 break;
@@ -428,7 +446,10 @@ impl GitLabClient {
                 || async {
                     self.client
                         .get(&url)
-                        .header(header::AUTHORIZATION, format!("Bearer {}", self.access_token))
+                        .header(
+                            header::AUTHORIZATION,
+                            format!("Bearer {}", self.access_token),
+                        )
                         .send()
                         .await
                 },
@@ -438,7 +459,10 @@ impl GitLabClient {
 
         let status = response.status();
         match status {
-            StatusCode::OK => response.text().await.map_err(GitLabClientError::RequestFailed),
+            StatusCode::OK => response
+                .text()
+                .await
+                .map_err(GitLabClientError::RequestFailed),
             StatusCode::UNAUTHORIZED => Err(GitLabClientError::Unauthorized),
             StatusCode::FORBIDDEN => Err(GitLabClientError::Forbidden),
             StatusCode::NOT_FOUND => Err(GitLabClientError::NotFound),
@@ -468,7 +492,10 @@ impl GitLabClient {
         // First request with auth
         let response = client
             .get(url)
-            .header(header::AUTHORIZATION, format!("Bearer {}", self.access_token))
+            .header(
+                header::AUTHORIZATION,
+                format!("Bearer {}", self.access_token),
+            )
             .send()
             .await
             .map_err(GitLabClientError::RequestFailed)?;
@@ -501,8 +528,85 @@ impl GitLabClient {
 
         match status {
             StatusCode::OK => {
-                let bytes = response.bytes().await.map_err(GitLabClientError::RequestFailed)?;
+                let bytes = response
+                    .bytes()
+                    .await
+                    .map_err(GitLabClientError::RequestFailed)?;
                 Ok(bytes.to_vec())
+            }
+            StatusCode::UNAUTHORIZED => Err(GitLabClientError::Unauthorized),
+            StatusCode::FORBIDDEN => Err(GitLabClientError::Forbidden),
+            StatusCode::NOT_FOUND => Err(GitLabClientError::NotFound),
+            _ => {
+                let body = response.text().await.unwrap_or_default();
+                Err(GitLabClientError::ApiError {
+                    status: status.as_u16(),
+                    message: body,
+                })
+            }
+        }
+    }
+
+    /// Make a GET request that returns raw text with a Range header for partial content.
+    /// Returns (content, new_byte_offset, is_complete).
+    /// The `Content-Range` header tells us the total size; if our offset reaches it the job log is complete.
+    pub async fn get_text_with_range(
+        &self,
+        url: &str,
+        offset: u64,
+    ) -> Result<(String, u64, bool), GitLabClientError> {
+        debug!("GET (text range) {} offset={}", url, offset);
+
+        let response = self
+            .execute_with_retry_and_cancel(
+                || async {
+                    self.client
+                        .get(url)
+                        .header(
+                            header::AUTHORIZATION,
+                            format!("Bearer {}", self.access_token),
+                        )
+                        .header(header::RANGE, format!("bytes={}-", offset))
+                        .send()
+                        .await
+                },
+                None,
+            )
+            .await?;
+
+        let status = response.status();
+
+        // GitLab returns 416 Range Not Satisfiable when offset is at end
+        if status == StatusCode::RANGE_NOT_SATISFIABLE {
+            return Ok((String::new(), offset, false));
+        }
+
+        match status {
+            StatusCode::OK | StatusCode::PARTIAL_CONTENT => {
+                // Check Content-Range to determine total size
+                let content_range = response
+                    .headers()
+                    .get(header::CONTENT_RANGE)
+                    .and_then(|v| v.to_str().ok())
+                    .map(String::from);
+
+                let body = response
+                    .text()
+                    .await
+                    .map_err(GitLabClientError::RequestFailed)?;
+                let new_offset = offset + body.len() as u64;
+
+                // Parse Content-Range: bytes start-end/total
+                let complete = content_range
+                    .as_deref()
+                    .and_then(|cr| {
+                        let total = cr.rsplit('/').next()?;
+                        total.parse::<u64>().ok()
+                    })
+                    .map(|total| new_offset >= total)
+                    .unwrap_or(false);
+
+                Ok((body, new_offset, complete))
             }
             StatusCode::UNAUTHORIZED => Err(GitLabClientError::Unauthorized),
             StatusCode::FORBIDDEN => Err(GitLabClientError::Forbidden),
@@ -521,7 +625,6 @@ impl GitLabClient {
     pub fn instance_url(&self) -> &str {
         self.base_url.trim_end_matches("/api/v4")
     }
-
 }
 
 /// Request manager for tracking and cancelling in-flight requests

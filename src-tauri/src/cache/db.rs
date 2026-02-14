@@ -85,7 +85,7 @@ impl Database {
         // 002: Theme system — add font columns and migrate theme values
         // Run each statement individually since SQLite doesn't support multi-statement ALTER TABLE
         let has_font_ui: bool = sqlx::query_scalar::<_, i32>(
-            "SELECT COUNT(*) FROM pragma_table_info('settings') WHERE name = 'font_family_ui'"
+            "SELECT COUNT(*) FROM pragma_table_info('settings') WHERE name = 'font_family_ui'",
         )
         .fetch_one(&self.pool)
         .await
@@ -95,14 +95,49 @@ impl Database {
         if !has_font_ui {
             // Migrate old theme values
             sqlx::query("UPDATE settings SET theme = 'default-light' WHERE theme = 'light'")
-                .execute(&self.pool).await.map_err(|e| DbError::Migration(e.to_string()))?;
+                .execute(&self.pool)
+                .await
+                .map_err(|e| DbError::Migration(e.to_string()))?;
             sqlx::query("UPDATE settings SET theme = 'default-dark' WHERE theme = 'dark'")
-                .execute(&self.pool).await.map_err(|e| DbError::Migration(e.to_string()))?;
+                .execute(&self.pool)
+                .await
+                .map_err(|e| DbError::Migration(e.to_string()))?;
 
             sqlx::query("ALTER TABLE settings ADD COLUMN font_family_ui TEXT")
-                .execute(&self.pool).await.map_err(|e| DbError::Migration(e.to_string()))?;
+                .execute(&self.pool)
+                .await
+                .map_err(|e| DbError::Migration(e.to_string()))?;
             sqlx::query("ALTER TABLE settings ADD COLUMN font_family_code TEXT")
-                .execute(&self.pool).await.map_err(|e| DbError::Migration(e.to_string()))?;
+                .execute(&self.pool)
+                .await
+                .map_err(|e| DbError::Migration(e.to_string()))?;
+        }
+
+        // 004: Pipeline support tables
+        let migration_004 = include_str!("../../migrations/004_pipeline_support.sql");
+        sqlx::query(migration_004)
+            .execute(&self.pool)
+            .await
+            .map_err(|e| DbError::Migration(e.to_string()))?;
+
+        // 005: Add iid and name columns to pipelines
+        let has_pipeline_iid: bool = sqlx::query_scalar::<_, i32>(
+            "SELECT COUNT(*) FROM pragma_table_info('pipelines') WHERE name = 'iid'",
+        )
+        .fetch_one(&self.pool)
+        .await
+        .map(|c| c > 0)
+        .unwrap_or(false);
+
+        if !has_pipeline_iid {
+            sqlx::query("ALTER TABLE pipelines ADD COLUMN iid INTEGER")
+                .execute(&self.pool)
+                .await
+                .map_err(|e| DbError::Migration(e.to_string()))?;
+            sqlx::query("ALTER TABLE pipelines ADD COLUMN name TEXT")
+                .execute(&self.pool)
+                .await
+                .map_err(|e| DbError::Migration(e.to_string()))?;
         }
 
         info!("Database migrations completed");

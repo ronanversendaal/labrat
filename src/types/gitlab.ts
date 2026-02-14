@@ -428,3 +428,140 @@ export interface MergeMrRequest {
 export interface RebaseMrResponse {
   rebase_in_progress: boolean;
 }
+
+// ============================================================================
+// Pipeline Types
+// ============================================================================
+
+/** Detailed pipeline information */
+export interface PipelineDetail {
+  id: number;
+  iid: number | null;
+  project_id: number;
+  ref_name: string;
+  sha: string;
+  status: PipelineStatus;
+  source: string | null;
+  name: string | null;
+  created_at: string;
+  updated_at: string;
+  started_at: string | null;
+  finished_at: string | null;
+  duration: number | null;
+  coverage: number | null;
+  web_url: string;
+  user: Author | null;
+}
+
+/** A job within a pipeline */
+export interface PipelineJob {
+  id: number;
+  name: string;
+  stage: string;
+  status: PipelineStatus;
+  created_at: string;
+  started_at: string | null;
+  finished_at: string | null;
+  duration: number | null;
+  coverage: number | null;
+  allow_failure: boolean;
+  failure_reason: string | null;
+  web_url: string;
+  artifacts: JobArtifact[];
+  runner: { id: number; description: string; tags: string[] } | null;
+}
+
+/** An artifact produced by a job */
+export interface JobArtifact {
+  file_type: string;
+  size: number;
+  filename: string;
+  file_format: string | null;
+}
+
+/** A stage in a pipeline, containing jobs */
+export interface PipelineStage {
+  name: string;
+  status: PipelineStatus;
+  jobs: PipelineJob[];
+}
+
+/** Test report for a pipeline */
+export interface TestReport {
+  total_time: number;
+  total_count: number;
+  success_count: number;
+  failed_count: number;
+  skipped_count: number;
+  error_count: number;
+  test_suites: TestSuite[];
+}
+
+/** A test suite within a test report */
+export interface TestSuite {
+  name: string;
+  total_time: number;
+  total_count: number;
+  success_count: number;
+  failed_count: number;
+  skipped_count: number;
+  error_count: number;
+  test_cases: TestCase[];
+}
+
+/** A single test case within a test suite */
+export interface TestCase {
+  status: 'success' | 'failed' | 'skipped' | 'error';
+  name: string;
+  classname: string;
+  execution_time: number;
+  system_output: string | null;
+  stack_trace: string | null;
+}
+
+/** A pinned project for pipeline monitoring */
+export interface PinnedProject {
+  account_id: string;
+  project_id: number;
+  path_with_namespace: string;
+  name: string;
+  web_url: string;
+  avatar_url: string | null;
+  pinned_at: string;
+}
+
+/** A project returned from search */
+export interface ProjectSearchResult {
+  id: number;
+  path_with_namespace: string;
+  name: string;
+  description: string | null;
+  web_url: string;
+  avatar_url: string | null;
+  last_activity_at: string;
+}
+
+/** Filter options for listing pipelines */
+export interface PipelineFilter {
+  ref_name?: string;
+  status?: PipelineStatus;
+  source?: string;
+  username?: string;
+  updated_after?: string;
+}
+
+/** Event payload for pipeline updates */
+export interface PipelineUpdateEvent {
+  project_id: number;
+  pipeline: PipelineDetail;
+  jobs: PipelineJob[];
+}
+
+/** Event payload for job log streaming */
+export interface JobLogUpdateEvent {
+  project_id: number;
+  job_id: number;
+  log_content: string;
+  is_complete: boolean;
+  byte_offset: number;
+}

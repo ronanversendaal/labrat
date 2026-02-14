@@ -13,6 +13,7 @@ pub mod utils;
 pub mod web;
 
 use cache::db::Database;
+use gitlab::pipeline_poller::PipelinePoller;
 use serde::{Deserialize, Serialize};
 use settings::credentials::CredentialCache;
 use sqlx::SqlitePool;
@@ -26,6 +27,8 @@ pub struct AppState {
     pub db_pool: SqlitePool,
     /// In-memory credential cache to avoid repeated OS keychain prompts
     pub credential_cache: CredentialCache,
+    /// Pipeline polling engine
+    pub pipeline_poller: PipelinePoller,
 }
 
 impl AppState {
@@ -37,6 +40,7 @@ impl AppState {
         Ok(Self {
             db_pool: db.pool().clone(),
             credential_cache: CredentialCache::new(),
+            pipeline_poller: PipelinePoller::new(),
         })
     }
 }
@@ -201,9 +205,9 @@ pub fn run() {
                     if let Ok(ns_win_ptr) = window.ns_window() {
                         let ns_win = unsafe { &*(ns_win_ptr as *const NSWindow) };
                         let color = NSColor::colorWithRed_green_blue_alpha(
-                            17.0 / 255.0,  // #11
-                            24.0 / 255.0,  // #18
-                            39.0 / 255.0,  // #27
+                            17.0 / 255.0, // #11
+                            24.0 / 255.0, // #18
+                            39.0 / 255.0, // #27
                             1.0,
                         );
                         ns_win.setBackgroundColor(Some(&color));
@@ -250,6 +254,25 @@ pub fn run() {
             commands::gitlab::gitlab_apply_suggestion,
             commands::gitlab::gitlab_merge_mr,
             commands::gitlab::gitlab_rebase_mr,
+            // Pipeline commands
+            commands::pipeline::gitlab_search_projects,
+            commands::pipeline::gitlab_list_pipelines,
+            commands::pipeline::gitlab_get_pipeline_detail,
+            commands::pipeline::gitlab_get_pipeline_stages,
+            commands::pipeline::gitlab_get_job_log,
+            commands::pipeline::gitlab_get_test_report,
+            commands::pipeline::gitlab_retry_pipeline,
+            commands::pipeline::gitlab_cancel_pipeline,
+            commands::pipeline::gitlab_retry_job,
+            commands::pipeline::gitlab_cancel_job,
+            commands::pipeline::gitlab_download_artifacts,
+            commands::pipeline::gitlab_pin_project,
+            commands::pipeline::gitlab_unpin_project,
+            commands::pipeline::gitlab_get_pinned_projects,
+            commands::pipeline::gitlab_start_pipeline_polling,
+            commands::pipeline::gitlab_stop_pipeline_polling,
+            commands::pipeline::gitlab_start_job_log_streaming,
+            commands::pipeline::gitlab_stop_job_log_streaming,
             // AI commands
             commands::ai::ai_list_providers,
             commands::ai::ai_add_provider,

@@ -8,6 +8,8 @@ pub mod client;
 pub mod comments;
 pub mod diffs;
 pub mod merge_requests;
+pub mod pipeline_poller;
+pub mod pipelines;
 pub mod types;
 pub mod user;
 

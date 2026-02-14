@@ -4,6 +4,7 @@ import { AppLayout } from './components/layout';
 import { ToastProvider, KeyboardHelpModal, useKeyboardHelpModal } from './components/common';
 import { MRListPage } from './components/mr-list';
 import { MyMRsPage } from './components/my-mrs';
+import { PipelinesPage } from './components/pipelines';
 import { AddAccountModal, SettingsModal } from './components/settings';
 import { useUIStore, useMRStore } from './stores';
 import { useKeyboardShortcut } from './hooks/useKeyboardShortcuts';
@@ -80,6 +81,17 @@ function AppContent() {
     category: 'global',
   });
 
+  // Register "Pipelines" shortcut (Shift+P)
+  const handleGoToPipelines = useCallback(() => {
+    setActiveView('pipelines');
+  }, [setActiveView]);
+
+  useKeyboardShortcut(['shift+p'], handleGoToPipelines, {
+    label: 'Pipelines',
+    description: 'Go to pipeline browser',
+    category: 'global',
+  });
+
   // Register refresh shortcut (Cmd+R on Mac, Ctrl+R on Windows/Linux)
   const handleRefresh = useCallback(() => {
     queryClientInstance.invalidateQueries({ queryKey: ['mergeRequests'] });
@@ -94,7 +106,13 @@ function AppContent() {
   return (
     <>
       <AppLayout>
-        {activeView === 'my-reviews' ? <MRListPage /> : <MyMRsPage />}
+        {activeView === 'pipelines' ? (
+          <PipelinesPage />
+        ) : activeView === 'my-reviews' ? (
+          <MRListPage />
+        ) : (
+          <MyMRsPage />
+        )}
       </AppLayout>
       <KeyboardHelpModal isOpen={keyboardHelp.isOpen} onClose={keyboardHelp.close} />
       <AddAccountModal />

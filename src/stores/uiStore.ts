@@ -2,7 +2,7 @@ import { create } from 'zustand';
 
 type ModalType = 'addAccount' | 'settings' | 'aiProvider' | 'postComment' | 'saveFilterPreset' | null;
 
-export type ActiveView = 'my-reviews' | 'my-mrs';
+export type ActiveView = 'my-reviews' | 'my-mrs' | 'pipelines';
 
 interface UIState {
   // Active view

@@ -133,6 +133,26 @@ export function AppLayout({ children }: AppLayoutProps) {
               }}
               badge={readyCount}
             />
+            <SidebarItem
+              icon={
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  {/* Pipeline: connected stage nodes */}
+                  <circle cx="4" cy="12" r="2" />
+                  <circle cx="12" cy="6" r="2" />
+                  <circle cx="12" cy="18" r="2" />
+                  <circle cx="20" cy="12" r="2" />
+                  <path strokeLinecap="round" d="M6 12h4M14 6l4 4M14 18l4-4" />
+                </svg>
+              }
+              label="Pipelines"
+              active={activeView === 'pipelines'}
+              collapsed={sidebarCollapsed}
+              onClick={() => {
+                setActiveView('pipelines');
+                closeDetail();
+                setSelectedMr(null);
+              }}
+            />
           </SidebarSection>
 
           <SidebarSection title="Settings" collapsed={sidebarCollapsed}>

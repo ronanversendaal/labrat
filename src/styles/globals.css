@@ -671,3 +671,46 @@ pre.suggestion code::before {
   padding: 1px 4px;
   border-radius: 3px;
 }
+
+/* ============================================
+   ANSI Log Color Classes (anser use_classes)
+   ============================================ */
+
+.anser-container {
+  font-family: var(--th-font-code);
+}
+
+/* Foreground colors — mapped to theme-friendly values */
+.ansi-black-fg   { color: var(--th-content-tertiary); }
+.ansi-red-fg     { color: var(--th-negative); }
+.ansi-green-fg   { color: var(--th-positive); }
+.ansi-yellow-fg  { color: var(--th-caution); }
+.ansi-blue-fg    { color: var(--th-primary); }
+.ansi-magenta-fg { color: #c678dd; }
+.ansi-cyan-fg    { color: #56b6c2; }
+.ansi-white-fg   { color: var(--th-content); }
+
+/* Bright foreground */
+.ansi-bright-black-fg   { color: var(--th-content-secondary); }
+.ansi-bright-red-fg     { color: var(--th-negative-text); }
+.ansi-bright-green-fg   { color: var(--th-positive-text); }
+.ansi-bright-yellow-fg  { color: var(--th-caution-text); }
+.ansi-bright-blue-fg    { color: var(--th-primary-text); }
+.ansi-bright-magenta-fg { color: #e06c75; }
+.ansi-bright-cyan-fg    { color: #7ec8d3; }
+.ansi-bright-white-fg   { color: var(--th-content); }
+
+/* Background colors */
+.ansi-black-bg   { background-color: var(--th-surface-inset); }
+.ansi-red-bg     { background-color: var(--th-negative-muted); }
+.ansi-green-bg   { background-color: var(--th-positive-muted); }
+.ansi-yellow-bg  { background-color: var(--th-caution-muted); }
+.ansi-blue-bg    { background-color: var(--th-primary-muted); }
+.ansi-magenta-bg { background-color: rgba(198, 120, 221, 0.2); }
+.ansi-cyan-bg    { background-color: rgba(86, 182, 194, 0.2); }
+.ansi-white-bg   { background-color: var(--th-surface-alt); }
+
+/* Text decorations */
+.ansi-bold       { font-weight: 700; }
+.ansi-italic     { font-style: italic; }
+.ansi-underline  { text-decoration: underline; }

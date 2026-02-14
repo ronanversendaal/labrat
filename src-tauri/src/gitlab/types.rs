@@ -576,3 +576,181 @@ pub struct MergeMrRequest {
 pub struct RebaseMrResponse {
     pub rebase_in_progress: bool,
 }
+
+// ============================================================================
+// Pipeline types
+// ============================================================================
+
+/// Detailed pipeline information
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PipelineDetail {
+    pub id: i64,
+    #[serde(default)]
+    pub iid: Option<i64>,
+    pub project_id: i64,
+    #[serde(alias = "ref")]
+    pub ref_name: String,
+    pub sha: String,
+    pub status: PipelineStatus,
+    pub source: Option<String>,
+    #[serde(default)]
+    pub name: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: Option<DateTime<Utc>>,
+    pub started_at: Option<DateTime<Utc>>,
+    pub finished_at: Option<DateTime<Utc>>,
+    pub duration: Option<f64>,
+    pub queued_duration: Option<f64>,
+    pub web_url: String,
+    pub user: Option<Author>,
+}
+
+impl PipelineDetail {
+    /// Whether this pipeline is in a terminal state
+    pub fn is_terminal(&self) -> bool {
+        matches!(
+            self.status,
+            PipelineStatus::Success
+                | PipelineStatus::Failed
+                | PipelineStatus::Canceled
+                | PipelineStatus::Skipped
+        )
+    }
+}
+
+/// A job within a pipeline
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PipelineJob {
+    pub id: i64,
+    pub name: String,
+    pub stage: String,
+    pub status: PipelineStatus,
+    #[serde(alias = "ref")]
+    pub ref_name: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub started_at: Option<DateTime<Utc>>,
+    pub finished_at: Option<DateTime<Utc>>,
+    pub duration: Option<f64>,
+    pub queued_duration: Option<f64>,
+    pub web_url: String,
+    pub runner: Option<serde_json::Value>,
+    #[serde(default)]
+    pub artifacts: Vec<JobArtifact>,
+    #[serde(default)]
+    pub allow_failure: bool,
+    pub failure_reason: Option<String>,
+    pub pipeline: Option<JobPipeline>,
+}
+
+/// Simplified pipeline reference within a job
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct JobPipeline {
+    pub id: i64,
+    pub project_id: i64,
+    pub status: PipelineStatus,
+}
+
+/// An artifact produced by a job
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct JobArtifact {
+    pub file_type: String,
+    pub size: Option<i64>,
+    pub filename: Option<String>,
+    #[serde(default)]
+    pub file_format: Option<String>,
+}
+
+/// Grouped stage with jobs
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PipelineStage {
+    pub name: String,
+    pub status: PipelineStatus,
+    pub jobs: Vec<PipelineJob>,
+}
+
+/// Test report for a pipeline
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TestReport {
+    pub total_time: Option<f64>,
+    pub total_count: i32,
+    pub success_count: i32,
+    pub failed_count: i32,
+    pub skipped_count: i32,
+    pub error_count: i32,
+    pub test_suites: Vec<TestSuite>,
+}
+
+/// A test suite within a test report
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TestSuite {
+    pub name: String,
+    pub total_time: Option<f64>,
+    pub total_count: i32,
+    pub success_count: i32,
+    pub failed_count: i32,
+    pub skipped_count: i32,
+    pub error_count: i32,
+    pub test_cases: Vec<TestCase>,
+}
+
+/// A single test case within a suite
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TestCase {
+    pub status: String,
+    pub name: String,
+    pub classname: Option<String>,
+    pub execution_time: Option<f64>,
+    pub system_output: Option<String>,
+    pub stack_trace: Option<String>,
+}
+
+/// A pinned project in the pipeline browser
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PinnedProject {
+    pub project_id: i64,
+    pub account_id: String,
+    pub path_with_namespace: String,
+    pub name: String,
+    pub web_url: String,
+    pub avatar_url: Option<String>,
+    pub pinned_at: DateTime<Utc>,
+}
+
+/// A project search result
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProjectSearchResult {
+    pub id: i64,
+    pub path_with_namespace: String,
+    pub name: String,
+    pub name_with_namespace: Option<String>,
+    pub description: Option<String>,
+    pub web_url: String,
+    pub avatar_url: Option<String>,
+    pub last_activity_at: Option<DateTime<Utc>>,
+}
+
+/// Filter options for listing pipelines
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct PipelineFilter {
+    pub status: Option<PipelineStatus>,
+    pub ref_name: Option<String>,
+    pub source: Option<String>,
+    pub username: Option<String>,
+}
+
+/// Event emitted when a pipeline is updated
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PipelineUpdateEvent {
+    pub project_id: i64,
+    pub pipeline: PipelineDetail,
+    pub jobs: Vec<PipelineJob>,
+}
+
+/// Event emitted when new job log content is available
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct JobLogUpdateEvent {
+    pub job_id: i64,
+    pub content: String,
+    pub offset: u64,
+    pub complete: bool,
+}

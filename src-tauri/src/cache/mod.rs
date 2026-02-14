@@ -7,3 +7,4 @@ pub mod db;
 pub mod diff_cache;
 pub mod filter_presets;
 pub mod mr_cache;
+pub mod pipeline_cache;
