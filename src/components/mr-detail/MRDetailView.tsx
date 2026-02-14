@@ -5,7 +5,7 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 // open() is dynamically imported only in Tauri mode
-import type { MergeRequest, Discussion, MRChangeSnapshot } from '../../types';
+import type { MergeRequest, MRChangeSnapshot } from '../../types';
 import { useDiff, useDiscussions, useMergeRequest, useAccounts, useApproveMR, useApprovalState, useMergeMR, useRebaseMR } from '../../hooks/useGitLab';
 import { isMergeReady } from '../../utils/mergeReadiness';
 import { useMRStore, isFileViewedSelector } from '../../stores/mrStore';
@@ -21,8 +21,8 @@ import { CollapsibleDescription } from './CollapsibleDescription';
 import { ImpedimentBadge } from '../mr-list/ImpedimentBadge';
 import { Skeleton, Button, useToast, ApprovalButton, ApprovalStatus } from '../common';
 import { AISuggestionsPanel } from '../ai';
-import { CommentThread, CommentComposer } from '../comments';
 import { PipelinePanel, PipelineStatusIcon } from '../pipeline';
+import { ActivityTimeline } from '../activity';
 
 interface MRDetailViewProps {
   mr: MergeRequest;
@@ -701,11 +701,12 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
         )}
 
         {activeTab === 'activity' && (
-          <ActivityTab
+          <ActivityTimeline
             discussions={discussions || []}
             isLoading={isLoadingDiscussions}
             projectId={mr.project_id}
             mrIid={mr.iid}
+            mrAuthor={mr.author}
           />
         )}
 
@@ -762,118 +763,6 @@ function TabButton({
         </span>
       )}
     </button>
-  );
-}
-
-/**
- * Activity tab content with discussion threads and comment composer
- */
-function ActivityTab({
-  discussions,
-  isLoading,
-  projectId,
-  mrIid,
-}: {
-  discussions: Discussion[];
-  isLoading: boolean;
-  projectId: number;
-  mrIid: number;
-}) {
-  const [showComposer, setShowComposer] = useState(false);
-
-  // Separate unresolved and resolved discussions
-  const unresolvedDiscussions = discussions.filter(
-    (d) => d.notes.some((n) => n.resolvable && !n.resolved)
-  );
-  const resolvedDiscussions = discussions.filter(
-    (d) => !d.notes.some((n) => n.resolvable && !n.resolved)
-  );
-
-  if (isLoading) {
-    return (
-      <div className="p-6 space-y-4">
-        <Skeleton variant="rectangular" height={100} />
-        <Skeleton variant="rectangular" height={100} />
-      </div>
-    );
-  }
-
-  return (
-    <div className="p-6 overflow-auto h-full">
-      {/* New comment button */}
-      <div className="mb-6">
-        {showComposer ? (
-          <div className="border border-edge rounded-lg p-4">
-            <h3 className="text-sm font-medium text-content mb-3">
-              New Comment
-            </h3>
-            <CommentComposer
-              projectId={projectId}
-              mrIid={mrIid}
-              onSuccess={() => setShowComposer(false)}
-              onCancel={() => setShowComposer(false)}
-              placeholder="Write a general comment on this merge request..."
-            />
-          </div>
-        ) : (
-          <Button
-            variant="secondary"
-            onClick={() => setShowComposer(true)}
-            className="w-full"
-          >
-            + Add Comment
-          </Button>
-        )}
-      </div>
-
-      {/* Unresolved discussions */}
-      {unresolvedDiscussions.length > 0 && (
-        <div className="mb-8">
-          <h3 className="text-sm font-semibold text-content-muted mb-4 flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-yellow-500" />
-            Unresolved ({unresolvedDiscussions.length})
-          </h3>
-          <div className="space-y-4">
-            {unresolvedDiscussions.map((discussion) => (
-              <CommentThread
-                key={discussion.id}
-                discussion={discussion}
-                projectId={projectId}
-                mrIid={mrIid}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Resolved discussions */}
-      {resolvedDiscussions.length > 0 && (
-        <div>
-          <h3 className="text-sm font-semibold text-content-secondary mb-4 flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-green-500" />
-            Resolved ({resolvedDiscussions.length})
-          </h3>
-          <div className="space-y-4">
-            {resolvedDiscussions.map((discussion) => (
-              <CommentThread
-                key={discussion.id}
-                discussion={discussion}
-                projectId={projectId}
-                mrIid={mrIid}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Empty state */}
-      {discussions.length === 0 && (
-        <div className="text-center text-gray-500 py-8">
-          <p>No discussions yet</p>
-          <p className="text-sm mt-1">Start a conversation by adding a comment above</p>
-        </div>
-      )}
-    </div>
   );
 }
 

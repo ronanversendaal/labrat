@@ -167,6 +167,8 @@ export interface Note {
   updated_at: string;
   resolved: boolean;
   resolvable: boolean;
+  system: boolean;
+  note_type: string | null;
   position: DiffPosition | null;
 }
 

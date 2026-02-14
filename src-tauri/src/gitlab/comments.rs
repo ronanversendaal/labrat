@@ -29,6 +29,10 @@ struct GitLabNote {
     resolvable: bool,
     #[serde(default)]
     resolved: bool,
+    #[serde(default)]
+    system: bool,
+    #[serde(default, rename = "type")]
+    note_type: Option<String>,
     position: Option<GitLabPosition>,
 }
 
@@ -113,6 +117,8 @@ impl GitLabClient {
                         updated_at: n.updated_at.parse().unwrap_or_default(),
                         resolvable: n.resolvable,
                         resolved: n.resolved,
+                        system: n.system,
+                        note_type: n.note_type,
                         position: n.position.map(|p| DiffPosition {
                             old_path: p.old_path,
                             new_path: p.new_path,
@@ -188,6 +194,8 @@ impl GitLabClient {
                     updated_at: n.updated_at.parse().unwrap_or_default(),
                     resolvable: n.resolvable,
                     resolved: n.resolved,
+                    system: n.system,
+                    note_type: n.note_type,
                     position: n.position.map(|p| DiffPosition {
                         old_path: p.old_path,
                         new_path: p.new_path,
@@ -247,6 +255,8 @@ impl GitLabClient {
             updated_at: response.updated_at.parse().unwrap_or_default(),
             resolvable: response.resolvable,
             resolved: response.resolved,
+            system: response.system,
+            note_type: response.note_type,
             position: response.position.map(|p| DiffPosition {
                 old_path: p.old_path,
                 new_path: p.new_path,

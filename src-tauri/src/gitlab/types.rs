@@ -289,6 +289,10 @@ pub struct Note {
     pub resolved: bool,
     #[serde(default)]
     pub resolvable: bool,
+    #[serde(default)]
+    pub system: bool,
+    #[serde(default)]
+    pub note_type: Option<String>,
     pub position: Option<DiffPosition>,
 }
 
