@@ -1,38 +1,56 @@
-# GitLab MR Review App
+# LabRat
 
 A native desktop application for reviewing GitLab merge requests with AI-powered code suggestions. Built with Tauri, React, and Rust for a fast, secure, cross-platform experience.
 
 ## Features
 
-### Core Functionality
-- **Unified MR Dashboard** - View all merge requests assigned to you across multiple GitLab projects in one place
-- **Rich MR Details** - See project name, author, labels, milestones, and linked issues at a glance
-- **Impediment Indicators** - Clear visual indicators for merge conflicts, failing pipelines, unresolved threads, and draft status
-- **Syntax-Highlighted Diffs** - View code changes with proper syntax highlighting in unified or split view modes
+### Three Main Views
+- **My Reviews** — Merge requests where you're a reviewer, with impediment indicators (conflicts, failing pipelines, unresolved threads, draft status)
+- **My MRs** — Your authored merge requests with merge-readiness detection
+- **Pipelines Browser** — Browse pipelines across projects with stage visualization, job logs, test reports, and artifact downloads
 
-### Filtering & Search
-- Filter by project, author, or impediment status
-- Full-text search across MR titles and descriptions
-- Save custom filter presets for quick access
-- Sort by creation date, update date, or priority
+### MR Detail Tabs
+- **Changes** — Monaco-powered diffs (split or unified) with inline comment threads, code suggestions, and file tree with viewed-state tracking
+- **Pipeline** — Pipeline stage visualization with job log streaming (ANSI color support) and test reports
+- **Activity** — Chronological timeline of all MR events (comments, approvals, pushes, status changes)
+- **AI** — AI-powered code review with categorized suggestions
 
-### AI-Powered Code Review
-- Analyze diffs with AI to get improvement suggestions
+### Diff & Code Review
+- Monaco Editor split/unified diffs with syntax highlighting
+- Inline comment threads with rich text editor (Tiptap)
+- Code suggestions with diff preview
+- File tree with viewed-state tracking
+- Quick file picker with fuzzy search (`Cmd/Ctrl+P`)
+- Virtualized rendering for large diffs (10,000+ lines)
+
+### Pipelines
+- Project sidebar for browsing pipelines across accounts
+- Pipeline stage visualization with job status
+- Job log streaming with ANSI color rendering
+- Test report summaries
+- Artifact download to `~/Downloads`
+
+### AI Code Review
+- Support for Claude, GPT-4, and local models
 - Categorized suggestions: bugs, code quality, performance, best practices
-- One-click to add AI suggestions as comments on the MR
-- Support for Claude CLI and direct API integration
+- Batch-post AI suggestions as comments to GitLab
 
-### Keyboard-Driven Workflow
-- GitLab-compatible keyboard shortcuts
-- Full navigation without mouse
-- Quick file picker with fuzzy search (Cmd/Ctrl+P)
-- Customizable shortcuts
+### Customization
+- 16 themes (8 dark + 8 light) plus system auto-detect
+  - Dark: Default Dark, Kanagawa Wave, Catppuccin Mocha, Rosé Pine, Tokyo Night, Nord, Everforest Dark, Dracula
+  - Light: Default Light, GitHub Light, Solarized Light, Gruvbox Light, Everforest Light, Catppuccin Latte, Rosé Pine Dawn, One Light
+- UI and code font selection with live preview
+- Configurable font size
+
+### Multi-Account Support
+- Multiple GitLab instances (gitlab.com and self-hosted)
+- Credentials stored securely in system keychain
 
 ### Performance
-- Virtualized rendering for large diffs (10,000+ lines)
+- SQLite caching for fast loading and offline access
+- Virtualized rendering for large diffs
 - Request deduplication and batching
-- Local SQLite caching for offline access
-- Progressive loading with skeleton states
+- Auto-updates via GitHub releases
 
 ## Tech Stack
 
@@ -42,6 +60,8 @@ A native desktop application for reviewing GitLab merge requests with AI-powered
 | Frontend | [React 19](https://react.dev/) + [TypeScript](https://www.typescriptlang.org/) |
 | Styling | [Tailwind CSS 4](https://tailwindcss.com/) |
 | State | [Zustand](https://zustand-demo.pmnd.rs/) + [TanStack Query](https://tanstack.com/query) |
+| Diff Editor | [Monaco Editor](https://microsoft.github.io/monaco-editor/) |
+| Rich Text | [Tiptap](https://tiptap.dev/) |
 | Backend | [Rust](https://www.rust-lang.org/) |
 | Database | [SQLite](https://www.sqlite.org/) via [sqlx](https://github.com/launchbadge/sqlx) |
 | HTTP | [reqwest](https://github.com/seanmonstar/reqwest) |
@@ -65,8 +85,8 @@ A native desktop application for reviewing GitLab merge requests with AI-powered
 ### 1. Clone and Install
 
 ```bash
-git clone https://github.com/your-org/gitlab-mr-review-app.git
-cd gitlab-mr-review-app
+git clone https://github.com/ronanversendaal/labrat.git
+cd labrat
 
 # Install frontend dependencies
 pnpm install
@@ -85,7 +105,7 @@ This starts the Vite dev server and launches the app with hot reload.
 
 ### 3. Configure GitLab
 
-1. Open Settings (gear icon or press `,`)
+1. Open Settings (`Cmd/Ctrl+,`)
 2. Navigate to "GitLab Accounts"
 3. Click "Add Account" and enter:
    - **Instance URL**: `https://gitlab.com` or your self-hosted URL
@@ -106,20 +126,26 @@ pnpm tauri build
 ```
 
 Build outputs:
-- **macOS**: `src-tauri/target/release/bundle/macos/GitLab MR Review.app`
-- **Linux**: `src-tauri/target/release/bundle/appimage/gitlab-mr-review_*.AppImage`
-- **Windows**: `src-tauri/target/release/bundle/msi/GitLab MR Review_*.msi`
+- **macOS**: `src-tauri/target/release/bundle/macos/LabRat.app`
+- **Linux**: `src-tauri/target/release/bundle/appimage/labrat_*.AppImage`
+- **Windows**: `src-tauri/target/release/bundle/msi/LabRat_*.msi`
 
 ## Project Structure
 
 ```
-gitlab-mr-review-app/
+labrat/
 ├── src/                    # React frontend
 │   ├── components/         # UI components
+│   │   ├── activity/       # Activity timeline
+│   │   ├── ai/             # AI review panel
+│   │   ├── comments/       # Comment threads & editor
 │   │   ├── common/         # Reusable components (Button, Modal, etc.)
 │   │   ├── layout/         # App layout (Sidebar, Header)
 │   │   ├── mr-list/        # MR list view components
 │   │   ├── mr-detail/      # MR detail view components
+│   │   ├── my-mrs/         # My MRs view
+│   │   ├── pipeline/       # Pipeline detail (stages, jobs, logs)
+│   │   ├── pipelines/      # Pipelines browser view
 │   │   └── settings/       # Settings components
 │   ├── hooks/              # Custom React hooks
 │   ├── services/           # Tauri IPC wrappers
@@ -144,32 +170,38 @@ gitlab-mr-review-app/
 | Shortcut | Action |
 |----------|--------|
 | `?` | Show keyboard shortcuts help |
-| `s` or `/` | Focus search |
-| `f` | Focus filters |
-| `Shift+M` | Go to my merge requests |
-| `Shift+R` | Go to review requests |
-| `,` | Open settings |
-| `Esc` | Close dialogs/popovers |
-| `Cmd/Ctrl+\` | Toggle sidebar |
+| `/` | Focus search |
+| `Shift+R` | Go to My Reviews |
+| `Shift+M` | Go to My MRs |
+| `Shift+P` | Go to Pipelines |
+| `Cmd/Ctrl+,` | Open settings |
+| `Cmd/Ctrl+R` | Refresh |
 
 ### MR List
 | Shortcut | Action |
 |----------|--------|
-| `j` / `k` | Navigate down/up |
-| `Enter` | Open selected MR |
-| `o` | Open in GitLab |
-| `r` | Refresh list |
+| `j` / `k` | Navigate down / up |
+| `Enter` or `o` | Open selected MR |
+| `g` | Toggle group & sort toolbar |
 
-### MR Detail
+### File Navigation (diff view)
 | Shortcut | Action |
 |----------|--------|
+| `j` / `k` | Next / previous file |
+| `Enter` | Enter line navigation |
 | `Cmd/Ctrl+P` or `t` | Quick file picker |
-| `]` / `[` | Next/previous file |
-| `n` / `p` | Next/previous change |
-| `c` | Expand/collapse all |
-| `v` | Toggle unified/split view |
-| `w` | Toggle whitespace |
-| `a` | Request AI analysis |
+| `v` | Toggle file viewed |
+| `n` / `p` | Scroll down / up |
+| `Esc` | Close detail / go back |
+
+### Line Navigation (inside diff)
+| Shortcut | Action |
+|----------|--------|
+| `j` / `k` | Next / previous line |
+| `c` | Add comment on current line |
+| `s` | Suggest a change on current line |
+| `Shift+A` | Approve merge request |
+| `Esc` | Back to file navigation |
 
 ## Development
 
@@ -217,9 +249,9 @@ The app stores data locally:
 
 | Platform | Location |
 |----------|----------|
-| macOS | `~/Library/Application Support/com.gitlab-mr-review/` |
-| Linux | `~/.local/share/gitlab-mr-review/` |
-| Windows | `%APPDATA%\gitlab-mr-review\` |
+| macOS | `~/Library/Application Support/com.labrat.app/` |
+| Linux | `~/.local/share/com.labrat.app/` |
+| Windows | `%APPDATA%\com.labrat.app\` |
 
 - `data.db` - SQLite database (cached MRs, settings)
 - Credentials are stored in the system keychain
