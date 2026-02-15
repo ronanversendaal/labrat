@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react';
+import { type ReactNode, useState, useEffect } from 'react';
 import { useUpdateStore } from '../../stores/updateStore';
 
 interface SidebarProps {
@@ -12,6 +12,11 @@ export function Sidebar({ collapsed = false, onToggleCollapse, onUpdateClick, ch
   const updateStatus = useUpdateStore((s) => s.status);
   const updateInfo = useUpdateStore((s) => s.updateInfo);
   const hasUpdate = updateStatus === 'available' || updateStatus === 'ready';
+  const [appVersion, setAppVersion] = useState('');
+
+  useEffect(() => {
+    import('@tauri-apps/api/app').then((m) => m.getVersion()).then(setAppVersion).catch(() => {});
+  }, []);
   return (
     <aside
       className={`
@@ -81,7 +86,7 @@ export function Sidebar({ collapsed = false, onToggleCollapse, onUpdateClick, ch
         ) : (
           !collapsed && (
             <div className="text-xs text-sidebar-muted">
-              v0.1.1
+              {appVersion ? `v${appVersion}` : ''}
             </div>
           )
         )}

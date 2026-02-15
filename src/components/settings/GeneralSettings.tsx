@@ -2,6 +2,7 @@
  * GeneralSettings - Updates, data, cache, and keyboard settings
  */
 
+import { useState, useEffect } from 'react';
 import { useSettings, useUpdateSettings, useCacheStats, useClearCache, useEvictCache } from '../../hooks/useSettings';
 import { useUpdater } from '../../hooks/useUpdater';
 import { Button, Skeleton } from '../common';
@@ -31,6 +32,11 @@ export function GeneralSettings() {
   const lastChecked = useUpdateStore((s) => s.lastChecked);
 
   const { checkForUpdate, downloadAndInstall, restartApp } = useUpdater();
+
+  const [appVersion, setAppVersion] = useState('');
+  useEffect(() => {
+    import('@tauri-apps/api/app').then((m) => m.getVersion()).then(setAppVersion).catch(() => {});
+  }, []);
 
   const handleRefreshIntervalChange = (seconds: number) => {
     setMrRefreshInterval(seconds);
@@ -78,7 +84,7 @@ export function GeneralSettings() {
           {/* Current version + check button */}
           <div className="flex items-center justify-between p-4 border border-edge rounded-lg">
             <div>
-              <p className="font-medium text-content">v0.1.1</p>
+              <p className="font-medium text-content">{appVersion ? `v${appVersion}` : ''}</p>
               <p className="text-sm text-content-secondary">Current version</p>
             </div>
             <Button
