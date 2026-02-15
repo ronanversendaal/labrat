@@ -10,6 +10,7 @@ import { useDiff, useDiscussions, useMergeRequest, useAccounts, useApproveMR, us
 import { isMergeReady } from '../../utils/mergeReadiness';
 import { useMRStore, isFileViewedSelector } from '../../stores/mrStore';
 import { useSettingsStore } from '../../stores/settingsStore';
+import { useDetailNavStore } from '../../stores/detailNavStore';
 import { partitionFiles } from '../../utils/generatedFiles';
 import { useAISuggestions } from '../../hooks/useAI';
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
@@ -54,6 +55,33 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
 
   // Focus store for mode-aware keyboard shortcuts
   const { currentZone, diffMode, setFocusZone, setDiffMode, setFocusedLine } = useFocusStore();
+
+  // Detail sub-navigation store (for job log awareness)
+  const jobLogOpen = useDetailNavStore((s) => s.jobLogOpen);
+  const setJobLogOpen = useDetailNavStore((s) => s.setJobLogOpen);
+  const setDetailTab = useDetailNavStore((s) => s.setDetailTab);
+  const resetDetailNav = useDetailNavStore((s) => s.reset);
+
+  // Sync activeTab → detailNavStore
+  useEffect(() => {
+    setDetailTab(activeTab);
+  }, [activeTab, setDetailTab]);
+
+  // React to external detailTab changes (from nav restore)
+  useEffect(() => {
+    const unsub = useDetailNavStore.subscribe((state) => {
+      const tab = state.detailTab as Tab;
+      if (tab !== activeTab) {
+        setActiveTab(tab);
+      }
+    });
+    return unsub;
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Reset store on unmount
+  useEffect(() => {
+    return () => resetDetailNav();
+  }, [resetDetailNav]);
 
   // Set initial zone on mount
   useEffect(() => {
@@ -201,9 +229,14 @@ export function MRDetailView({ mr, onClose }: MRDetailViewProps) {
       diffViewRef.current?.exitLineNavMode();
       return;
     }
+    // If job log is open on pipeline tab, close it instead of closing the detail
+    if (activeTab === 'pipeline' && jobLogOpen) {
+      setJobLogOpen(false);
+      return;
+    }
     // Default: close detail view
     onClose?.();
-  }, [currentZone, diffMode, onClose, setFocusZone, setDiffMode, setFocusedLine]);
+  }, [currentZone, diffMode, activeTab, jobLogOpen, onClose, setFocusZone, setDiffMode, setFocusedLine, setJobLogOpen]);
 
   const handleToggleFolder = (folder: string) => {
     setExpandedFolders((prev) => {

@@ -1,9 +1,13 @@
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { usePipelineDetail, usePipelineStages, usePipelineUpdates, useRetryPipeline, useCancelPipeline } from '../../hooks/usePipeline';
+import { useDetailNavStore } from '../../stores/detailNavStore';
 import { PipelineStatusIcon, getStatusLabel } from './PipelineStatusIcon';
 import { StageColumn } from './StageColumn';
+import { JobLogViewer } from './JobLogViewer';
 import { Skeleton } from '../common/Skeleton';
 import { Button } from '../common/Button';
 import { useToast } from '../common/Toast';
+import type { PipelineJob } from '../../types';
 
 interface PipelinePanelProps {
   projectId: number;
@@ -24,9 +28,31 @@ function formatDuration(seconds: number | null): string {
 
 export function PipelinePanel({ projectId, pipelineId, compact = false }: PipelinePanelProps) {
   const toast = useToast();
+  const [expandedJob, setExpandedJob] = useState<PipelineJob | null>(null);
+  const setJobLogOpen = useDetailNavStore((s) => s.setJobLogOpen);
+  const jobLogOpen = useDetailNavStore((s) => s.jobLogOpen);
+
+  // Sync local expandedJob → store
+  const handleSelectJob = useCallback((job: PipelineJob | null) => {
+    setExpandedJob(job);
+    setJobLogOpen(job !== null);
+  }, [setJobLogOpen]);
+
+  // React to external close (Escape via MRDetailView or nav restore)
+  useEffect(() => {
+    if (!jobLogOpen && expandedJob) {
+      setExpandedJob(null);
+    }
+  }, [jobLogOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const { data: pipeline, isLoading: pipelineLoading } = usePipelineDetail(projectId, pipelineId);
   const { data: stages, isLoading: stagesLoading } = usePipelineStages(projectId, pipelineId);
+
+  // Flat list of all jobs for prev/next navigation in the log viewer
+  const allJobs = useMemo(
+    () => (stages ?? []).flatMap((s) => s.jobs),
+    [stages]
+  );
 
   // Subscribe to live updates
   usePipelineUpdates(projectId, pipelineId);
@@ -74,6 +100,21 @@ export function PipelinePanel({ projectId, pipelineId, compact = false }: Pipeli
     return (
       <div className="border border-edge rounded-lg p-6 text-center text-content-secondary text-sm">
         Pipeline not found.
+      </div>
+    );
+  }
+
+  // When a job log is expanded, show full-width log viewer replacing the stages
+  if (expandedJob) {
+    return (
+      <div className="border border-edge overflow-hidden flex flex-col h-full min-h-0">
+        <JobLogViewer
+          projectId={projectId}
+          job={expandedJob}
+          allJobs={allJobs}
+          onClose={() => handleSelectJob(null)}
+          onNavigateJob={handleSelectJob}
+        />
       </div>
     );
   }
@@ -152,6 +193,8 @@ export function PipelinePanel({ projectId, pipelineId, compact = false }: Pipeli
                 projectId={projectId}
                 pipelineId={pipelineId}
                 stage={stage}
+                expandedJobId={null}
+                onSelectJob={handleSelectJob}
               />
             ))}
           </div>

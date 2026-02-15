@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useUIStore } from '../stores/uiStore';
 import { useMRStore } from '../stores/mrStore';
+import { useDetailNavStore } from '../stores/detailNavStore';
 import type { ActiveView } from '../stores/uiStore';
 import type { MergeRequest } from '../types/gitlab';
 
@@ -9,6 +10,8 @@ interface NavEntry {
   selectedMrId: number | null;
   selectedMr: MergeRequest | null;
   isDetailOpen: boolean;
+  detailTab?: string;
+  jobLogOpen?: boolean;
 }
 
 const MAX_HISTORY = 50;
@@ -16,7 +19,15 @@ const MAX_HISTORY = 50;
 function getCurrentNavState(): NavEntry {
   const { activeView } = useUIStore.getState();
   const { selectedMrId, selectedMr, isDetailOpen } = useMRStore.getState();
-  return { activeView, selectedMrId, selectedMr, isDetailOpen };
+  const { detailTab, jobLogOpen } = useDetailNavStore.getState();
+  return {
+    activeView,
+    selectedMrId,
+    selectedMr,
+    isDetailOpen,
+    detailTab: isDetailOpen ? detailTab : undefined,
+    jobLogOpen: isDetailOpen ? jobLogOpen : undefined,
+  };
 }
 
 /**
@@ -27,6 +38,8 @@ function getCurrentNavState(): NavEntry {
  *  - Opening an MR detail
  *  - Closing an MR detail
  *  - Switching to a different MR while detail is open
+ *  - Switching tabs within MR detail
+ *  - Opening/closing a job log within pipeline tab
  *
  * Selecting / highlighting an MR in the list is NOT tracked.
  *
@@ -61,9 +74,17 @@ export function useNavigationHistory() {
           prev.isDetailOpen &&
           next.isDetailOpen &&
           prev.selectedMrId !== next.selectedMrId;
+        const tabChanged =
+          prev.isDetailOpen &&
+          next.isDetailOpen &&
+          prev.detailTab !== next.detailTab;
+        const jobLogToggled =
+          prev.isDetailOpen &&
+          next.isDetailOpen &&
+          prev.jobLogOpen !== next.jobLogOpen;
 
         // Only meaningful navigations create entries
-        if (!viewChanged && !detailToggled && !mrSwitched) return;
+        if (!viewChanged && !detailToggled && !mrSwitched && !tabChanged && !jobLogToggled) return;
 
         backStackRef.current.push(prev);
         if (backStackRef.current.length > MAX_HISTORY) {
@@ -76,10 +97,12 @@ export function useNavigationHistory() {
 
     const unsubUI = useUIStore.subscribe(scheduleCheck);
     const unsubMR = useMRStore.subscribe(scheduleCheck);
+    const unsubDetail = useDetailNavStore.subscribe(scheduleCheck);
 
     return () => {
       unsubUI();
       unsubMR();
+      unsubDetail();
       if (timer) clearTimeout(timer);
     };
   }, []);
@@ -97,6 +120,14 @@ export function useNavigationHistory() {
       if (entry.isDetailOpen && entry.selectedMr) {
         useMRStore.getState().setSelectedMr(entry.selectedMr);
         useMRStore.getState().openDetail();
+
+        // Restore sub-navigation state
+        if (entry.detailTab !== undefined) {
+          useDetailNavStore.getState().setDetailTab(entry.detailTab);
+        }
+        if (entry.jobLogOpen !== undefined) {
+          useDetailNavStore.getState().setJobLogOpen(entry.jobLogOpen);
+        }
       } else {
         useMRStore.getState().closeDetail();
       }
