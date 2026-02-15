@@ -78,7 +78,7 @@ export function GeneralSettings() {
           {/* Current version + check button */}
           <div className="flex items-center justify-between p-4 border border-edge rounded-lg">
             <div>
-              <p className="font-medium text-content">v0.1.0</p>
+              <p className="font-medium text-content">v0.1.1</p>
               <p className="text-sm text-content-secondary">Current version</p>
             </div>
             <Button

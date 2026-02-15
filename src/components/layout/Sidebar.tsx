@@ -81,7 +81,7 @@ export function Sidebar({ collapsed = false, onToggleCollapse, onUpdateClick, ch
         ) : (
           !collapsed && (
             <div className="text-xs text-sidebar-muted">
-              v0.1.0
+              v0.1.1
             </div>
           )
         )}
