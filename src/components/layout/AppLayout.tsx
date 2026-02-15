@@ -59,6 +59,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         <Sidebar
           collapsed={sidebarCollapsed}
           onToggleCollapse={toggleSidebarCollapsed}
+          onUpdateClick={() => openModal('settings')}
         >
           {/* Account selector */}
           {accounts && accounts.length > 0 && (

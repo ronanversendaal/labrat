@@ -34,6 +34,9 @@ interface SettingsState {
   hideGeneratedFiles: boolean;
   generatedFilePatterns: string[];
 
+  // Updates
+  autoCheckUpdates: boolean;
+
   // Actions
   setTheme: (theme: Theme) => void;
   setFontSize: (size: number) => void;
@@ -55,6 +58,7 @@ interface SettingsState {
   setToastNotifications: (enabled: boolean) => void;
   setHideGeneratedFiles: (hide: boolean) => void;
   setGeneratedFilePatterns: (patterns: string[]) => void;
+  setAutoCheckUpdates: (enabled: boolean) => void;
   resetToDefaults: () => void;
 }
 
@@ -77,6 +81,7 @@ const defaultSettings = {
   toastNotifications: true,
   hideGeneratedFiles: true,
   generatedFilePatterns: DEFAULT_GENERATED_PATTERNS,
+  autoCheckUpdates: true,
 };
 
 export const useSettingsStore = create<SettingsState>()(
@@ -113,11 +118,12 @@ export const useSettingsStore = create<SettingsState>()(
         set({ hideGeneratedFiles }),
       setGeneratedFilePatterns: (generatedFilePatterns) =>
         set({ generatedFilePatterns }),
+      setAutoCheckUpdates: (autoCheckUpdates) => set({ autoCheckUpdates }),
       resetToDefaults: () => set(defaultSettings),
     }),
     {
       name: 'labrat-settings',
-      version: 4,
+      version: 5,
       migrate: (persisted, version) => {
         const state = persisted as Record<string, unknown>;
         if (version < 2) {
@@ -137,6 +143,9 @@ export const useSettingsStore = create<SettingsState>()(
         if (version < 4) {
           if (!('hideGeneratedFiles' in state)) state.hideGeneratedFiles = true;
           if (!('generatedFilePatterns' in state)) state.generatedFilePatterns = DEFAULT_GENERATED_PATTERNS;
+        }
+        if (version < 5) {
+          if (!('autoCheckUpdates' in state)) state.autoCheckUpdates = true;
         }
         return state as unknown as SettingsState;
       },

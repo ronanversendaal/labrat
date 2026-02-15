@@ -1,12 +1,17 @@
 import { type ReactNode } from 'react';
+import { useUpdateStore } from '../../stores/updateStore';
 
 interface SidebarProps {
   collapsed?: boolean;
   onToggleCollapse?: () => void;
+  onUpdateClick?: () => void;
   children?: ReactNode;
 }
 
-export function Sidebar({ collapsed = false, onToggleCollapse, children }: SidebarProps) {
+export function Sidebar({ collapsed = false, onToggleCollapse, onUpdateClick, children }: SidebarProps) {
+  const updateStatus = useUpdateStore((s) => s.status);
+  const updateInfo = useUpdateStore((s) => s.updateInfo);
+  const hasUpdate = updateStatus === 'available' || updateStatus === 'ready';
   return (
     <aside
       className={`
@@ -49,10 +54,36 @@ export function Sidebar({ collapsed = false, onToggleCollapse, children }: Sideb
 
       {/* Footer */}
       <div className="p-4 border-t border-sidebar-border">
-        {!collapsed && (
-          <div className="text-xs text-sidebar-muted">
-            v0.1.0
-          </div>
+        {hasUpdate ? (
+          collapsed ? (
+            <button
+              onClick={onUpdateClick}
+              className="flex justify-center w-full"
+              title={`v${updateInfo?.version} available`}
+            >
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
+              </span>
+            </button>
+          ) : (
+            <button
+              onClick={onUpdateClick}
+              className="flex items-center gap-2 text-xs text-primary hover:text-primary/80 transition-colors cursor-pointer"
+            >
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
+              </span>
+              v{updateInfo?.version} available
+            </button>
+          )
+        ) : (
+          !collapsed && (
+            <div className="text-xs text-sidebar-muted">
+              v0.1.0
+            </div>
+          )
         )}
       </div>
     </aside>

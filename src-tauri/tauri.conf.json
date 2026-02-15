@@ -28,7 +28,16 @@
       "csp": null
     }
   },
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://github.com/ronanversendaal/labrat/releases/latest/download/latest.json"
+      ],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEUxOUIzMkY1MTY5NDY2OUQKUldTZFpwUVc5VEtiNFIwTThtTEI4cE96anpNZEgrSkNvQkFIYzdWZnFJOGRISlBFbWorRVJYMzAK"
+    }
+  },
   "bundle": {
+    "createUpdaterArtifacts": true,
     "active": true,
     "targets": "all",
     "icon": [

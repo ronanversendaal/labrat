@@ -1,10 +1,12 @@
 /**
- * GeneralSettings - Data, cache, and keyboard settings
+ * GeneralSettings - Updates, data, cache, and keyboard settings
  */
 
 import { useSettings, useUpdateSettings, useCacheStats, useClearCache, useEvictCache } from '../../hooks/useSettings';
+import { useUpdater } from '../../hooks/useUpdater';
 import { Button, Skeleton } from '../common';
 import { useSettingsStore } from '../../stores/settingsStore';
+import { useUpdateStore } from '../../stores/updateStore';
 
 export function GeneralSettings() {
   const { isLoading: isLoadingSettings } = useSettings();
@@ -19,6 +21,16 @@ export function GeneralSettings() {
   const setMrRefreshInterval = useSettingsStore((s) => s.setMrRefreshInterval);
   const cacheSizeMb = useSettingsStore((s) => s.cacheSizeMb);
   const setCacheSizeMb = useSettingsStore((s) => s.setCacheSizeMb);
+  const autoCheckUpdates = useSettingsStore((s) => s.autoCheckUpdates);
+  const setAutoCheckUpdates = useSettingsStore((s) => s.setAutoCheckUpdates);
+
+  const updateStatus = useUpdateStore((s) => s.status);
+  const updateInfo = useUpdateStore((s) => s.updateInfo);
+  const downloadProgress = useUpdateStore((s) => s.downloadProgress);
+  const updateError = useUpdateStore((s) => s.error);
+  const lastChecked = useUpdateStore((s) => s.lastChecked);
+
+  const { checkForUpdate, downloadAndInstall, restartApp } = useUpdater();
 
   const handleRefreshIntervalChange = (seconds: number) => {
     setMrRefreshInterval(seconds);
@@ -43,6 +55,11 @@ export function GeneralSettings() {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
   };
 
+  const progressPercent =
+    downloadProgress?.contentLength && downloadProgress.contentLength > 0
+      ? Math.round((downloadProgress.totalDownloaded / downloadProgress.contentLength) * 100)
+      : null;
+
   if (isLoadingSettings) {
     return (
       <div className="space-y-6">
@@ -54,6 +71,122 @@ export function GeneralSettings() {
 
   return (
     <div className="space-y-8">
+      {/* Updates */}
+      <section>
+        <h2 className="text-lg font-medium text-content mb-4">Updates</h2>
+        <div className="space-y-4">
+          {/* Current version + check button */}
+          <div className="flex items-center justify-between p-4 border border-edge rounded-lg">
+            <div>
+              <p className="font-medium text-content">v0.1.0</p>
+              <p className="text-sm text-content-secondary">Current version</p>
+            </div>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={checkForUpdate}
+              loading={updateStatus === 'checking'}
+            >
+              Check for Updates
+            </Button>
+          </div>
+
+          {/* Auto-check toggle */}
+          <div className="flex items-center justify-between p-4 border border-edge rounded-lg">
+            <div>
+              <p className="font-medium text-content">Automatic Updates</p>
+              <p className="text-sm text-content-secondary">
+                Check for updates when the app starts
+              </p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={autoCheckUpdates}
+                onChange={(e) => setAutoCheckUpdates(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-surface-alt peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-ring rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-edge-strong after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+            </label>
+          </div>
+
+          {/* Update available card */}
+          {(updateStatus === 'available' || updateStatus === 'downloading' || updateStatus === 'ready') && updateInfo && (
+            <div className="p-4 border border-primary/30 bg-primary/5 rounded-lg space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium text-content">v{updateInfo.version}</p>
+                  {updateInfo.date && (
+                    <p className="text-sm text-content-secondary">
+                      {new Date(updateInfo.date).toLocaleDateString()}
+                    </p>
+                  )}
+                </div>
+                {updateStatus === 'available' && (
+                  <Button variant="primary" size="sm" onClick={downloadAndInstall}>
+                    Download & Install
+                  </Button>
+                )}
+                {updateStatus === 'ready' && (
+                  <Button variant="primary" size="sm" onClick={restartApp}>
+                    Restart Now
+                  </Button>
+                )}
+              </div>
+
+              {/* Download progress */}
+              {updateStatus === 'downloading' && (
+                <div className="space-y-1">
+                  <div className="w-full bg-surface-alt rounded-full h-2 overflow-hidden">
+                    <div
+                      className="bg-primary h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${progressPercent ?? 0}%` }}
+                    />
+                  </div>
+                  {progressPercent !== null && (
+                    <p className="text-xs text-content-secondary text-right">{progressPercent}%</p>
+                  )}
+                </div>
+              )}
+
+              {/* Release notes */}
+              {updateInfo.body && (
+                <details className="text-sm">
+                  <summary className="cursor-pointer text-content-secondary hover:text-content">
+                    Release notes
+                  </summary>
+                  <div className="mt-2 text-content-secondary whitespace-pre-wrap text-xs leading-relaxed">
+                    {updateInfo.body}
+                  </div>
+                </details>
+              )}
+            </div>
+          )}
+
+          {/* Error state */}
+          {updateStatus === 'error' && updateError && (
+            <div className="p-4 border border-red-500/30 bg-red-500/5 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium text-red-400">Update check failed</p>
+                  <p className="text-sm text-content-secondary mt-1">{updateError}</p>
+                </div>
+                <Button variant="secondary" size="sm" onClick={checkForUpdate}>
+                  Retry
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Last checked */}
+          {updateStatus === 'idle' && lastChecked && (
+            <p className="text-xs text-content-secondary">
+              Last checked: {lastChecked.toLocaleString()}
+            </p>
+          )}
+        </div>
+      </section>
+
       {/* Keyboard */}
       <section>
         <h2 className="text-lg font-medium text-content mb-4">Keyboard</h2>

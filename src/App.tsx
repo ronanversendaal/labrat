@@ -15,6 +15,7 @@ import {
   useMergeReadyNotifications,
 } from './hooks/useNotifications';
 import { useNavigationHistory } from './hooks/useNavigationHistory';
+import { useUpdater } from './hooks/useUpdater';
 
 // Create a client
 const queryClient = new QueryClient({
@@ -34,6 +35,9 @@ function AppContent() {
   const { data: accounts } = useAccounts();
   const activeAccount = accounts?.find((a) => a.is_active);
   const queryClientInstance = useQueryClient();
+
+  // Initialize auto-update check
+  useUpdater();
 
   // Synchronize theme with document class
   useThemeSync();
