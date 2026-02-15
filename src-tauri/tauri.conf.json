@@ -33,7 +33,7 @@
       "endpoints": [
         "https://github.com/ronanversendaal/labrat/releases/latest/download/latest.json"
       ],
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEU3MkM2NDc5OUYwMEI2OUUKUldTZXRnQ2ZlV1FzNS9pZ2V4SDBKMEE5Y1pzVVZub2xLNSs5RnZPcElUbndxSVBDaXkzOWpkRTEK"
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDE0ODdGNjAxQzU4MjJFQzAKUldUQUxvTEZBZmFIRkRFRHVGQWZMb255RS9YbkxKdjBEc2tVVEpWWHdPV0FTR2ZRNGxMZ2FVMlIK"
     }
   },
   "bundle": {
