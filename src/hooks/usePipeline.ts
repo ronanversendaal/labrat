@@ -245,8 +245,11 @@ export function useCancelJob() {
  */
 export function useDownloadArtifacts() {
   return useMutation({
-    mutationFn: ({ projectId, jobId }: { projectId: number; jobId: number }) =>
-      api.downloadArtifacts(projectId, jobId),
+    mutationFn: ({ projectId, jobId, jobName }: { projectId: number; jobId: number; jobName: string }) =>
+      api.downloadArtifacts(projectId, jobId, jobName),
+    onSuccess: (result) => {
+      api.revealFileInFolder(result.path);
+    },
   });
 }
 

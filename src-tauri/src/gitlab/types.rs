@@ -750,6 +750,13 @@ pub struct PipelineUpdateEvent {
     pub jobs: Vec<PipelineJob>,
 }
 
+/// Result of downloading job artifacts to disk
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ArtifactDownloadResult {
+    pub path: String,
+    pub size_bytes: u64,
+}
+
 /// Event emitted when new job log content is available
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JobLogUpdateEvent {

@@ -552,6 +552,12 @@ export interface PipelineFilter {
   updated_after?: string;
 }
 
+/** Result of downloading job artifacts */
+export interface ArtifactDownloadResult {
+  path: string;
+  size_bytes: number;
+}
+
 /** Event payload for pipeline updates */
 export interface PipelineUpdateEvent {
   project_id: number;

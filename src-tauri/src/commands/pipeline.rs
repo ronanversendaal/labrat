@@ -6,8 +6,8 @@ use crate::cache::pipeline_cache::PipelineCache;
 use crate::commands::gitlab::get_active_client;
 use crate::gitlab::client::GitLabClient;
 use crate::gitlab::types::{
-    PinnedProject, PipelineDetail, PipelineFilter, PipelineJob, PipelineStage, ProjectSearchResult,
-    TestReport,
+    ArtifactDownloadResult, PinnedProject, PipelineDetail, PipelineFilter, PipelineJob,
+    PipelineStage, ProjectSearchResult, TestReport,
 };
 use crate::{SharedAppState, TauriError, TauriResult};
 use tauri::{AppHandle, State};
@@ -214,12 +214,13 @@ pub async fn cancel_job_inner(
     Ok(job)
 }
 
-/// Download job artifacts (inner) — saves to temp file and returns path
+/// Download job artifacts (inner) — saves to Downloads folder and returns metadata
 pub async fn download_artifacts_inner(
     state: &SharedAppState,
     project_id: i64,
     job_id: i64,
-) -> TauriResult<Vec<u8>> {
+    job_name: String,
+) -> TauriResult<ArtifactDownloadResult> {
     let (_account, client) = get_active_client(state).await?;
 
     let bytes = client
@@ -227,12 +228,35 @@ pub async fn download_artifacts_inner(
         .await
         .map_err(|e| TauriError::api_error(e.to_string()))?;
 
+    let size_bytes = bytes.len() as u64;
+
+    // Sanitize job name for use in filename
+    let safe_name: String = job_name
+        .chars()
+        .map(|c| if c.is_alphanumeric() || c == '-' || c == '_' || c == '.' { c } else { '_' })
+        .collect();
+
+    let downloads_dir = dirs::download_dir().ok_or_else(|| {
+        TauriError::api_error("Could not determine Downloads directory")
+    })?;
+
+    let filename = format!("{}-{}-artifacts.zip", safe_name, job_id);
+    let path = downloads_dir.join(&filename);
+
+    tokio::fs::write(&path, &bytes)
+        .await
+        .map_err(|e| TauriError::api_error(format!("Failed to write artifact file: {}", e)))?;
+
+    let path_str = path.to_string_lossy().to_string();
     info!(
-        "Downloaded {} bytes of artifacts for job {}",
-        bytes.len(),
-        job_id
+        "Saved {} bytes of artifacts for job {} to {}",
+        size_bytes, job_id, path_str
     );
-    Ok(bytes)
+
+    Ok(ArtifactDownloadResult {
+        path: path_str,
+        size_bytes,
+    })
 }
 
 /// Pin a project (inner)
@@ -389,14 +413,46 @@ pub async fn gitlab_cancel_job(
     cancel_job_inner(&state, project_id, job_id).await
 }
 
-/// Download artifacts for a job (returns raw bytes)
+/// Download artifacts for a job (saves to Downloads folder)
 #[tauri::command]
 pub async fn gitlab_download_artifacts(
     state: State<'_, SharedAppState>,
     project_id: i64,
     job_id: i64,
-) -> TauriResult<Vec<u8>> {
-    download_artifacts_inner(&state, project_id, job_id).await
+    job_name: String,
+) -> TauriResult<ArtifactDownloadResult> {
+    download_artifacts_inner(&state, project_id, job_id, job_name).await
+}
+
+/// Reveal a file in the system file manager
+#[tauri::command]
+pub async fn reveal_file_in_folder(path: String) -> TauriResult<()> {
+    #[cfg(target_os = "macos")]
+    {
+        tokio::process::Command::new("open")
+            .arg("-R")
+            .arg(&path)
+            .status()
+            .await
+            .map_err(|e| TauriError::api_error(format!("Failed to reveal file: {}", e)))?;
+    }
+    #[cfg(target_os = "windows")]
+    {
+        tokio::process::Command::new("explorer")
+            .arg(format!("/select,{}", &path))
+            .status()
+            .await
+            .map_err(|e| TauriError::api_error(format!("Failed to reveal file: {}", e)))?;
+    }
+    #[cfg(target_os = "linux")]
+    {
+        tokio::process::Command::new("xdg-open")
+            .arg(std::path::Path::new(&path).parent().unwrap_or(std::path::Path::new("/")))
+            .status()
+            .await
+            .map_err(|e| TauriError::api_error(format!("Failed to reveal file: {}", e)))?;
+    }
+    Ok(())
 }
 
 /// Pin a project for the pipeline browser

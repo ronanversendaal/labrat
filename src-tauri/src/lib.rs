@@ -268,6 +268,7 @@ pub fn run() {
             commands::pipeline::gitlab_retry_job,
             commands::pipeline::gitlab_cancel_job,
             commands::pipeline::gitlab_download_artifacts,
+            commands::pipeline::reveal_file_in_folder,
             commands::pipeline::gitlab_pin_project,
             commands::pipeline::gitlab_unpin_project,
             commands::pipeline::gitlab_get_pinned_projects,

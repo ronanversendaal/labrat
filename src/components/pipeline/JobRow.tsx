@@ -1,6 +1,5 @@
 import type { PipelineJob } from '../../types';
 import { PipelineStatusIcon } from './PipelineStatusIcon';
-import { JobLogViewer } from './JobLogViewer';
 import { useRetryJob, useCancelJob, useDownloadArtifacts } from '../../hooks/usePipeline';
 import { usePipelineStore } from '../../stores/pipelineStore';
 import { useToast } from '../common/Toast';
@@ -23,7 +22,7 @@ function formatDuration(seconds: number | null): string {
 }
 
 export function JobRow({ projectId, pipelineId, job }: JobRowProps) {
-  const { expandedJobId, setExpandedJobId } = usePipelineStore();
+  const { expandedJobId, setExpandedJob } = usePipelineStore();
   const isExpanded = expandedJobId === job.id;
   const toast = useToast();
 
@@ -36,7 +35,7 @@ export function JobRow({ projectId, pipelineId, job }: JobRowProps) {
   const hasArtifacts = job.artifacts.length > 0;
 
   const handleToggle = () => {
-    setExpandedJobId(isExpanded ? null : job.id);
+    setExpandedJob(isExpanded ? null : job);
   };
 
   const handleRetry = (e: React.MouseEvent) => {
@@ -57,92 +56,87 @@ export function JobRow({ projectId, pipelineId, job }: JobRowProps) {
 
   const handleDownload = (e: React.MouseEvent) => {
     e.stopPropagation();
+    toast.info(`Downloading artifacts for "${job.name}"...`);
     downloadArtifacts.mutate(
-      { projectId, jobId: job.id },
+      { projectId, jobId: job.id, jobName: job.name },
       {
-        onSuccess: () => toast.success('Artifacts downloaded'),
-        onError: () => toast.error('Failed to download artifacts'),
+        onSuccess: (result) => {
+          const sizeMB = (result.size_bytes / (1024 * 1024)).toFixed(1);
+          toast.success(`Downloaded "${job.name}" artifacts (${sizeMB} MB)`);
+        },
+        onError: () => toast.error(`Failed to download "${job.name}" artifacts`),
       }
     );
   };
 
   return (
-    <div>
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={handleToggle}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            handleToggle();
-          }
-        }}
-        className={`
-          flex items-center gap-2 px-2 py-1.5 rounded-md text-sm
-          hover:bg-surface-hover transition-colors
-          ${isExpanded ? 'bg-surface-hover' : ''}
-        `}
-      >
-        <PipelineStatusIcon status={job.status} size={14} />
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={handleToggle}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          handleToggle();
+        }
+      }}
+      className={`
+        flex items-center gap-2 px-2 py-1.5 rounded-md text-sm
+        hover:bg-surface-hover transition-colors cursor-pointer
+        ${isExpanded ? 'bg-surface-hover ring-1 ring-primary/30' : ''}
+      `}
+    >
+      <PipelineStatusIcon status={job.status} size={14} />
 
-        <span className="flex-1 min-w-0 truncate text-content">{job.name}</span>
+      <span className="flex-1 min-w-0 truncate text-content">{job.name}</span>
 
-        {job.allow_failure && (
-          <span className="flex-shrink-0 px-1.5 py-0.5 text-[10px] font-medium uppercase rounded bg-caution-muted text-caution-text">
-            allowed to fail
-          </span>
-        )}
-
-        <span className="flex-shrink-0 text-xs text-content-tertiary tabular-nums">
-          {formatDuration(job.duration)}
+      {job.allow_failure && (
+        <span className="flex-shrink-0 px-1.5 py-0.5 text-[10px] font-medium uppercase rounded bg-caution-muted text-caution-text">
+          allowed to fail
         </span>
-
-        {/* Action buttons */}
-        <div className="flex items-center gap-0.5 flex-shrink-0">
-          {isFailed && (
-            <button
-              onClick={handleRetry}
-              disabled={retryJob.isPending}
-              className="p-1 rounded text-content-secondary hover:text-content hover:bg-surface-active"
-              title="Retry job"
-            >
-              <RetryIcon className="w-3.5 h-3.5" />
-            </button>
-          )}
-          {isRunning && (
-            <button
-              onClick={handleCancel}
-              disabled={cancelJob.isPending}
-              className="p-1 rounded text-content-secondary hover:text-negative hover:bg-surface-active"
-              title="Cancel job"
-            >
-              <CancelIcon className="w-3.5 h-3.5" />
-            </button>
-          )}
-          {hasArtifacts && (
-            <button
-              onClick={handleDownload}
-              disabled={downloadArtifacts.isPending}
-              className="p-1 rounded text-content-secondary hover:text-content hover:bg-surface-active"
-              title="Download artifacts"
-            >
-              <DownloadIcon className="w-3.5 h-3.5" />
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Expanded log viewer */}
-      {isExpanded && (
-        <div className="mt-1 mb-2">
-          <JobLogViewer
-            projectId={projectId}
-            job={job}
-            onClose={() => setExpandedJobId(null)}
-          />
-        </div>
       )}
+
+      <span className="flex-shrink-0 text-xs text-content-tertiary tabular-nums">
+        {formatDuration(job.duration)}
+      </span>
+
+      {/* Action buttons */}
+      <div className="flex items-center gap-0.5 flex-shrink-0">
+        {isFailed && (
+          <button
+            onClick={handleRetry}
+            disabled={retryJob.isPending}
+            className="p-1 rounded text-content-secondary hover:text-content hover:bg-surface-active"
+            title="Retry job"
+          >
+            <RetryIcon className="w-3.5 h-3.5" />
+          </button>
+        )}
+        {isRunning && (
+          <button
+            onClick={handleCancel}
+            disabled={cancelJob.isPending}
+            className="p-1 rounded text-content-secondary hover:text-negative hover:bg-surface-active"
+            title="Cancel job"
+          >
+            <CancelIcon className="w-3.5 h-3.5" />
+          </button>
+        )}
+        {hasArtifacts && (
+          <button
+            onClick={handleDownload}
+            disabled={downloadArtifacts.isPending}
+            className="p-1 rounded text-content-secondary hover:text-content hover:bg-surface-active"
+            title="Download artifacts"
+          >
+            {downloadArtifacts.isPending ? (
+              <SpinnerIcon className="w-3.5 h-3.5" />
+            ) : (
+              <DownloadIcon className="w-3.5 h-3.5" />
+            )}
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -160,6 +154,15 @@ function CancelIcon({ className = 'w-4 h-4' }: { className?: string }) {
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
       <rect x="9" y="9" width="6" height="6" rx="0.5" fill="currentColor" />
+    </svg>
+  );
+}
+
+function SpinnerIcon({ className = 'w-4 h-4' }: { className?: string }) {
+  return (
+    <svg className={`animate-spin ${className}`} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
     </svg>
   );
 }

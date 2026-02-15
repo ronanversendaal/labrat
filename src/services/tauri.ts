@@ -35,6 +35,7 @@ import type {
   TestReport,
   PinnedProject,
   PipelineFilter,
+  ArtifactDownloadResult,
 } from '../types/gitlab';
 import type {
   AIProvider,
@@ -528,10 +529,17 @@ export async function cancelJob(projectId: number, jobId: number): Promise<Pipel
 }
 
 /**
- * Download artifacts for a job
+ * Download artifacts for a job (saves to Downloads folder)
  */
-export async function downloadArtifacts(projectId: number, jobId: number): Promise<string> {
-  return invokeCommand<string>('gitlab_download_artifacts', { projectId, jobId });
+export async function downloadArtifacts(projectId: number, jobId: number, jobName: string): Promise<ArtifactDownloadResult> {
+  return invokeCommand<ArtifactDownloadResult>('gitlab_download_artifacts', { projectId, jobId, jobName });
+}
+
+/**
+ * Reveal a file in the system file manager
+ */
+export async function revealFileInFolder(path: string): Promise<void> {
+  return invokeCommand<void>('reveal_file_in_folder', { path });
 }
 
 /**
@@ -683,6 +691,7 @@ export const pipeline = {
   retryJob,
   cancelJob,
   downloadArtifacts,
+  revealFileInFolder,
   pinProject,
   unpinProject,
   getPinnedProjects,
