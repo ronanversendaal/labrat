@@ -14,6 +14,7 @@ import {
   useNotificationPermission,
   useMergeReadyNotifications,
 } from './hooks/useNotifications';
+import { useNavigationHistory } from './hooks/useNavigationHistory';
 
 // Create a client
 const queryClient = new QueryClient({
@@ -36,6 +37,9 @@ function AppContent() {
 
   // Synchronize theme with document class
   useThemeSync();
+
+  // Track navigation state for mouse back/forward buttons
+  useNavigationHistory();
 
   // Request notification permission eagerly at startup
   useNotificationPermission();
