@@ -1,13 +1,14 @@
 import type { PipelineJob } from '../../types';
 import { PipelineStatusIcon } from './PipelineStatusIcon';
 import { useRetryJob, useCancelJob, useDownloadArtifacts } from '../../hooks/usePipeline';
-import { usePipelineStore } from '../../stores/pipelineStore';
 import { useToast } from '../common/Toast';
 
 interface JobRowProps {
   projectId: number;
   pipelineId: number;
   job: PipelineJob;
+  isExpanded: boolean;
+  onSelect: (job: PipelineJob | null) => void;
 }
 
 function formatDuration(seconds: number | null): string {
@@ -21,9 +22,7 @@ function formatDuration(seconds: number | null): string {
   return `${hours}h ${remMins}m`;
 }
 
-export function JobRow({ projectId, pipelineId, job }: JobRowProps) {
-  const { expandedJobId, setExpandedJob } = usePipelineStore();
-  const isExpanded = expandedJobId === job.id;
+export function JobRow({ projectId, pipelineId, job, isExpanded, onSelect }: JobRowProps) {
   const toast = useToast();
 
   const retryJob = useRetryJob();
@@ -35,7 +34,7 @@ export function JobRow({ projectId, pipelineId, job }: JobRowProps) {
   const hasArtifacts = job.artifacts.length > 0;
 
   const handleToggle = () => {
-    setExpandedJob(isExpanded ? null : job);
+    onSelect(isExpanded ? null : job);
   };
 
   const handleRetry = (e: React.MouseEvent) => {
@@ -88,11 +87,11 @@ export function JobRow({ projectId, pipelineId, job }: JobRowProps) {
     >
       <PipelineStatusIcon status={job.status} size={14} />
 
-      <span className="flex-1 min-w-0 truncate text-content">{job.name}</span>
+      <span className="flex-1 min-w-0 truncate text-content" title={job.name}>{job.name}</span>
 
       {job.allow_failure && (
-        <span className="flex-shrink-0 px-1.5 py-0.5 text-[10px] font-medium uppercase rounded bg-caution-muted text-caution-text">
-          allowed to fail
+        <span className="flex-shrink-0 text-caution-text/60" title="Allowed to fail">
+          <AllowFailureIcon className="w-3.5 h-3.5" />
         </span>
       )}
 
@@ -163,6 +162,14 @@ function SpinnerIcon({ className = 'w-4 h-4' }: { className?: string }) {
     <svg className={`animate-spin ${className}`} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+    </svg>
+  );
+}
+
+function AllowFailureIcon({ className = 'w-4 h-4' }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M12 3l9 16H3L12 3z" />
     </svg>
   );
 }

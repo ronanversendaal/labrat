@@ -1,4 +1,4 @@
-import type { PipelineStage } from '../../types';
+import type { PipelineJob, PipelineStage } from '../../types';
 import { PipelineStatusIcon } from './PipelineStatusIcon';
 import { JobRow } from './JobRow';
 
@@ -6,9 +6,11 @@ interface StageColumnProps {
   projectId: number;
   pipelineId: number;
   stage: PipelineStage;
+  expandedJobId: number | null;
+  onSelectJob: (job: PipelineJob | null) => void;
 }
 
-export function StageColumn({ projectId, pipelineId, stage }: StageColumnProps) {
+export function StageColumn({ projectId, pipelineId, stage, expandedJobId, onSelectJob }: StageColumnProps) {
   return (
     <div className="flex flex-col min-w-[180px] max-w-[260px]">
       {/* Stage header */}
@@ -28,6 +30,8 @@ export function StageColumn({ projectId, pipelineId, stage }: StageColumnProps) 
             projectId={projectId}
             pipelineId={pipelineId}
             job={job}
+            isExpanded={expandedJobId === job.id}
+            onSelect={onSelectJob}
           />
         ))}
       </div>
