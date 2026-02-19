@@ -10,8 +10,11 @@ use std::sync::Arc;
 use std::time::Duration;
 use thiserror::Error;
 use tokio::select;
+use tokio::sync::OnceCell;
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, warn};
+
+use super::user::CurrentUser;
 
 /// Default timeout for API requests
 const DEFAULT_TIMEOUT_SECS: u64 = 30;
@@ -59,6 +62,7 @@ pub struct GitLabClient {
     client: Client,
     base_url: String,
     access_token: String,
+    cached_user: Arc<OnceCell<CurrentUser>>,
 }
 
 impl GitLabClient {
@@ -83,6 +87,7 @@ impl GitLabClient {
             client,
             base_url: format!("{}/api/v4", base_url),
             access_token: access_token.to_string(),
+            cached_user: Arc::new(OnceCell::new()),
         })
     }
 
@@ -94,6 +99,15 @@ impl GitLabClient {
     /// Get the access token
     pub fn access_token(&self) -> &str {
         &self.access_token
+    }
+
+    /// Get the current authenticated user, caching the result for subsequent calls.
+    /// This avoids repeated GET /user requests within the same client lifetime.
+    pub async fn get_current_user_cached(&self) -> Result<CurrentUser, GitLabClientError> {
+        self.cached_user
+            .get_or_try_init(|| self.get_current_user())
+            .await
+            .cloned()
     }
 
     /// Make a GET request to the GitLab API

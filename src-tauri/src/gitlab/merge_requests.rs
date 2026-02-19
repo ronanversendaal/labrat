@@ -12,21 +12,23 @@ const DEFAULT_PER_PAGE: u32 = 100;
 impl GitLabClient {
     /// Get all merge requests assigned to the current user (as reviewer or assignee)
     ///
-    /// This combines MRs where the user is a reviewer with MRs where they are assigned
+    /// This combines MRs where the user is a reviewer with MRs where they are assigned.
+    /// Uses cached user and parallel fetches for performance.
     pub async fn get_assigned_merge_requests(&self) -> Result<Vec<MergeRequest>, GitLabClientError> {
-        // Get current user ID for reviewer query (some GitLab versions don't support "self")
-        let current_user = self.get_current_user().await?;
+        // Get current user ID (cached after first call)
+        let current_user = self.get_current_user_cached().await?;
         let user_id = current_user.id;
 
-        // Fetch MRs where the current user is assigned
-        let path = "/merge_requests?scope=assigned_to_me&state=opened";
-        debug!("Fetching assigned MRs: {}", path);
-        let assigned: Vec<MergeRequest> = self.get_all_pages(path, DEFAULT_PER_PAGE).await?;
-
-        // Fetch MRs where the current user is a reviewer (use numeric ID for compatibility)
+        // Fetch assigned and reviewer MRs in parallel
+        let assigned_path = "/merge_requests?scope=assigned_to_me&state=opened";
         let review_path = format!("/merge_requests?scope=all&reviewer_id={}&state=opened", user_id);
+        debug!("Fetching assigned MRs: {}", assigned_path);
         debug!("Fetching review MRs: {}", review_path);
-        let for_review: Vec<MergeRequest> = self.get_all_pages(&review_path, DEFAULT_PER_PAGE).await?;
+
+        let (assigned, for_review): (Vec<MergeRequest>, Vec<MergeRequest>) = tokio::try_join!(
+            self.get_all_pages(assigned_path, DEFAULT_PER_PAGE),
+            self.get_all_pages(&review_path, DEFAULT_PER_PAGE),
+        )?;
 
         // Merge and deduplicate by ID
         let mut all_mrs: Vec<MergeRequest> = assigned

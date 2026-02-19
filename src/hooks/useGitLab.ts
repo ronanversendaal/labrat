@@ -129,6 +129,31 @@ export function useMergeRequests(request?: ListMergeRequestsRequest) {
         }
       }
 
+      // If we got cached data, trigger a background refetch with use_cache: false
+      if (data.from_cache) {
+        const freshRequest = { ...mergedRequest, use_cache: false };
+        api.listMergeRequests(freshRequest).then((freshData) => {
+          queryClient.setQueryData(
+            queryKeys.mergeRequests(mergedRequest),
+            freshData
+          );
+          // Seed approval caches from fresh data too
+          if (freshData.approval_states) {
+            for (const mr of freshData.merge_requests) {
+              const approvalState = freshData.approval_states[mr.id];
+              if (approvalState) {
+                queryClient.setQueryData(
+                  queryKeys.approvalState(mr.project_id, mr.iid),
+                  approvalState
+                );
+              }
+            }
+          }
+        }).catch(() => {
+          // Silent failure — cached data remains displayed, next interval will retry
+        });
+      }
+
       return data;
     },
     select: (data: ListMergeRequestsResponse) => data.merge_requests,

@@ -244,6 +244,25 @@ pub async fn list_merge_requests_inner(
     state: &SharedAppState,
     request: ListMergeRequestsRequest,
 ) -> TauriResult<ListMergeRequestsResponse> {
+    // If use_cache is true, try returning cached MRs from SQLite first
+    if request.use_cache {
+        let state_read = state.read().await;
+        match MrCache::get_all_open(&state_read.db_pool).await {
+            Ok(cached_mrs) if !cached_mrs.is_empty() => {
+                let cached_at = cached_mrs.first().and_then(|mr| mr.cached_at);
+                debug!("Returning {} cached MRs from SQLite", cached_mrs.len());
+                return Ok(ListMergeRequestsResponse {
+                    merge_requests: cached_mrs,
+                    from_cache: true,
+                    cached_at,
+                    approval_states: None,
+                });
+            }
+            Ok(_) => debug!("No cached MRs found, fetching from API"),
+            Err(e) => warn!("Failed to read MR cache: {}, fetching from API", e),
+        }
+    }
+
     let (account, client) = get_active_client(state).await?;
 
     // Fetch MRs from GitLab API based on scope
